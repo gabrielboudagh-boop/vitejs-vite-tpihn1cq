@@ -4,3 +4,5 @@ export const supabase = createClient(
   'https://vsmfnemgzyghremuenuh.supabase.co',
   import.meta.env.VITE_SUPABASE_ANON_KEY
 )
+
+

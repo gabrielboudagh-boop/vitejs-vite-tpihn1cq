@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
- 
+import { supabase } from './supabase.js'  //
 // ── Fonts ────────────────────────────────────────────────────────────────────
 const fontLink = document.createElement("link");
 fontLink.rel = "stylesheet";
@@ -853,7 +853,7 @@ function AuthScreen({ onAuth, T }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: window.location.origin
+          redirectTo: 'https://vima-vima.netlify.app'
         }
       });
 
@@ -1019,7 +1019,33 @@ function AuthScreen({ onAuth, T }) {
 // ── MAIN APP ───────────────────────────────────────────────────────────────────
 export default function App(){
   const [splashDone,setSplashDone]=useState(false);
-  const [user,setUser]=useState(null); // {name, email, track}
+  const [user,setUser]=useState(null);
+
+  // ← ADD THIS BLOCK
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          name: session.user.user_metadata?.full_name || session.user.email,
+          email: session.user.email,
+          track: localStorage.getItem('vimavima_track') || null
+        });
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          name: session.user.user_metadata?.full_name || session.user.email,
+          email: session.user.email,
+          track: localStorage.getItem('vimavima_track') || null
+        });
+      } else {
+        setUser(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+  // 
   const [darkMode,setDarkMode]=useState(true);
   const T=darkMode?DARK:LIGHT;
   const mode = user?.track || "USMLE";
@@ -1067,7 +1093,10 @@ export default function App(){
   const filteredQ=allQ.filter(q=>(filterSubject==="All"||q.subject===filterSubject)&&(filterResult==="All"||q.result===filterResult.toLowerCase()));
 
   // Show auth if not logged in
-  if(!user) return <AuthScreen T={T} onAuth={(u)=>{ setUser(u); }} />;
+  if(!user) return <AuthScreen T={T} onAuth={(u)=>{ 
+    localStorage.setItem('vimavima_track', u.track);
+    setUser(u); 
+  }} />;
   if(!splashDone) return <SplashScreen dark={darkMode} onDone={()=>setSplashDone(true)}/>;
 
   if(view==="session"&&activeSess) return (
