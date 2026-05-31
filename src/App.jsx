@@ -1020,6 +1020,31 @@ function AuthScreen({ onAuth, T }) {
 export default function App(){
   const [splashDone,setSplashDone]=useState(false);
   const [user,setUser]=useState(null);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const savedTrack = localStorage.getItem('vimavima_track');
+        setUser({
+          name: session.user.user_metadata?.full_name || session.user.email,
+          email: session.user.email,
+          track: savedTrack || null
+        });
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const savedTrack = localStorage.getItem('vimavima_track');
+        setUser({
+          name: session.user.user_metadata?.full_name || session.user.email,
+          email: session.user.email,
+          track: savedTrack || null
+        });
+      } else {
+        setUser(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   // ← ADD THIS BLOCK
   useEffect(() => {
