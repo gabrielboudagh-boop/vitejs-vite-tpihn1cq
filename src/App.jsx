@@ -865,6 +865,13 @@ function AuthScreen({ onAuth, T }) {
     }
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    localStorage.removeItem('vimavima_track'); // Clear their track choice
+    window.location.reload(); // Refresh to clean the slate
+  };
+
   const handleSubmit = () => {
     if (!email || !pass) {
       setError("Please fill in all fields.");
