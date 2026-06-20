@@ -1021,42 +1021,34 @@ function AuthScreen({ onAuth, T }) {
 // ── MAIN APP ───────────────────────────────────────────────────────────────────
 export default function App(){
   const [splashDone,setSplashDone]=useState(false);
-  const [user,setUser]=useState(null);
- // REWRITTEN AUTH SEED LOGIC
-useEffect(() => {
-  // Create a helper function to avoid repeating code
-  const handleUserSession = (session) => {
-    if (session?.user) {
-      const savedTrack = localStorage.getItem('vimavima_track');
-      
-      setUser({
-        name: session.user.user_metadata?.full_name || session.user.email,
-        email: session.user.email,
-        track: savedTrack || null
-      });
+  const [user, setUser] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-      // If they haven't picked an exam track yet, force the onboarding screen!
-      if (!savedTrack) {
-        setScreen("onboarding");
+  useEffect(() => {
+    const handleUserSession = (session) => {
+      if (session?.user) {
+        const savedTrack = localStorage.getItem('vimavima_track');
+        setUser({
+          name: session.user.user_metadata?.full_name || session.user.email,
+          email: session.user.email,
+          track: savedTrack || null
+        });
+      } else {
+        setUser(null);
       }
-    } else {
-      setUser(null);
-      setScreen("login"); // Send back to login if they log out
-    }
-  };
+      setIsAuthLoading(false);
+    };
 
-  // 1. Check initial session on boot
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    handleUserSession(session);
-  });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleUserSession(session);
+    });
 
-  // 2. Listen to active log-in changes (like returning from Google OAuth)
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-    handleUserSession(session);
-  });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleUserSession(session);
+    });
 
-  return () => subscription.unsubscribe();
-}, []);
+    return () => subscription.unsubscribe();
+  }, []);
 
   // 
   const [darkMode,setDarkMode]=useState(true);
@@ -1105,27 +1097,32 @@ useEffect(() => {
   const cfg=MODES[mode];
   const filteredQ=allQ.filter(q=>(filterSubject==="All"||q.subject===filterSubject)&&(filterResult==="All"||q.result===filterResult.toLowerCase()));
 
-// Show auth if not logged in
-if(!user) return <AuthScreen T={T} onAuth={(u)=>{ 
-  localStorage.setItem('vimavima_track', u.track);
-  setUser(u); 
-}} />;
+// 1. Show loading screen while checking Supabase
+if (isAuthLoading) {
+  return <div style={{ minHeight: "100vh", background: T.bg }}></div>; 
+}
 
-// 🚨 FIXED: Check if user exists but has no track (screen doesn't exist here!)
-if(user && !user.track) {
+// 2. Show auth if not logged in
+if (!user) {
+  return <AuthScreen T={T} onAuth={(u) => { 
+    localStorage.setItem('vimavima_track', u.track);
+    setUser(u); 
+  }} />;
+}
+
+// 3. If the user is logged in but hasn't picked a track yet, show onboarding
+if (user && !user.track) {
   return (
     <div style={{minHeight:"100vh",background:T.bg,color:T.text,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
       <h1 style={{fontSize:24,fontWeight:700,marginBottom:8}}>Welcome to VimaVima</h1>
       <p style={{color:T.muted,marginBottom:32}}>What exam track are you studying for?</p>
       <div style={{display:"flex",gap:16,maxWidth:800,width:"100%",padding:20,justifyContent:"center"}}>
-        {/* FIXED: Using uppercase TRACKS from your constants */}
         {TRACKS.map(tr => {
           return (
             <div 
               key={tr.id} 
               onClick={() => {
                 localStorage.setItem('vimavima_track', tr.id);
-                // FIXED: Removed setScreen('main'), just updating the user track is enough!
                 setUser(prev => ({ ...prev, track: tr.id }));
               }}
               style={{
@@ -1140,7 +1137,6 @@ if(user && !user.track) {
               }}
             >
               <div style={{fontSize:24,marginBottom:8}}>{tr.icon}</div>
-              {/* FIXED: Using tr.label to match your TRACKS array */}
               <div style={{fontWeight:600}}>{tr.label}</div>
             </div>
           );
@@ -1150,7 +1146,8 @@ if(user && !user.track) {
   );
 }
 
-if(!splashDone) return <SplashScreen dark={darkMode} onDone={()=>setSplashDone(true)}/>;
+// 4. Show splash screen before loading the main app
+if (!splashDone) return <SplashScreen dark={darkMode} onDone={() => setSplashDone(true)} />;
 if(view==="session"&&activeSess) return (
   <>
     <SessionDetail session={activeSess} onBack={()=>setView("home")} onAddQuestion={()=>setShowWizard(true)} mode={mode} T={T}/>
