@@ -850,13 +850,15 @@ function AuthScreen({ onAuth, T }) {
   // ✅ SUPABASE LOGIN FUNCTION
   const signInWithProvider = async (provider) => {
     try {
+      // window.location.origin automatically gets your current StackBlitz preview URL or production URL
+      const currentUrl = window.location.origin;
+  
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: 'https://vima-vima.netlify.app'
+          redirectTo: currentUrl,
         }
       });
-
       if (error) setError(error.message);
     } catch (err) {
       setError("Login failed. Try again.");
