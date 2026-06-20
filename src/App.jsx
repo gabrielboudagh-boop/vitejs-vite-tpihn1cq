@@ -1022,31 +1022,41 @@ function AuthScreen({ onAuth, T }) {
 export default function App(){
   const [splashDone,setSplashDone]=useState(false);
   const [user,setUser]=useState(null);
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const savedTrack = localStorage.getItem('vimavima_track');
-        setUser({
-          name: session.user.user_metadata?.full_name || session.user.email,
-          email: session.user.email,
-          track: savedTrack || null
-        });
+ // REWRITTEN AUTH SEED LOGIC
+useEffect(() => {
+  // Create a helper function to avoid repeating code
+  const handleUserSession = (session) => {
+    if (session?.user) {
+      const savedTrack = localStorage.getItem('vimavima_track');
+      
+      setUser({
+        name: session.user.user_metadata?.full_name || session.user.email,
+        email: session.user.email,
+        track: savedTrack || null
+      });
+
+      // If they haven't picked an exam track yet, force the onboarding screen!
+      if (!savedTrack) {
+        setScreen("onboarding");
       }
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const savedTrack = localStorage.getItem('vimavima_track');
-        setUser({
-          name: session.user.user_metadata?.full_name || session.user.email,
-          email: session.user.email,
-          track: savedTrack || null
-        });
-      } else {
-        setUser(null);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+    } else {
+      setUser(null);
+      setScreen("login"); // Send back to login if they log out
+    }
+  };
+
+  // 1. Check initial session on boot
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    handleUserSession(session);
+  });
+
+  // 2. Listen to active log-in changes (like returning from Google OAuth)
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    handleUserSession(session);
+  });
+
+  return () => subscription.unsubscribe();
+}, []);
 
   // 
   const [darkMode,setDarkMode]=useState(true);
@@ -1100,8 +1110,45 @@ export default function App(){
     localStorage.setItem('vimavima_track', u.track);
     setUser(u); 
   }} />;
-  if(!splashDone) return <SplashScreen dark={darkMode} onDone={()=>setSplashDone(true)}/>;
 
+  // If the user is logged in but hasn't picked USMLE/MCAT/LSAT yet, show onboarding!
+  if(screen === 'onboarding') {
+    return (
+      <div style={{minHeight:"100vh",background:T.bg,color:T.text,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+        <h1 style={{fontSize:24,fontWeight:700,marginBottom:8}}>Welcome to VimaVima</h1>
+        <p style={{color:T.muted,marginBottom:32}}>What exam track are you studying for?</p>
+        <div style={{display:"flex",gap:16,maxWidth:800,width:"100%",padding:20,justifyContent:"center"}}>
+          {tracks.map(tr => {
+            return (
+              <div 
+                key={tr.id} 
+                onClick={() => {
+                  localStorage.setItem('vimavima_track', tr.id);
+                  setUser(prev => prev ? { ...prev, track: tr.id } : { name: "User", email: "", track: tr.id });
+                  setScreen('main');
+                }}
+                style={{
+                  background:T.raised,
+                  border:`1px solid ${T.border}`,
+                  borderRadius:12,
+                  padding:24,
+                  textAlign:"center",
+                  cursor:"pointer",
+                  flex:1,
+                  maxWidth:200
+                }}
+              >
+                <div style={{fontSize:24,marginBottom:8}}>{tr.icon}</div>
+                <div style={{fontWeight:600}}>{tr.name}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if(!splashDone) return <SplashScreen dark={darkMode} onDone={()=>setSplashDone(true)}/>;
   if(view==="session"&&activeSess) return (
     <>
       <SessionDetail session={activeSess} onBack={()=>setView("home")} onAddQuestion={()=>setShowWizard(true)} mode={mode} T={T}/>
