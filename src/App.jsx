@@ -1046,30 +1046,6 @@ export default function App(){
     return () => subscription.unsubscribe();
   }, []);
 
-  // ← ADD THIS BLOCK
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser({
-          name: session.user.user_metadata?.full_name || session.user.email,
-          email: session.user.email,
-          track: localStorage.getItem('vimavima_track') || null
-        });
-      }
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser({
-          name: session.user.user_metadata?.full_name || session.user.email,
-          email: session.user.email,
-          track: localStorage.getItem('vimavima_track') || null
-        });
-      } else {
-        setUser(null);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
   // 
   const [darkMode,setDarkMode]=useState(true);
   const T=darkMode?DARK:LIGHT;
