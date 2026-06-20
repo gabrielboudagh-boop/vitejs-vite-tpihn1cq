@@ -1105,57 +1105,58 @@ useEffect(() => {
   const cfg=MODES[mode];
   const filteredQ=allQ.filter(q=>(filterSubject==="All"||q.subject===filterSubject)&&(filterResult==="All"||q.result===filterResult.toLowerCase()));
 
-  // Show auth if not logged in
-  if(!user) return <AuthScreen T={T} onAuth={(u)=>{ 
-    localStorage.setItem('vimavima_track', u.track);
-    setUser(u); 
-  }} />;
+// Show auth if not logged in
+if(!user) return <AuthScreen T={T} onAuth={(u)=>{ 
+  localStorage.setItem('vimavima_track', u.track);
+  setUser(u); 
+}} />;
 
-  // If the user is logged in but hasn't picked USMLE/MCAT/LSAT yet, show onboarding!
-  if(screen === 'onboarding') {
-    return (
-      <div style={{minHeight:"100vh",background:T.bg,color:T.text,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-        <h1 style={{fontSize:24,fontWeight:700,marginBottom:8}}>Welcome to VimaVima</h1>
-        <p style={{color:T.muted,marginBottom:32}}>What exam track are you studying for?</p>
-        <div style={{display:"flex",gap:16,maxWidth:800,width:"100%",padding:20,justifyContent:"center"}}>
-          {tracks.map(tr => {
-            return (
-              <div 
-                key={tr.id} 
-                onClick={() => {
-                  localStorage.setItem('vimavima_track', tr.id);
-                  setUser(prev => prev ? { ...prev, track: tr.id } : { name: "User", email: "", track: tr.id });
-                  setScreen('main');
-                }}
-                style={{
-                  background:T.raised,
-                  border:`1px solid ${T.border}`,
-                  borderRadius:12,
-                  padding:24,
-                  textAlign:"center",
-                  cursor:"pointer",
-                  flex:1,
-                  maxWidth:200
-                }}
-              >
-                <div style={{fontSize:24,marginBottom:8}}>{tr.icon}</div>
-                <div style={{fontWeight:600}}>{tr.name}</div>
-              </div>
-            );
-          })}
-        </div>
+// 🚨 FIXED: Check if user exists but has no track (screen doesn't exist here!)
+if(user && !user.track) {
+  return (
+    <div style={{minHeight:"100vh",background:T.bg,color:T.text,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+      <h1 style={{fontSize:24,fontWeight:700,marginBottom:8}}>Welcome to VimaVima</h1>
+      <p style={{color:T.muted,marginBottom:32}}>What exam track are you studying for?</p>
+      <div style={{display:"flex",gap:16,maxWidth:800,width:"100%",padding:20,justifyContent:"center"}}>
+        {/* FIXED: Using uppercase TRACKS from your constants */}
+        {TRACKS.map(tr => {
+          return (
+            <div 
+              key={tr.id} 
+              onClick={() => {
+                localStorage.setItem('vimavima_track', tr.id);
+                // FIXED: Removed setScreen('main'), just updating the user track is enough!
+                setUser(prev => ({ ...prev, track: tr.id }));
+              }}
+              style={{
+                background:T.raised,
+                border:`1px solid ${T.border}`,
+                borderRadius:12,
+                padding:24,
+                textAlign:"center",
+                cursor:"pointer",
+                flex:1,
+                maxWidth:200
+              }}
+            >
+              <div style={{fontSize:24,marginBottom:8}}>{tr.icon}</div>
+              {/* FIXED: Using tr.label to match your TRACKS array */}
+              <div style={{fontWeight:600}}>{tr.label}</div>
+            </div>
+          );
+        })}
       </div>
-    );
-  }
-
-  if(!splashDone) return <SplashScreen dark={darkMode} onDone={()=>setSplashDone(true)}/>;
-  if(view==="session"&&activeSess) return (
-    <>
-      <SessionDetail session={activeSess} onBack={()=>setView("home")} onAddQuestion={()=>setShowWizard(true)} mode={mode} T={T}/>
-      {showWizard&&<Wizard onClose={()=>setShowWizard(false)} onSave={addQuestion} mode={mode} T={T}/>}
-    </>
+    </div>
   );
+}
 
+if(!splashDone) return <SplashScreen dark={darkMode} onDone={()=>setSplashDone(true)}/>;
+if(view==="session"&&activeSess) return (
+  <>
+    <SessionDetail session={activeSess} onBack={()=>setView("home")} onAddQuestion={()=>setShowWizard(true)} mode={mode} T={T}/>
+    {showWizard&&<Wizard onClose={()=>setShowWizard(false)} onSave={addQuestion} mode={mode} T={T}/>}
+  </>
+);
   return (
     <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'DM Sans',sans-serif",paddingBottom:60}}>
 
