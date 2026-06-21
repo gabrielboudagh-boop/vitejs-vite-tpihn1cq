@@ -1402,7 +1402,7 @@ return (
           </Card>
         </div>
       )}
-      
+      </div>
     </div>
   );
 }
