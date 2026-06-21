@@ -951,6 +951,7 @@ function AuthScreen({ onAuth, T }) {
     marginTop:4,
     opacity:disabled?0.45:1
   });
+
   const oBtn = {
     width:"100%",
     background:T.raised,
@@ -1620,7 +1621,6 @@ return (
           </Card>
         </div>
       )}
-      </div>
     </div>
   );
 }
