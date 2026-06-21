@@ -1165,15 +1165,15 @@ if(view==="session"&&activeSess) return (
     <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'DM Sans',sans-serif",paddingBottom:60}}>
 
       {/* Header */}
-      <div style={{padding:"18px 32px 14px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,background:T.bg}}>
-        <VimaLogo dark={darkMode}/>
-        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          <span style={{background:T.accent+"22",color:T.accent,border:"1px solid "+T.accent+"30",borderRadius:8,padding:"7px 14px",fontSize:12,fontWeight:600}}>{MODES[mode]?.label||mode}</span>
-          <button onClick={()=>setShowNewSession(true)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"7px 14px",fontSize:12,color:T.dim,cursor:"pointer"}}>📁 New Session</button>
-          <button onClick={()=>{if(sessions.length){setActiveId(sessions[sessions.length-1].id);setView("session");setShowWizard(true);}else setShowNewSession(true);}} style={{background:T.accent,border:"none",borderRadius:8,padding:"7px 16px",fontSize:12,color:"#fff",cursor:"pointer",fontWeight:600}}>+ Log Question</button>
-          <button onClick={()=>setDarkMode(d=>!d)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"7px 11px",fontSize:14,cursor:"pointer",color:T.dim}}>{darkMode?"☀":"🌙"}</button>
-        </div>
-      </div>
+      <div style={{
+      width: "100%",          // <--- Changed from fixed constraints
+      minHeight: "100vh",     // Keeps it at least the full window height
+      background: T.bg,       // Keeps your theme background
+      margin: 0,              // Removes external spacing
+      padding: 0,             // Removes internal spacing
+      display: "flex",
+      flexDirection: "column"
+    }}>
 
       {/* Stats */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(155px,1fr))",gap:14,padding:"20px 32px"}}>
