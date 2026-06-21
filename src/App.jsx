@@ -7,6 +7,24 @@ fontLink.rel = "stylesheet";
 fontLink.href = "https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap";
 document.head.appendChild(fontLink);
  
+// Force full-width before React mounts — setProperty is the only reliable way to
+// set !important inline styles, overriding any Vite/index.css max-width rule.
+(function forceFullWidth() {
+  const props = [
+    ['max-width','none'],['width','100%'],['margin','0'],['padding','0']
+  ];
+  [document.documentElement, document.body].forEach(el => {
+    props.forEach(([p,v]) => el.style.setProperty(p,v,'important'));
+  });
+  const root = document.getElementById('root');
+  if (root) props.forEach(([p,v]) => root.style.setProperty(p,v,'important'));
+  // Re-apply after every style mutation (catches Vite HMR re-injections)
+  new MutationObserver(() => {
+    const r = document.getElementById('root');
+    if (r) props.forEach(([p,v]) => r.style.setProperty(p,v,'important'));
+  }).observe(document.head, {childList:true, subtree:true});
+})();
+
 const styleEl = document.createElement("style");
 styleEl.textContent = `
   html, body { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; overflow-x: hidden; }
@@ -1178,11 +1196,19 @@ export default function App(){
 
   // Keep body bg in sync with theme to eliminate white flash
   useEffect(() => {
-    const el = document.documentElement;
-    document.body.style.cssText = `background:${T.bg};margin:0;padding:0;width:100%;max-width:100%;overflow-x:hidden`;
-    el.style.cssText = `background:${T.bg};margin:0;padding:0;width:100%;max-width:100%`;
-    const root = document.getElementById('root');
-    if (root) root.style.cssText = `width:100%;max-width:100%;margin:0;padding:0`;
+    const forceW = (el) => {
+      if (!el) return;
+      el.style.setProperty('max-width','none','important');
+      el.style.setProperty('width','100%','important');
+      el.style.setProperty('margin','0','important');
+      el.style.setProperty('padding','0','important');
+    };
+    document.body.style.setProperty('background', T.bg, 'important');
+    document.body.style.setProperty('overflow-x', 'hidden', 'important');
+    document.documentElement.style.setProperty('background', T.bg, 'important');
+    forceW(document.body);
+    forceW(document.documentElement);
+    forceW(document.getElementById('root'));
   }, [T.bg]);
   const mode = user?.track || "USMLE";
   const [sessionsByMode,setSessionsByMode]=useState(SAMPLE_DATA);
