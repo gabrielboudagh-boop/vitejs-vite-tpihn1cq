@@ -1234,22 +1234,7 @@ return (
     </header>
 
     {/* Main Container Wrapper */}
-    <div style={{ flex: 1, width: "100%", padding: "32px", display: "flex", flexDirection: "column" }}>
-      <button 
-          onClick={handleLogout} 
-          style={{
-            background: T.raised, // Matches your theme
-            border: `1px solid ${T.border}`,
-            color: T.text,
-            padding: "8px 16px",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontWeight: "600"
-          }}
-        >
-          Log Out
-        </button>
-      </div>
+    <div style={{ flex: 1, width: "100%", display: "flex", flexDirection: "column" }}></div>
 
       {/* Stats */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(155px,1fr))",gap:14,padding:"20px 32px"}}>
