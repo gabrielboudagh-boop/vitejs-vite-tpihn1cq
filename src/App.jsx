@@ -892,12 +892,7 @@ function AuthScreen({ onAuth, T }) {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    localStorage.removeItem('vimavima_track'); // Clear their track choice
-    window.location.reload(); // Refresh to clean the slate
-  };
+
 
   const handleSubmit = () => {
     if (!email || !pass) {
@@ -1121,6 +1116,13 @@ export default function App(){
     return{bySubject,byType,byReason,byChange};
   },[allQ]);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    localStorage.removeItem('vimavima_track');
+    window.location.reload();
+  };
+
   function addQuestion(qdata){setSessions(prev=>prev.map(s=>s.id===activeId?{...s,questions:[...s.questions,qdata]}:s));}
   function createSession(){
     if(!newSess.name)return;
@@ -1234,7 +1236,7 @@ return (
     </header>
 
     {/* Main Container Wrapper */}
-    <div style={{ flex: 1, width: "100%", display: "flex", flexDirection: "column" }}></div>
+    <div style={{ flex: 1, width: "100%", display: "flex", flexDirection: "column" }}>
 
       {/* Stats */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(155px,1fr))",gap:14,padding:"20px 32px"}}>
