@@ -1192,7 +1192,7 @@ if(view==="session"&&activeSess) return (
 );
 return (
   <div style={{
-    width: "100vw",
+    width: "100%",
     minHeight: "100vh",
     background: T.bg,
     color: T.text,
@@ -1217,22 +1217,29 @@ return (
         VIMA VIMA <span style={{ fontSize: 12, fontWeight: 400, color: T.muted }}>| {mode}</span>
       </div>
       
-      <button 
-        onClick={handleLogout}
-        style={{
-          background: "transparent",
-          border: `1px solid ${T.border}`,
-          color: T.muted,
-          padding: "6px 14px",
-          borderRadius: "8px",
-          fontSize: "13px",
-          fontWeight: "500",
-        }}
-        onMouseEnter={(e) => { e.target.style.color = "#ef4444"; e.target.style.borderColor = "#fca5a5"; }}
-        onMouseLeave={(e) => { e.target.style.color = T.muted; e.target.style.borderColor = T.border; }}
-      >
-        Log Out
-      </button>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <button
+          onClick={()=>setDarkMode(d=>!d)}
+          style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"6px 12px",color:T.dim,fontSize:16,cursor:"pointer",lineHeight:1}}
+          title="Toggle light/dark mode"
+        >{darkMode?"☀️":"🌙"}</button>
+        <button 
+          onClick={handleLogout}
+          style={{
+            background: "transparent",
+            border: `1px solid ${T.border}`,
+            color: T.muted,
+            padding: "6px 14px",
+            borderRadius: "8px",
+            fontSize: "13px",
+            fontWeight: "500",
+          }}
+          onMouseEnter={(e) => { e.target.style.color = "#ef4444"; e.target.style.borderColor = "#fca5a5"; }}
+          onMouseLeave={(e) => { e.target.style.color = T.muted; e.target.style.borderColor = T.border; }}
+        >
+          Log Out
+        </button>
+      </div>
     </header>
 
     {/* Main Container Wrapper */}
@@ -1252,6 +1259,9 @@ return (
       <div style={{padding:"20px 32px"}}>
         {/* SESSIONS */}
         {tab==="sessions"&&(<>
+          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
+            <button onClick={()=>setShowNewSession(true)} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 20px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>+ New Session</button>
+          </div>
           {sessions.length===0&&<div style={{textAlign:"center",color:T.muted,padding:"50px 0",fontSize:13}}>No {mode} sessions yet. Create your first session!</div>}
           {[...sessions].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(s=>{
             const c=s.questions.filter(q=>q.result==="correct").length,p=pct(c,s.questions.length);
