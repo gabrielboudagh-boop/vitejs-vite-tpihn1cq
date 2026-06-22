@@ -1211,7 +1211,29 @@ export default function App(){
     forceW(document.getElementById('root'));
   }, [T.bg]);
   const mode = user?.track || "USMLE";
-  const [sessionsByMode,setSessionsByMode]=useState(SAMPLE_DATA);
+
+  // ── Persistent sessions: load from localStorage when user signs in ────────
+  const [sessionsByMode,setSessionsByMode]=useState({USMLE:[],MCAT:[],LSAT:[]});
+
+  // Load this user's saved data whenever they log in (or email changes)
+  useEffect(() => {
+    if (!user?.email) return;
+    const key = `vimavima_data_${user.email}`;
+    try {
+      const raw = localStorage.getItem(key);
+      setSessionsByMode(raw ? JSON.parse(raw) : {USMLE:[],MCAT:[],LSAT:[]});
+    } catch { setSessionsByMode({USMLE:[],MCAT:[],LSAT:[]}); }
+  }, [user?.email]);
+
+  // Save every change back to localStorage immediately
+  useEffect(() => {
+    if (!user?.email) return;
+    try {
+      localStorage.setItem(`vimavima_data_${user.email}`, JSON.stringify(sessionsByMode));
+    } catch {}
+  }, [sessionsByMode, user?.email]);
+  // ─────────────────────────────────────────────────────────────────────────
+
   const sessions=sessionsByMode[mode]||[];
   const setSessions=(upd)=>setSessionsByMode(prev=>({...prev,[mode]:typeof upd==="function"?upd(prev[mode]):upd}));
   const [view,setView]=useState("home");
