@@ -118,14 +118,14 @@ const QBANKS_MAP = {
 const pct = (c,t) => t ? Math.round((c/t)*100) : 0;
  
 // ── Themes ───────────────────────────────────────────────────────────────────
-const COLORS = ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd']; // Modern blue shades
+const COLORS = ['#5b8fbd', '#8272c2', '#4da6a0', '#9668b2'];
 const DARK = {
   bg:"#07090f", surface:"#0d1020", raised:"#131728",
   border:"rgba(100,140,255,0.09)", borderHov:"rgba(100,140,255,0.22)",
   text:"#dce8ff", muted:"#4e6080", dim:"#8aa0c0",
   accent:"#3b6eff", accentGlow:"rgba(59,110,255,0.18)",
-  success:"#22c55e", danger:"#ef4444", warn:"#f59e0b", gold:"#C9A84C",
-  scoreColor:(p)=>p>=75?"#22c55e":p>=60?"#f59e0b":"#ef4444",
+  success:"#3dab80", danger:"#c86060", warn:"#b8943a", gold:"#a88e50",
+  scoreColor:(p)=>p>=75?"#3dab80":p>=60?"#b8943a":"#c86060",
   name:"dark",
 };
 const LIGHT = {
@@ -133,18 +133,18 @@ const LIGHT = {
   border:"rgba(0,0,0,0.07)", borderHov:"rgba(0,0,0,0.16)",
   text:"#0a0d1a", muted:"#9ba8be", dim:"#4a5568",
   accent:"#0055d4", accentGlow:"rgba(0,85,212,0.10)",
-  success:"#16a34a", danger:"#dc2626", warn:"#d97706", gold:"#b8860b",
-  scoreColor:(p)=>p>=75?"#16a34a":p>=60?"#d97706":"#dc2626",
+  success:"#2a8a60", danger:"#a84848", warn:"#9a7828", gold:"#8a7020",
+  scoreColor:(p)=>p>=75?"#2a8a60":p>=60?"#9a7828":"#a84848",
   name:"light",
 };
  
 const subjColors = {
-  Cardiology:"#3b82f6",Pulmonology:"#06b6d4",Neurology:"#8b5cf6","OB/GYN":"#ec4899",
-  GI:"#f59e0b",Renal:"#14b8a6",MSK:"#84cc16",Derm:"#f97316","Heme/Onc":"#ef4444",
-  ID:"#10b981",Endo:"#c084fc",Peds:"#fb923c",Psych:"#e879f9",Surgery:"#64748b",
-  "Biostats/Ethics":"#64748b",Other:"#6b7280",
-  "C/P":"#60a5fa","CARS":"#34d399","B/B":"#a78bfa","Psych/Soc":"#f472b6",
-  "Logical Reasoning":"#fb923c","Analytical Reasoning":"#4ade80","Reading Comprehension":"#c084fc",
+  Cardiology:"#5b8fbd",  Pulmonology:"#4da6a0",  Neurology:"#8272c2",  "OB/GYN":"#b878a0",
+  GI:"#a89040",          Renal:"#40a8a0",          MSK:"#7a9860",          Derm:"#b88860",
+  "Heme/Onc":"#a86060", ID:"#40a878",             Endo:"#8878c0",         Peds:"#b09060",
+  Psych:"#9868b0",       Surgery:"#6888a0",        "Biostats/Ethics":"#6888a0", Other:"#6a7e90",
+  "C/P":"#5b8fbd","CARS":"#40a878","B/B":"#8272c2","Psych/Soc":"#b878a0",
+  "Logical Reasoning":"#a89040","Analytical Reasoning":"#4da6a0","Reading Comprehension":"#8878c0",
 };
  
 // ── Splash Screen ─────────────────────────────────────────────────────────────
@@ -394,7 +394,7 @@ function BarRow({label,p,T}){
 }
 
 // ── Chart helpers (avoid IIFE pattern in JSX) ──────────────────────────────
-const REASON_COLORS = ["#ef4444","#f59e0b","#fb923c","#8b5cf6"];
+const REASON_COLORS = ["#a86060","#a89040","#b88860","#8272c2"];
 
 function WrongReasonDonut({byReason, T, size=140, inner=44, outer=62}) {
   const entries = Object.entries(byReason);
