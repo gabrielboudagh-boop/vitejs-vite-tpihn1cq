@@ -1005,17 +1005,32 @@ function AuthScreen({ onAuth, T }) {
     }
   };
 
-  const handleSubmit = () => {
-    if (!email || !pass) {
-      setError("Please fill in all fields.");
-      return;
-    }
-    if (screen==="signup" && !name) {
-      setError("Please enter your name.");
-      return;
-    }
+  const handleSubmit = async () => {
+    if (!email || !pass) { setError("Please fill in all fields."); return; }
+    if (screen === "signup" && !name) { setError("Please enter your name."); return; }
     setError("");
-    setScreen("onboarding");
+
+    try {
+      if (screen === "signup") {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password: pass,
+          options: { data: { full_name: name } }
+        });
+        if (error) { setError(error.message); return; }
+        setError("✅ Check your email to confirm your account, then log in.");
+        setScreen("login");
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password: pass
+        });
+        if (error) { setError(error.message); return; }
+        setScreen("onboarding");
+      }
+    } catch (err) {
+      setError("Something went wrong. Try again.");
+    }
   };
 
   // ── ONBOARDING SCREEN ───────────────────────────────
@@ -1098,16 +1113,6 @@ function AuthScreen({ onAuth, T }) {
         {/* GOOGLE */}
         <button style={oBtn} onClick={() => signInWithProvider('google')}>
           Continue with Google
-        </button>
-
-        {/* APPLE */}
-        <button style={oBtn} onClick={() => signInWithProvider('apple')}>
-          Continue with Apple
-        </button>
-
-        {/* GITHUB (replaces Yahoo) */}
-        <button style={oBtn} onClick={() => signInWithProvider('github')}>
-          Continue with GitHub
         </button>
 
         <div style={{ display:"flex", alignItems:"center", gap:12, margin:"18px 0" }}>
