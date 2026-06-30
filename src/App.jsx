@@ -1005,17 +1005,31 @@ function AuthScreen({ onAuth, T }) {
     }
   };
 
-  const handleSubmit = () => {
-    if (!email || !pass) {
-      setError("Please fill in all fields.");
-      return;
-    }
-    if (screen==="signup" && !name) {
-      setError("Please enter your name.");
-      return;
-    }
+  const handleSubmit = async () => {
+    if (!email || !pass) { setError("Please fill in all fields."); return; }
+    if (screen === "signup" && !name) { setError("Please enter your name."); return; }
     setError("");
-    setScreen("onboarding");
+
+    try {
+      if (screen === "signup") {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password: pass,
+          options: { data: { full_name: name } }
+        });
+        if (error) { setError(error.message); return; }
+        // onAuthStateChange in App handles the transition
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password: pass
+        });
+        if (error) { setError(error.message); return; }
+        // onAuthStateChange in App handles the transition
+      }
+    } catch (err) {
+      setError("Something went wrong. Try again.");
+    }
   };
 
   // ── ONBOARDING SCREEN ───────────────────────────────
@@ -1098,16 +1112,6 @@ function AuthScreen({ onAuth, T }) {
         {/* GOOGLE */}
         <button style={oBtn} onClick={() => signInWithProvider('google')}>
           Continue with Google
-        </button>
-
-        {/* APPLE */}
-        <button style={oBtn} onClick={() => signInWithProvider('apple')}>
-          Continue with Apple
-        </button>
-
-        {/* GITHUB (replaces Yahoo) */}
-        <button style={oBtn} onClick={() => signInWithProvider('github')}>
-          Continue with GitHub
         </button>
 
         <div style={{ display:"flex", alignItems:"center", gap:12, margin:"18px 0" }}>
@@ -1242,6 +1246,7 @@ export default function App(){
   const [showNewSession,setShowNewSession]=useState(false);
   const [newSess,setNewSess]=useState({name:"",date:""});
   const [tab,setTab]=useState("sessions");
+  const [analyticsTab,setAnalyticsTab]=useState("overview");
   const [filterSubject,setFilterSubject]=useState("All");
   const [filterResult,setFilterResult]=useState("All");
 
@@ -1496,99 +1501,108 @@ return (
 
         {/* ANALYTICS */}
         {tab==="analytics"&&(<>
-          {/* Summary metric cards */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:24}}>
-            {[
-              {l:"Correct → Wrong",v:allQ.filter(q=>q.answerChange==="Correct → Incorrect").length,c:T.danger,icon:"📉"},
-              {l:"Wrong → Correct",v:allQ.filter(q=>q.answerChange==="Incorrect → Correct").length,c:T.success,icon:"📈"},
-              {l:"Didn't Know",v:allQ.filter(q=>q.wrongReason==="Didn't know the material").length,c:T.danger,icon:"📚"},
-              {l:"Wrong Algorithm",v:allQ.filter(q=>q.wrongReason==="Knew material, wrong algorithm").length,c:T.warn,icon:"🧠"},
-              {l:"Silly Mistake",v:allQ.filter(q=>q.wrongReason==="Silly mistake / misread").length,c:"#fb923c",icon:"😅"},
-              {l:"Ran Out of Time",v:allQ.filter(q=>q.wrongReason==="Ran out of time").length,c:T.warn,icon:"⏰"},
-            ].map(item=>(
-              <Card key={item.l} T={T} style={{padding:"16px 18px"}}>
-                <div style={{fontSize:10,color:T.muted,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-                  <span>{item.icon}</span>
-                  <span style={{letterSpacing:"0.4px",textTransform:"uppercase"}}>{item.l}</span>
-                </div>
-                <div style={{fontSize:28,fontWeight:700,color:item.c,lineHeight:1}}>{item.v}</div>
-              </Card>
+          {/* Sub-tab bar */}
+          <div style={{display:"flex",gap:4,marginBottom:20,background:T.raised,borderRadius:10,padding:4,width:"fit-content"}}>
+            {[["overview","Overview"],["mistakes","Mistakes"],["subjects","Subjects"]].map(([id,label])=>(
+              <button key={id} onClick={()=>setAnalyticsTab(id)} style={{background:analyticsTab===id?T.surface:"transparent",border:analyticsTab===id?`1px solid ${T.border}`:"1px solid transparent",borderRadius:7,padding:"7px 18px",fontSize:13,fontWeight:analyticsTab===id?600:400,color:analyticsTab===id?T.text:T.muted,cursor:"pointer",transition:"all 0.15s",boxShadow:analyticsTab===id?"0 1px 3px rgba(0,0,0,0.18)":"none"}}>{label}</button>
             ))}
           </div>
 
-          {/* Main charts row */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
-
-            {/* Overall donut */}
-            <Card T={T} style={{padding:"24px 22px"}}>
-              <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:20}}>Overall Performance</div>
-              {allQ.length===0 ? <div style={{textAlign:"center",color:T.muted,padding:"40px 0",fontSize:12}}>No data yet.</div> : (
-                <div style={{display:"flex",alignItems:"center",gap:24}}>
-                  <div style={{position:"relative",width:160,height:160,flexShrink:0}}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={[{name:"Correct",value:totalC},{name:"Incorrect",value:allQ.length-totalC}]}
-                          cx="50%" cy="50%" innerRadius={52} outerRadius={72} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
-                          <Cell fill={T.success}/>
-                          <Cell fill={darkMode?"#1e293b":"#e5e7eb"}/>
-                        </Pie>
-                        <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:12,color:T.text}}/>
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
-                      <div style={{fontSize:26,fontWeight:800,color:T.scoreColor(overallPct),lineHeight:1}}>{overallPct}%</div>
-                      <div style={{fontSize:10,color:T.muted,marginTop:3}}>correct</div>
-                    </div>
-                  </div>
-                  <div style={{flex:1}}>
-                    {[{label:"Correct",val:totalC,color:T.success},{label:"Incorrect",val:allQ.length-totalC,color:T.danger},{label:"Total",val:allQ.length,color:T.dim}].map(({label,val,color})=>(
-                      <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${T.border}`}}>
-                        <span style={{fontSize:12,color:T.muted}}>{label}</span>
-                        <span style={{fontSize:16,fontWeight:700,color}}>{val}</span>
+          {/* OVERVIEW sub-tab */}
+          {analyticsTab==="overview"&&(<>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+              {/* Overall donut */}
+              <Card T={T} style={{padding:"24px 22px"}}>
+                <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:20}}>Overall Performance</div>
+                {allQ.length===0 ? <div style={{textAlign:"center",color:T.muted,padding:"40px 0",fontSize:12}}>No data yet.</div> : (
+                  <div style={{display:"flex",alignItems:"center",gap:24}}>
+                    <div style={{position:"relative",width:160,height:160,flexShrink:0}}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={[{name:"Correct",value:totalC},{name:"Incorrect",value:allQ.length-totalC}]}
+                            cx="50%" cy="50%" innerRadius={52} outerRadius={72} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
+                            <Cell fill={T.success}/>
+                            <Cell fill={darkMode?"#1e293b":"#e5e7eb"}/>
+                          </Pie>
+                          <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:12,color:T.text}}/>
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+                        <div style={{fontSize:26,fontWeight:800,color:T.scoreColor(overallPct),lineHeight:1}}>{overallPct}%</div>
+                        <div style={{fontSize:10,color:T.muted,marginTop:3}}>correct</div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            {/* Why wrong donut */}
-            <Card T={T} style={{padding:"24px 22px"}}>
-              <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:20}}>Why You Got It Wrong</div>
-              <WrongReasonDonut byReason={analytics.byReason} T={T} size={140} inner={44} outer={62}/>
-            </Card>
-          </div>
-
-          {/* Subject + Type pie charts */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
-            {[{title:"Score by Subject",data:analytics.bySubject},{title:"Score by Question Type",data:analytics.byType}].map(({title,data:d})=>(
-              <Card key={title} T={T} style={{padding:"22px 20px"}}>
-                <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:18}}>{title}</div>
-                <SubjectPieChart data={d} T={T}/>
-              </Card>
-            ))}
-          </div>
-
-          {/* Answer change patterns */}
-          <Card T={T} style={{padding:"22px 20px"}}>
-            <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>Answer Change Patterns</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12}}>
-              {ANSWER_CHANGES.filter(a=>a!=="No change").map(a=>{
-                const cnt=allQ.filter(q=>q.answerChange===a).length;
-                const color=a==="Incorrect → Correct"?T.success:a==="Correct → Incorrect"?T.danger:T.warn;
-                const icon=a==="Incorrect → Correct"?"📈":a==="Correct → Incorrect"?"📉":"↔️";
-                return (
-                  <div key={a} style={{background:color+"12",border:`1px solid ${color}28`,borderRadius:10,padding:"14px 16px",display:"flex",alignItems:"center",gap:12}}>
-                    <span style={{fontSize:20}}>{icon}</span>
-                    <div>
-                      <div style={{fontSize:10,color:T.muted,marginBottom:3,letterSpacing:"0.3px"}}>{a}</div>
-                      <div style={{fontSize:22,fontWeight:700,color,lineHeight:1}}>{cnt}</div>
+                    </div>
+                    <div style={{flex:1}}>
+                      {[{label:"Correct",val:totalC,color:T.success},{label:"Incorrect",val:allQ.length-totalC,color:T.danger},{label:"Total",val:allQ.length,color:T.dim}].map(({label,val,color})=>(
+                        <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${T.border}`}}>
+                          <span style={{fontSize:12,color:T.muted}}>{label}</span>
+                          <span style={{fontSize:16,fontWeight:700,color}}>{val}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                );
-              })}
+                )}
+              </Card>
+              {/* Answer change summary */}
+              <Card T={T} style={{padding:"24px 22px"}}>
+                <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:20}}>Answer Changes</div>
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {ANSWER_CHANGES.filter(a=>a!=="No change").map(a=>{
+                    const cnt=allQ.filter(q=>q.answerChange===a).length;
+                    const color=a==="Incorrect → Correct"?T.success:a==="Correct → Incorrect"?T.danger:T.warn;
+                    const icon=a==="Incorrect → Correct"?"📈":a==="Correct → Incorrect"?"📉":"↔️";
+                    return (
+                      <div key={a} style={{background:color+"12",border:`1px solid ${color}28`,borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
+                        <span style={{fontSize:18}}>{icon}</span>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:11,color:T.muted,letterSpacing:"0.3px"}}>{a}</div>
+                        </div>
+                        <div style={{fontSize:22,fontWeight:700,color,lineHeight:1}}>{cnt}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
             </div>
-          </Card>
+          </>)}
+
+          {/* MISTAKES sub-tab */}
+          {analyticsTab==="mistakes"&&(<>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+              <Card T={T} style={{padding:"24px 22px"}}>
+                <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:20}}>Why You Got It Wrong</div>
+                <WrongReasonDonut byReason={analytics.byReason} T={T} size={140} inner={44} outer={62}/>
+              </Card>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,alignContent:"start"}}>
+                {[
+                  {l:"Didn't Know",v:allQ.filter(q=>q.wrongReason==="Didn't know the material").length,c:T.danger,icon:"📚"},
+                  {l:"Wrong Algorithm",v:allQ.filter(q=>q.wrongReason==="Knew material, wrong algorithm").length,c:T.warn,icon:"🧠"},
+                  {l:"Silly Mistake",v:allQ.filter(q=>q.wrongReason==="Silly mistake / misread").length,c:"#fb923c",icon:"😅"},
+                  {l:"Ran Out of Time",v:allQ.filter(q=>q.wrongReason==="Ran out of time").length,c:T.warn,icon:"⏰"},
+                ].map(item=>(
+                  <Card key={item.l} T={T} style={{padding:"16px 18px"}}>
+                    <div style={{fontSize:10,color:T.muted,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                      <span>{item.icon}</span>
+                      <span style={{letterSpacing:"0.4px",textTransform:"uppercase"}}>{item.l}</span>
+                    </div>
+                    <div style={{fontSize:28,fontWeight:700,color:item.c,lineHeight:1}}>{item.v}</div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </>)}
+
+          {/* SUBJECTS sub-tab */}
+          {analyticsTab==="subjects"&&(<>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+              {[{title:"Score by Subject",data:analytics.bySubject},{title:"Score by Question Type",data:analytics.byType}].map(({title,data:d})=>(
+                <Card key={title} T={T} style={{padding:"22px 20px"}}>
+                  <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:18}}>{title}</div>
+                  <SubjectPieChart data={d} T={T}/>
+                </Card>
+              ))}
+            </div>
+          </>)}
         </>)}
 
         {/* FLASHCARDS */}
