@@ -147,6 +147,26 @@ const subjColors = {
   "Logical Reasoning":"#a89040","Analytical Reasoning":"#4da6a0","Reading Comprehension":"#8878c0",
 };
  
+// ── AdBanner ─────────────────────────────────────────────────────────────────
+function AdBanner({ style = {} }) {
+  useEffect(() => {
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {}
+  }, []);
+  return (
+    <div style={{ width: "100%", overflow: "hidden", ...style }}>
+      <ins
+        className="adsbygoogle"
+        style={{ display: "block" }}
+        data-ad-client="ca-pub-4179326594130154"
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </div>
+  );
+}
+
 // ── Splash Screen ─────────────────────────────────────────────────────────────
 function SplashScreen({ dark, onDone }) {
   const [phase, setPhase] = useState("in");
@@ -602,6 +622,7 @@ function SessionDetail({session,onBack,onAddQuestion,mode,T}){
         <StatCard T={T} label="Incorrect" value={qs.length-correct} sub="questions"/>
         <StatCard T={T} label="Changed → Wrong" value={changedWrong} sub="trust your gut" color={T.danger}/>
       </div>
+      <AdBanner style={{ padding: "0 32px 4px" }} />
       <TabBar T={T} tabs={[["questions","≡  Questions"],["analytics","📊  Analytics"]]} active={tab} onChange={setTab} style={{padding:"0 32px"}}/>
       <div style={{padding:"18px 32px"}}>
         {tab==="questions"&&(<>
@@ -1194,6 +1215,17 @@ export default function App(){
     return () => subscription.unsubscribe();
   }, []);
 
+  // Inject AdSense script once the user is authenticated (not on login screen)
+  useEffect(() => {
+    if (!user) return;
+    if (document.querySelector('script[src*="adsbygoogle"]')) return;
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4179326594130154";
+    script.crossOrigin = "anonymous";
+    document.head.appendChild(script);
+  }, [user]);
+
   // 
   const [darkMode,setDarkMode]=useState(true);
   const T=darkMode?DARK:LIGHT;
@@ -1434,6 +1466,8 @@ return (
         <StatCard T={T} label="Recent 20" value={`${recentPct}%`} sub={`${recentQs.filter(q=>q.result==="correct").length}/${recentQs.length}`} color={T.scoreColor(recentPct)}/>
         <StatCard T={T} label="Changed → Wrong" value={changedWrong} sub="Trust your gut!" color={T.danger}/>
       </div>
+
+      <AdBanner style={{ padding: "0 32px 4px" }} />
 
       {/* Tabs */}
       <TabBar T={T} tabs={[["sessions","📁  Sessions"],["topics","🔍  Topics"],["analytics","📊  Analytics"],["flashcards",`⚡  Flashcards${ankiTotal>0?" ("+ankiTotal+")":""}`]]} active={tab} onChange={setTab} style={{padding:"0 32px"}}/>
