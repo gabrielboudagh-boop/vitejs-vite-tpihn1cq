@@ -147,6 +147,26 @@ const subjColors = {
   "Logical Reasoning":"#a89040","Analytical Reasoning":"#4da6a0","Reading Comprehension":"#8878c0",
 };
  
+// ── AdBanner ─────────────────────────────────────────────────────────────────
+function AdBanner({ style = {} }) {
+  useEffect(() => {
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {}
+  }, []);
+  return (
+    <div style={{ width: "100%", overflow: "hidden", ...style }}>
+      <ins
+        className="adsbygoogle"
+        style={{ display: "block" }}
+        data-ad-client="ca-pub-4179326594130154"
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </div>
+  );
+}
+
 // ── Splash Screen ─────────────────────────────────────────────────────────────
 function SplashScreen({ dark, onDone }) {
   const [phase, setPhase] = useState("in");
@@ -462,11 +482,11 @@ function SubjectPieChart({data, T}) {
 
 // ── WIZARD ────────────────────────────────────────────────────────────────────
 const STEPS=["result","time","change","why","category","anki","summary","notes"];
-const STEP_LABELS=["Correct or incorrect?","Time taken","Answer changed?","Why?","Subject & Category","Flashcard (1-liner)","Question summary","Reflection & notes"];
+const STEP_LABELS=["Correct or incorrect?","Time taken","Answer changed?","Why?","Subject & Category","Flashcard (front & back)","Question summary","Reflection & notes"];
 
 function Wizard({onClose,onSave,mode,T}){
   const [step,setStep]=useState(0);
-  const [data,setData]=useState({result:"",time:"",answerChange:"",wrongReason:"",correctReason:"",subject:"",qtype:"",concept:"",qnum:"",qbank:"",ankiFront:"",summary:"",resource:"",notes:""});
+  const [data,setData]=useState({result:"",time:"",answerChange:"",wrongReason:"",correctReason:"",subject:"",qtype:"",concept:"",qnum:"",qbank:"",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""});
   const [aiText,setAiText]=useState(""); const [aiLoading,setAiLoading]=useState(false);
   const [aiAnki,setAiAnki]=useState(""); const [ankiLoading,setAnkiLoading]=useState(false);
   const cfg=MODES[mode];
@@ -522,31 +542,45 @@ function Wizard({onClose,onSave,mode,T}){
           {s==="anki"&&(<>
             <div style={{textAlign:"center",marginBottom:20}}>
               <div style={{fontSize:34,marginBottom:8}}>⚡</div>
-              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Anki One-Liner</div>
-              <div style={{fontSize:13,color:T.muted}}>A concise cue for your flashcard front</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Flashcard</div>
+              <div style={{fontSize:13,color:T.muted}}>Front question + back answer</div>
             </div>
-            {/* 1. Write your own — shown first */}
-            <Lbl T={T}>Write your own 1-liner</Lbl>
-            <Inp T={T} placeholder="e.g. 55M jaw claudication + vision loss → next step?" value={data.ankiFront} onChange={e=>set("ankiFront",e.target.value)} style={{marginBottom:14}}/>
-            {/* 2. AI suggestion */}
-            <div style={{background:T.raised,border:"1px solid "+T.border,borderRadius:10,padding:"12px 14px",marginBottom:14}}>
-              <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:8}}>✨ AI SUGGESTED</div>
+
+            {/* FRONT */}
+            <Lbl T={T}>Front — Question / Cue</Lbl>
+            <Inp T={T} placeholder="e.g. 55M jaw claudication + vision loss → next step?" value={data.ankiFront} onChange={e=>set("ankiFront",e.target.value)} style={{marginBottom:8}}/>
+            {/* AI suggestion */}
+            <div style={{background:T.raised,border:"1px solid "+T.border,borderRadius:10,padding:"10px 14px",marginBottom:16}}>
+              <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:6}}>✨ AI SUGGESTED FRONT</div>
               {ankiLoading?<div style={{color:T.muted,fontSize:12,fontStyle:"italic"}}>Generating suggestion...</div>
               :aiAnki?<><div style={{fontSize:13,color:T.text,lineHeight:1.5,marginBottom:8}}>{aiAnki}</div><button onClick={()=>set("ankiFront",aiAnki)} style={{background:T.accent,border:"none",borderRadius:6,padding:"5px 12px",color:"#fff",fontSize:11,cursor:"pointer"}}>Use this →</button></>
               :<div style={{fontSize:12,color:T.muted}}>Fill in concept on previous step for a suggestion.</div>}
             </div>
-            {/* 3. Preview card — shown last */}
-            <div style={{background:T.name==="dark"?"#0a1628":"#fff8e6",border:"1px solid "+(T.name==="dark"?"#c9a84c40":"#c9a84c60"),borderRadius:12,padding:"16px 18px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                <span style={{fontSize:13}}>🃏</span>
-                <span style={{fontSize:10,fontWeight:700,color:"#c9a84c",letterSpacing:"1px"}}>ANKI ONE-LINER PREVIEW</span>
-                <span style={{fontSize:10,color:T.muted,marginLeft:4}}>— copy into your card</span>
+
+            {/* BACK */}
+            <Lbl T={T}>Back — Answer</Lbl>
+            <Inp T={T} placeholder="e.g. Giant cell arteritis → temporal artery biopsy" value={data.ankiBack} onChange={e=>set("ankiBack",e.target.value)} style={{marginBottom:16}}/>
+
+            {/* Preview — both sides */}
+            {(data.ankiFront||data.ankiBack)&&(
+            <div style={{background:T.name==="dark"?"#0a1628":"#fff8e6",border:"1px solid "+(T.name==="dark"?"#c9a84c40":"#c9a84c60"),borderRadius:12,padding:"14px 16px"}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#c9a84c",letterSpacing:"1px",marginBottom:10}}>🃏 PREVIEW</div>
+              {/* front row */}
+              <div style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}>
+                <span style={{fontSize:9,color:T.muted,letterSpacing:"0.6px",textTransform:"uppercase",minWidth:38,paddingTop:2}}>Front</span>
+                <span style={{fontSize:13,fontWeight:600,color:T.name==="dark"?"#fde68a":T.text,lineHeight:1.45,flex:1}}>{data.ankiFront||<em style={{color:T.muted,fontWeight:400}}>empty</em>}</span>
               </div>
-              {data.ankiFront
-                ? <div style={{fontSize:14,fontWeight:600,color:T.name==="dark"?"#fde68a":T.text,lineHeight:1.55,marginBottom:10}}>{data.ankiFront}</div>
-                : <div style={{fontSize:13,color:T.muted,fontStyle:"italic",marginBottom:10}}>Your 1-liner will appear here as you type...</div>}
-              {data.ankiFront && <button onClick={()=>navigator.clipboard?.writeText(data.ankiFront)} style={{background:"#c9a84c",border:"none",borderRadius:6,padding:"5px 12px",color:"#000",fontSize:11,fontWeight:700,cursor:"pointer"}}>📋 Copy</button>}
-            </div>
+              <div style={{borderTop:"1px solid "+(T.name==="dark"?"#c9a84c30":"#c9a84c50"),margin:"8px 0"}}/>
+              {/* back row */}
+              <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                <span style={{fontSize:9,color:T.muted,letterSpacing:"0.6px",textTransform:"uppercase",minWidth:38,paddingTop:2}}>Back</span>
+                <span style={{fontSize:13,color:T.name==="dark"?"#a5f3b4":"#166534",lineHeight:1.45,flex:1}}>{data.ankiBack||<em style={{color:T.muted,fontWeight:400}}>empty</em>}</span>
+              </div>
+              <div style={{display:"flex",gap:8,marginTop:10}}>
+                {data.ankiFront&&<button onClick={()=>navigator.clipboard?.writeText(data.ankiFront)} style={{background:"#c9a84c",border:"none",borderRadius:6,padding:"4px 10px",color:"#000",fontSize:10,fontWeight:700,cursor:"pointer"}}>📋 Copy Front</button>}
+                {data.ankiBack&&<button onClick={()=>navigator.clipboard?.writeText(data.ankiBack)} style={{background:T.success,border:"none",borderRadius:6,padding:"4px 10px",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer"}}>📋 Copy Back</button>}
+              </div>
+            </div>)}
           </>)}
           {s==="summary"&&(<><div style={{textAlign:"center",marginBottom:22}}><div style={{fontSize:34,marginBottom:8}}>📄</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Question Summary</div><div style={{fontSize:13,color:T.muted}}>Brief note on what was asked</div></div><Lbl T={T}>Summary</Lbl><Inp T={T} textarea placeholder="Brief summary..." value={data.summary} onChange={e=>set("summary",e.target.value)} style={{height:110}}/><div style={{marginTop:14}}><Lbl T={T}>Screenshot</Lbl><div style={{border:`1px dashed ${T.border}`,borderRadius:8,padding:"12px 16px",display:"inline-flex",alignItems:"center",gap:8,cursor:"pointer",color:T.muted,fontSize:13}}>📎 Attach screenshot</div></div></>)}
           {s==="notes"&&(<><div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:34,marginBottom:8}}>💡</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Reflection & Notes</div><div style={{fontSize:13,color:T.muted}}>Cement what you learned</div></div><div style={{background:T.name==="dark"?"#0e0e2a":"#eff2ff",border:`1px solid ${T.name==="dark"?"#3730a360":"#c7d2fe"}`,borderRadius:12,padding:"14px 16px",marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span>✨</span><span style={{fontSize:10,fontWeight:700,color:T.name==="dark"?"#a5b4fc":T.accent,letterSpacing:"0.8px"}}>AI STUDY INSIGHT</span></div>{aiLoading?<div style={{color:T.muted,fontSize:12,fontStyle:"italic"}}>Generating...</div>:aiText?<div style={{color:T.name==="dark"?"#c7d2fe":T.dim,fontSize:12,lineHeight:1.75,whiteSpace:"pre-wrap"}}>{aiText}</div>:<div style={{fontSize:12,color:T.muted}}>Fill in subject/concept above.</div>}</div><div style={{marginBottom:14}}><Lbl T={T}>Resource to Review</Lbl><Inp T={T} placeholder="e.g. FA p.342, Pathoma Ch.3..." value={data.resource} onChange={e=>set("resource",e.target.value)}/></div><div><Lbl T={T}>Personal Notes</Lbl><Inp T={T} textarea placeholder="Your own notes..." value={data.notes} onChange={e=>set("notes",e.target.value)} style={{height:72}}/></div><div style={{marginTop:12,background:data.result==="correct"?T.success+"18":T.danger+"18",border:`1px solid ${data.result==="correct"?T.success+"30":T.danger+"30"}`,borderRadius:8,padding:"10px 14px",fontSize:12,color:data.result==="correct"?T.success:T.danger}}>{data.result==="correct"?"✅  Great job! Add notes and submit.":"📚  Review the concept, add resources, then submit."}</div></>)}
@@ -602,6 +636,7 @@ function SessionDetail({session,onBack,onAddQuestion,mode,T}){
         <StatCard T={T} label="Incorrect" value={qs.length-correct} sub="questions"/>
         <StatCard T={T} label="Changed → Wrong" value={changedWrong} sub="trust your gut" color={T.danger}/>
       </div>
+      <AdBanner style={{ padding: "0 32px 4px" }} />
       <TabBar T={T} tabs={[["questions","≡  Questions"],["analytics","📊  Analytics"]]} active={tab} onChange={setTab} style={{padding:"0 32px"}}/>
       <div style={{padding:"18px 32px"}}>
         {tab==="questions"&&(<>
@@ -711,27 +746,26 @@ async function downloadApkg(session, mode, serverUrl) {
 }
 
 // ── Flip Card ─────────────────────────────────────────────────────────────────
-function FlipCard({ T, front, backLines, session }) {
+function FlipCard({ T, front, answer, backLines, session }) {
   const [flipped, setFlipped] = useState(false);
   return (
-    <div onClick={() => setFlipped(f => !f)} style={{ cursor:"pointer", height:180, perspective:1000 }}>
+    <div onClick={() => setFlipped(f => !f)} style={{ cursor:"pointer", perspective:1000 }}>
       <div style={{
-        position:"relative", width:"100%", height:"100%",
+        position:"relative", width:"100%",
         transformStyle:"preserve-3d",
         transition:"transform 0.5s cubic-bezier(0.4,0.2,0.2,1)",
         transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
       }}>
         {/* FRONT */}
         <div style={{
-          position:"absolute", inset:0, backfaceVisibility:"hidden",
+          backfaceVisibility:"hidden",
           background: T.surface, border:`1px solid ${T.border}`,
           borderRadius:14, padding:"22px 20px",
-          display:"flex", flexDirection:"column", justifyContent:"space-between",
+          display:"flex", flexDirection:"column", gap:12,
+          minHeight:160,
         }}>
-          <div>
-            <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:10}}>Front · Tap to reveal</div>
-            <div style={{fontSize:14,fontWeight:600,color:T.text,lineHeight:1.55}}>{front}</div>
-          </div>
+          <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase"}}>Front · Tap to reveal</div>
+          <div style={{fontSize:14,fontWeight:600,color:T.text,lineHeight:1.55,flex:1}}>{front}</div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <span style={{fontSize:10,color:T.muted}}>{session}</span>
             <span style={{fontSize:18,color:T.muted,opacity:0.5}}>↻</span>
@@ -744,20 +778,34 @@ function FlipCard({ T, front, backLines, session }) {
           background: T.name==="dark" ? "#0d1520" : "#f0f4ff",
           border:`1px solid ${T.accent}40`,
           borderRadius:14, padding:"16px 18px",
-          display:"flex", flexDirection:"column", justifyContent:"space-between",
+          display:"flex", flexDirection:"column", gap:10,
+          minHeight:160, overflow:"auto",
         }}>
-          <div>
-            <div style={{fontSize:10,color:T.accent,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:10}}>Back · Answer</div>
-            <div style={{display:"flex",flexDirection:"column",gap:5}}>
-              {backLines.map(({label,val,color},i)=>(
-                <div key={i} style={{display:"flex",gap:6,fontSize:12,alignItems:"flex-start"}}>
-                  <span style={{color:T.muted,minWidth:70,fontSize:10,paddingTop:1,letterSpacing:"0.5px"}}>{label}</span>
-                  <span style={{color:color||T.text,fontWeight:label==="Result"?700:400,lineHeight:1.4}}>{val}</span>
-                </div>
-              ))}
-            </div>
+          {/* Header */}
+          <div style={{fontSize:10,color:T.accent,letterSpacing:"0.8px",textTransform:"uppercase",fontWeight:700}}>Back · Answer</div>
+          {/* Answer — prominent */}
+          {answer && (
+            <div style={{
+              fontSize:15, fontWeight:700,
+              color: T.name==="dark" ? "#a5f3b4" : "#166534",
+              lineHeight:1.45,
+              background: T.name==="dark" ? "rgba(165,243,180,0.07)" : "rgba(22,101,52,0.06)",
+              border: `1px solid ${T.name==="dark" ? "rgba(165,243,180,0.18)" : "rgba(22,101,52,0.15)"}`,
+              borderRadius:8, padding:"10px 12px",
+            }}>{answer}</div>
+          )}
+          {/* Divider before metadata */}
+          <div style={{borderTop:`1px solid ${T.border}`}}/>
+          {/* Metadata rows */}
+          <div style={{display:"flex",flexDirection:"column",gap:5}}>
+            {backLines.map(({label,val,color},i)=>(
+              <div key={i} style={{display:"flex",gap:6,fontSize:12,alignItems:"flex-start"}}>
+                <span style={{color:T.muted,minWidth:72,fontSize:10,paddingTop:1,letterSpacing:"0.5px",flexShrink:0}}>{label}</span>
+                <span style={{color:color||T.text,fontWeight:label==="Result"?700:400,lineHeight:1.4}}>{val}</span>
+              </div>
+            ))}
           </div>
-          <div style={{display:"flex",justifyContent:"flex-end"}}>
+          <div style={{display:"flex",justifyContent:"flex-end",marginTop:"auto"}}>
             <span style={{fontSize:18,color:T.accent,opacity:0.6}}>↻</span>
           </div>
         </div>
@@ -1194,6 +1242,17 @@ export default function App(){
     return () => subscription.unsubscribe();
   }, []);
 
+  // Inject AdSense script once the user is authenticated (not on login screen)
+  useEffect(() => {
+    if (!user) return;
+    if (document.querySelector('script[src*="adsbygoogle"]')) return;
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4179326594130154";
+    script.crossOrigin = "anonymous";
+    document.head.appendChild(script);
+  }, [user]);
+
   // 
   const [darkMode,setDarkMode]=useState(true);
   const T=darkMode?DARK:LIGHT;
@@ -1435,6 +1494,8 @@ return (
         <StatCard T={T} label="Changed → Wrong" value={changedWrong} sub="Trust your gut!" color={T.danger}/>
       </div>
 
+      <AdBanner style={{ padding: "0 32px 4px" }} />
+
       {/* Tabs */}
       <TabBar T={T} tabs={[["sessions","📁  Sessions"],["topics","🔍  Topics"],["analytics","📊  Analytics"],["flashcards",`⚡  Flashcards${ankiTotal>0?" ("+ankiTotal+")":""}`]]} active={tab} onChange={setTab} style={{padding:"0 32px"}}/>
 
@@ -1663,7 +1724,7 @@ return (
                 q.notes    && {label:"Notes",  val: q.notes,    color: T.dim},
               ].filter(Boolean).filter(x=>x.val);
 
-              return <FlipCard key={q.id} T={T} front={q.ankiFront} backLines={backLines} session={sess?.name}/>;
+              return <FlipCard key={q.id} T={T} front={q.ankiFront} answer={q.ankiBack||q.concept||""} backLines={backLines} session={sess?.name}/>;
             })}
           </div>
         </>)}
