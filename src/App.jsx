@@ -1610,9 +1610,7 @@ return (
       zIndex: 100,
     }}>
       <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-        <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-0.02em", color: T.text }}>
-          VIMA VIMA
-        </div>
+        <VimaLogo dark={darkMode}/>
         <span style={{ fontSize:11, background: T.accent+"22", color: T.accent, borderRadius:6, padding:"2px 8px", fontWeight:600 }}>{mode}</span>
       </div>
       
