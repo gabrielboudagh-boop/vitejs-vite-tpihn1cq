@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
 import { supabase } from './supabase.js'  //
 // ── Fonts ────────────────────────────────────────────────────────────────────
 const fontLink = document.createElement("link");
@@ -596,7 +596,7 @@ function Wizard({onClose,onSave,mode,T}){
 
 
 // ── SESSION DETAIL ─────────────────────────────────────────────────────────────
-function SessionDetail({session,onBack,onAddQuestion,mode,T}){
+function SessionDetail({session,sessions,onBack,onAddQuestion,mode,T}){
   const [tab,setTab]=useState("questions");
   const [expanded,setExpanded]=useState({});
   const [analyticsSlide,setAnalyticsSlide]=useState(0);
@@ -611,6 +611,13 @@ function SessionDetail({session,onBack,onAddQuestion,mode,T}){
     if(!byType[q.qtype])byType[q.qtype]={c:0,t:0};byType[q.qtype].t++;if(q.result==="correct")byType[q.qtype].c++;
     if(q.result==="incorrect"&&q.wrongReason)wrongReasons[q.wrongReason]=(wrongReasons[q.wrongReason]||0)+1;
   });
+  const timingData=[
+    {name:"Under the limit",value:qs.filter(q=>q.time==="Under the limit").length,color:T.success,icon:"⚡"},
+    {name:"At the limit",value:qs.filter(q=>q.time==="At the limit").length,color:T.warn,icon:"🕐"},
+    {name:"Over the limit",value:qs.filter(q=>q.time==="Over the limit").length,color:T.danger,icon:"🚨"},
+  ].filter(d=>d.value>0);
+  const answerData=ANSWER_CHANGES.map(a=>({name:a,value:qs.filter(q=>q.answerChange===a).length,color:a==="No change"?T.dim:a==="Incorrect → Correct"?T.success:a==="Correct → Incorrect"?T.danger:T.warn,icon:a==="No change"?"➡️":a==="Incorrect → Correct"?"📈":a==="Correct → Incorrect"?"📉":"🔁"})).filter(d=>d.value>0);
+  const progressData=[...sessions].sort((a,b)=>new Date(a.date)-new Date(b.date)).filter(s=>s.questions.length>0).map(s=>{const t=s.questions.length,c=s.questions.filter(q=>q.result==="correct").length;return{name:s.name.length>12?s.name.substring(0,12)+'…':s.name,score:Math.round((c/t)*100),isCurrent:s.id===session.id,date:s.date};});
 
   return (
     <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'DM Sans',sans-serif"}}>
@@ -685,19 +692,19 @@ function SessionDetail({session,onBack,onAddQuestion,mode,T}){
               >←</button>
               <div style={{flex:1}}>
                 <div style={{fontSize:16,fontWeight:700,color:T.text}}>
-                  {["Session Overview","Subjects & Types","Timing & Patterns","Mistake Analysis"][analyticsSlide]}
+                  {["Session Overview","Subjects & Types","Timing & Patterns","Mistake Analysis","Progress"][analyticsSlide]}
                 </div>
                 <div style={{display:"flex",gap:6,marginTop:6}}>
-                  {[0,1,2,3].map(i=>(
+                  {[0,1,2,3,4].map(i=>(
                     <button key={i} onClick={()=>setAnalyticsSlide(i)} style={{width:i===analyticsSlide?22:8,height:8,borderRadius:4,background:i===analyticsSlide?T.accent:T.raised,border:`1px solid ${i===analyticsSlide?T.accent:T.border}`,padding:0,cursor:"pointer",transition:"all 0.2s"}}/>
                   ))}
-                  <span style={{fontSize:11,color:T.muted,marginLeft:6}}>{analyticsSlide+1} / 4</span>
+                  <span style={{fontSize:11,color:T.muted,marginLeft:6}}>{analyticsSlide+1} / 5</span>
                 </div>
               </div>
               <button
-                onClick={()=>setAnalyticsSlide(s=>Math.min(3,s+1))}
-                disabled={analyticsSlide===3}
-                style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:10,width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:T.muted,cursor:analyticsSlide===3?"default":"pointer",opacity:analyticsSlide===3?0.25:1,flexShrink:0}}
+                onClick={()=>setAnalyticsSlide(s=>Math.min(4,s+1))}
+                disabled={analyticsSlide===4}
+                style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:10,width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:T.muted,cursor:analyticsSlide===4?"default":"pointer",opacity:analyticsSlide===4?0.25:1,flexShrink:0}}
               >→</button>
             </div>
 
@@ -762,49 +769,11 @@ function SessionDetail({session,onBack,onAddQuestion,mode,T}){
               <div className="fade-in" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
                 <Card T={T} style={{padding:"20px 22px"}}>
                   <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>Score by Subject</div>
-                  {Object.entries(bySubject).length===0
-                    ?<div style={{color:T.muted,fontSize:12,textAlign:"center",padding:"30px 0"}}>No data yet.</div>
-                    :Object.entries(bySubject).sort((a,b)=>pct(b[1].c,b[1].t)-pct(a[1].c,a[1].t)).map(([subj,d])=>{
-                      const p=pct(d.c,d.t);
-                      return(
-                        <div key={subj} style={{marginBottom:14}}>
-                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-                            <span style={{fontSize:12,color:T.dim}}>{subj}</span>
-                            <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                              <span style={{fontSize:10,color:T.muted}}>{d.c}/{d.t}</span>
-                              <span style={{fontSize:12,fontWeight:700,color:T.scoreColor(p),minWidth:34,textAlign:"right"}}>{p}%</span>
-                            </div>
-                          </div>
-                          <div style={{height:7,background:T.raised,borderRadius:4,overflow:"hidden"}}>
-                            <div style={{height:"100%",width:`${p}%`,background:subjColors[subj]||T.scoreColor(p),borderRadius:4,transition:"width 0.5s ease"}}/>
-                          </div>
-                        </div>
-                      );
-                    })
-                  }
+                  <SubjectPieChart data={bySubject} T={T}/>
                 </Card>
                 <Card T={T} style={{padding:"20px 22px"}}>
                   <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>Score by Question Type</div>
-                  {Object.entries(byType).length===0
-                    ?<div style={{color:T.muted,fontSize:12,textAlign:"center",padding:"30px 0"}}>No data yet.</div>
-                    :Object.entries(byType).sort((a,b)=>pct(b[1].c,b[1].t)-pct(a[1].c,a[1].t)).map(([qtype,d])=>{
-                      const p=pct(d.c,d.t);
-                      return(
-                        <div key={qtype} style={{marginBottom:14}}>
-                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-                            <span style={{fontSize:12,color:T.dim}}>{qtype}</span>
-                            <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                              <span style={{fontSize:10,color:T.muted}}>{d.c}/{d.t}</span>
-                              <span style={{fontSize:12,fontWeight:700,color:T.scoreColor(p),minWidth:34,textAlign:"right"}}>{p}%</span>
-                            </div>
-                          </div>
-                          <div style={{height:7,background:T.raised,borderRadius:4,overflow:"hidden"}}>
-                            <div style={{height:"100%",width:`${p}%`,background:T.scoreColor(p),borderRadius:4,transition:"width 0.5s ease"}}/>
-                          </div>
-                        </div>
-                      );
-                    })
-                  }
+                  <SubjectPieChart data={byType} T={T}/>
                 </Card>
               </div>
             )}
@@ -814,53 +783,57 @@ function SessionDetail({session,onBack,onAddQuestion,mode,T}){
               <div className="fade-in" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
                 <Card T={T} style={{padding:"20px 22px"}}>
                   <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>Time per Question</div>
-                  {[
-                    {label:"Under the limit",icon:"⚡",color:T.success},
-                    {label:"At the limit",icon:"🕐",color:T.warn},
-                    {label:"Over the limit",icon:"🚨",color:T.danger},
-                  ].map(({label,icon,color})=>{
-                    const count=qs.filter(q=>q.time===label).length;
-                    const p=qs.length?Math.round((count/qs.length)*100):0;
-                    return(
-                      <div key={label} style={{background:color+"10",border:`1px solid ${color}28`,borderRadius:10,padding:"14px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:12}}>
-                        <span style={{fontSize:22}}>{icon}</span>
-                        <div style={{flex:1}}>
-                          <div style={{fontSize:12,color:T.dim,marginBottom:6}}>{label}</div>
-                          <div style={{height:5,background:T.raised,borderRadius:3,overflow:"hidden"}}>
-                            <div style={{height:"100%",width:`${p}%`,background:color,borderRadius:3,transition:"width 0.6s ease"}}/>
-                          </div>
+                  {timingData.length===0
+                    ? <div style={{textAlign:"center",color:T.muted,padding:"30px 0",fontSize:12}}>No timing data yet.</div>
+                    : <div style={{display:"flex",alignItems:"center",gap:20}}>
+                        <div style={{width:150,height:150,flexShrink:0}}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={timingData} cx="50%" cy="50%" outerRadius={68} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
+                                {timingData.map((e,i)=><Cell key={i} fill={e.color}/>)}
+                              </Pie>
+                              <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:11,color:T.text}}/>
+                            </PieChart>
+                          </ResponsiveContainer>
                         </div>
-                        <div style={{textAlign:"right"}}>
-                          <div style={{fontSize:20,fontWeight:700,color}}>{count}</div>
-                          <div style={{fontSize:10,color:T.muted}}>{p}%</div>
+                        <div style={{flex:1,display:"flex",flexDirection:"column",gap:10}}>
+                          {timingData.map(({name,value,color,icon})=>(
+                            <div key={name} style={{display:"flex",alignItems:"center",gap:8}}>
+                              <span style={{fontSize:16}}>{icon}</span>
+                              <span style={{fontSize:11,color:T.dim,flex:1,lineHeight:1.3}}>{name}</span>
+                              <span style={{fontSize:16,fontWeight:700,color}}>{value}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    );
-                  })}
+                  }
                 </Card>
                 <Card T={T} style={{padding:"20px 22px"}}>
                   <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>Answer Changes</div>
-                  {ANSWER_CHANGES.map(a=>{
-                    const cnt=qs.filter(q=>q.answerChange===a).length;
-                    const color=a==="No change"?T.dim:a==="Incorrect → Correct"?T.success:a==="Correct → Incorrect"?T.danger:T.warn;
-                    const icon=a==="No change"?"➡️":a==="Incorrect → Correct"?"📈":a==="Correct → Incorrect"?"📉":"🔁";
-                    const p=qs.length?Math.round((cnt/qs.length)*100):0;
-                    return(
-                      <div key={a} style={{background:color+"10",border:`1px solid ${color}28`,borderRadius:10,padding:"14px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:12}}>
-                        <span style={{fontSize:18}}>{icon}</span>
-                        <div style={{flex:1}}>
-                          <div style={{fontSize:11,color:T.dim,marginBottom:6}}>{a}</div>
-                          <div style={{height:5,background:T.raised,borderRadius:3,overflow:"hidden"}}>
-                            <div style={{height:"100%",width:`${p}%`,background:color,borderRadius:3,transition:"width 0.6s ease"}}/>
-                          </div>
+                  {answerData.length===0
+                    ? <div style={{textAlign:"center",color:T.muted,padding:"30px 0",fontSize:12}}>No data yet.</div>
+                    : <div style={{display:"flex",alignItems:"center",gap:20}}>
+                        <div style={{width:150,height:150,flexShrink:0}}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={answerData} cx="50%" cy="50%" outerRadius={68} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
+                                {answerData.map((e,i)=><Cell key={i} fill={e.color}/>)}
+                              </Pie>
+                              <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:11,color:T.text}}/>
+                            </PieChart>
+                          </ResponsiveContainer>
                         </div>
-                        <div style={{textAlign:"right"}}>
-                          <div style={{fontSize:18,fontWeight:700,color}}>{cnt}</div>
-                          <div style={{fontSize:10,color:T.muted}}>{p}%</div>
+                        <div style={{flex:1,display:"flex",flexDirection:"column",gap:10}}>
+                          {answerData.map(({name,value,color,icon})=>(
+                            <div key={name} style={{display:"flex",alignItems:"center",gap:8}}>
+                              <span style={{fontSize:14}}>{icon}</span>
+                              <span style={{fontSize:11,color:T.dim,flex:1,lineHeight:1.3}}>{name}</span>
+                              <span style={{fontSize:16,fontWeight:700,color}}>{value}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    );
-                  })}
+                  }
                 </Card>
               </div>
             )}
@@ -889,6 +862,47 @@ function SessionDetail({session,onBack,onAddQuestion,mode,T}){
                       </div>
                   }
                 </Card>
+              </div>
+            )}
+
+            {/* Slide 4: Progress */}
+            {analyticsSlide===4&&(
+              <div className="fade-in">
+                {progressData.length<2
+                  ? <div style={{textAlign:"center",color:T.muted,padding:"60px 0",fontSize:13}}>
+                      <div style={{fontSize:36,marginBottom:12}}>📈</div>
+                      <div style={{fontWeight:600,color:T.dim,marginBottom:6}}>Not enough data yet</div>
+                      <div style={{fontSize:12}}>Complete at least 2 sessions with questions to see your progress trend.</div>
+                    </div>
+                  : <Card T={T} style={{padding:"24px 22px"}}>
+                      <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:4}}>Score Across Sessions</div>
+                      <div style={{fontSize:12,color:T.muted,marginBottom:20}}>
+                        {progressData.find(s=>s.isCurrent)&&<><span style={{color:T.accent,fontWeight:600}}>{progressData.find(s=>s.isCurrent).name}</span> vs. previous sessions</>}
+                      </div>
+                      <div style={{height:230}}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={progressData} margin={{top:10,right:16,left:-10,bottom:0}}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
+                            <XAxis dataKey="name" tick={{fontSize:10,fill:T.muted}} axisLine={{stroke:T.border}} tickLine={false}/>
+                            <YAxis domain={[0,100]} tick={{fontSize:10,fill:T.muted}} axisLine={false} tickLine={false}/>
+                            <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:12,color:T.text}} formatter={(v)=>[`${v}%`,"Score"]}/>
+                            <ReferenceLine y={75} stroke={T.success} strokeDasharray="4 4" strokeOpacity={0.5}/>
+                            <ReferenceLine y={60} stroke={T.warn} strokeDasharray="4 4" strokeOpacity={0.5}/>
+                            <Line type="monotone" dataKey="score" stroke={T.accent} strokeWidth={2.5}
+                              dot={(dp)=>{const {cx,cy,payload}=dp;return <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={payload.isCurrent?7:4} fill={payload.isCurrent?T.accent:T.surface} stroke={T.accent} strokeWidth={2}/>;} }
+                              activeDot={{r:7,fill:T.accent}}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div style={{display:"flex",gap:18,marginTop:14,flexWrap:"wrap"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.muted}}><div style={{width:20,height:3,background:T.accent,borderRadius:2}}/> Score trend</div>
+                        <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.muted}}><div style={{width:14,height:14,borderRadius:"50%",background:T.accent}}/> Current session</div>
+                        <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.success}}><div style={{width:20,height:2,background:T.success,opacity:0.6}}/> 75% goal</div>
+                        <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.warn}}><div style={{width:20,height:2,background:T.warn,opacity:0.6}}/> 60% threshold</div>
+                      </div>
+                    </Card>
+                }
               </div>
             )}
           </div>
@@ -1481,6 +1495,7 @@ export default function App(){
   const recentQs=recentSess?.questions||[];
   const recentPct=pct(recentQs.filter(q=>q.result==="correct").length,recentQs.length);
   const ankiTotal=allQ.filter(q=>q.ankiFront&&q.ankiFront.trim()).length;
+  const allProgressData=[...sessions].sort((a,b)=>new Date(a.date)-new Date(b.date)).filter(s=>s.questions.length>0).map(s=>{const t=s.questions.length,c=s.questions.filter(q=>q.result==="correct").length;return{name:s.name.length>12?s.name.substring(0,12)+'…':s.name,score:Math.round((c/t)*100),date:s.date};});
 
   const analytics=useMemo(()=>{
     const bySubject={},byType={},byReason={},byChange={};
@@ -1556,7 +1571,7 @@ if (user && !user.track) {
 if (!splashDone) return <SplashScreen dark={darkMode} onDone={() => setSplashDone(true)} />;
 if(view==="session"&&activeSess) return (
   <>
-    <SessionDetail session={activeSess} onBack={()=>setView("home")} onAddQuestion={()=>setShowWizard(true)} mode={mode} T={T}/>
+    <SessionDetail session={activeSess} sessions={sessions} onBack={()=>setView("home")} onAddQuestion={()=>setShowWizard(true)} mode={mode} T={T}/>
     {showWizard&&<Wizard onClose={()=>setShowWizard(false)} onSave={addQuestion} mode={mode} T={T}/>}
   </>
 );
@@ -1725,7 +1740,7 @@ return (
         {tab==="analytics"&&(<>
           {/* Sub-tab bar */}
           <div style={{display:"flex",gap:4,marginBottom:20,background:T.raised,borderRadius:10,padding:4,width:"fit-content"}}>
-            {[["overview","Overview"],["mistakes","Mistakes"],["subjects","Subjects"]].map(([id,label])=>(
+            {[["overview","Overview"],["mistakes","Mistakes"],["subjects","Subjects"],["progress","📈 Progress"]].map(([id,label])=>(
               <button key={id} onClick={()=>setAnalyticsTab(id)} style={{background:analyticsTab===id?T.surface:"transparent",border:analyticsTab===id?`1px solid ${T.border}`:"1px solid transparent",borderRadius:7,padding:"7px 18px",fontSize:13,fontWeight:analyticsTab===id?600:400,color:analyticsTab===id?T.text:T.muted,cursor:"pointer",transition:"all 0.15s",boxShadow:analyticsTab===id?"0 1px 3px rgba(0,0,0,0.18)":"none"}}>{label}</button>
             ))}
           </div>
@@ -1825,6 +1840,41 @@ return (
               ))}
             </div>
           </>)}
+
+          {/* PROGRESS sub-tab */}
+          {analyticsTab==="progress"&&(
+            allProgressData.length<2
+              ? <div style={{textAlign:"center",color:T.muted,padding:"60px 0",fontSize:13}}>
+                  <div style={{fontSize:36,marginBottom:12}}>📈</div>
+                  <div style={{fontWeight:600,color:T.dim,marginBottom:6}}>Not enough data yet</div>
+                  <div style={{fontSize:12}}>Complete at least 2 sessions with questions to see your progress trend.</div>
+                </div>
+              : <Card T={T} style={{padding:"24px 22px"}}>
+                  <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:4}}>Score Trend — All Sessions</div>
+                  <div style={{fontSize:12,color:T.muted,marginBottom:20}}>{allProgressData.length} sessions tracked</div>
+                  <div style={{height:280}}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={allProgressData} margin={{top:10,right:20,left:-10,bottom:0}}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
+                        <XAxis dataKey="name" tick={{fontSize:10,fill:T.muted}} axisLine={{stroke:T.border}} tickLine={false}/>
+                        <YAxis domain={[0,100]} tick={{fontSize:10,fill:T.muted}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
+                        <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:12,color:T.text}} formatter={(v)=>[`${v}%`,"Score"]}/>
+                        <ReferenceLine y={75} stroke={T.success} strokeDasharray="4 4" strokeOpacity={0.5}/>
+                        <ReferenceLine y={60} stroke={T.warn} strokeDasharray="4 4" strokeOpacity={0.5}/>
+                        <Line type="monotone" dataKey="score" stroke={T.accent} strokeWidth={2.5}
+                          dot={{fill:T.surface,stroke:T.accent,strokeWidth:2,r:5}}
+                          activeDot={{r:7,fill:T.accent}}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div style={{display:"flex",gap:18,marginTop:14,flexWrap:"wrap"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.muted}}><div style={{width:20,height:3,background:T.accent,borderRadius:2}}/> Score trend</div>
+                    <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.success}}><div style={{width:20,height:2,background:T.success,opacity:0.6}}/> 75% goal</div>
+                    <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.warn}}><div style={{width:20,height:2,background:T.warn,opacity:0.6}}/> 60% threshold</div>
+                  </div>
+                </Card>
+          )}
         </>)}
 
         {/* FLASHCARDS */}
