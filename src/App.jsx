@@ -746,7 +746,7 @@ async function downloadApkg(session, mode, serverUrl) {
 }
 
 // ── Flip Card ─────────────────────────────────────────────────────────────────
-function FlipCard({ T, front, answer, backLines, session }) {
+function FlipCard({ T, front, answer, session }) {
   const [flipped, setFlipped] = useState(false);
   return (
     <div onClick={() => setFlipped(f => !f)} style={{ cursor:"pointer", perspective:1000 }}>
@@ -777,35 +777,16 @@ function FlipCard({ T, front, answer, backLines, session }) {
           transform:"rotateY(180deg)",
           background: T.name==="dark" ? "#0d1520" : "#f0f4ff",
           border:`1px solid ${T.accent}40`,
-          borderRadius:14, padding:"16px 18px",
-          display:"flex", flexDirection:"column", gap:10,
-          minHeight:160, overflow:"auto",
+          borderRadius:14, padding:"22px 20px",
+          display:"flex", flexDirection:"column", gap:12,
+          minHeight:160,
         }}>
-          {/* Header */}
           <div style={{fontSize:10,color:T.accent,letterSpacing:"0.8px",textTransform:"uppercase",fontWeight:700}}>Back · Answer</div>
-          {/* Answer — prominent */}
-          {answer && (
-            <div style={{
-              fontSize:15, fontWeight:700,
-              color: T.name==="dark" ? "#a5f3b4" : "#166534",
-              lineHeight:1.45,
-              background: T.name==="dark" ? "rgba(165,243,180,0.07)" : "rgba(22,101,52,0.06)",
-              border: `1px solid ${T.name==="dark" ? "rgba(165,243,180,0.18)" : "rgba(22,101,52,0.15)"}`,
-              borderRadius:8, padding:"10px 12px",
-            }}>{answer}</div>
-          )}
-          {/* Divider before metadata */}
-          <div style={{borderTop:`1px solid ${T.border}`}}/>
-          {/* Metadata rows */}
-          <div style={{display:"flex",flexDirection:"column",gap:5}}>
-            {backLines.map(({label,val,color},i)=>(
-              <div key={i} style={{display:"flex",gap:6,fontSize:12,alignItems:"flex-start"}}>
-                <span style={{color:T.muted,minWidth:72,fontSize:10,paddingTop:1,letterSpacing:"0.5px",flexShrink:0}}>{label}</span>
-                <span style={{color:color||T.text,fontWeight:label==="Result"?700:400,lineHeight:1.4}}>{val}</span>
-              </div>
-            ))}
+          <div style={{fontSize:18,fontWeight:700,color:T.name==="dark"?"#a5f3b4":"#166534",lineHeight:1.5,flex:1}}>
+            {answer || <span style={{color:T.muted,fontStyle:"italic",fontWeight:400,fontSize:14}}>No answer set — edit card to add one.</span>}
           </div>
-          <div style={{display:"flex",justifyContent:"flex-end",marginTop:"auto"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:10,color:T.muted}}>{session}</span>
             <span style={{fontSize:18,color:T.accent,opacity:0.6}}>↻</span>
           </div>
         </div>
@@ -1676,15 +1657,7 @@ return (
             </div>
             {ankiTotal>0&&<button onClick={()=>{
               const rows=allQ.filter(q=>q.ankiFront&&q.ankiFront.trim()).map(q=>{
-                const back=[
-                  q.result==="correct"?"✓ Correct":"✗ Incorrect",
-                  q.subject&&`Subject: ${q.subject}`,
-                  q.concept&&`Concept: ${q.concept}`,
-                  q.wrongReason&&`Why wrong: ${q.wrongReason}`,
-                  q.correctReason&&`Why correct: ${q.correctReason}`,
-                  q.resource&&`Review: ${q.resource}`,
-                  q.notes&&`Notes: ${q.notes}`,
-                ].filter(Boolean).join("<br>");
+                const back=(q.ankiBack||q.concept||"").replace(/\t/g," ");
                 return `${q.ankiFront.replace(/\t/g," ")}\t${back}`;
               }).join("\n");
               const a=document.createElement("a");
@@ -1711,20 +1684,7 @@ return (
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
             {allQ.filter(q=>q.ankiFront&&q.ankiFront.trim()).map(q=>{
               const sess=sessions.find(s=>s.questions.some(sq=>sq.id===q.id));
-              const isC=q.result==="correct";
-              const backLines=[
-                {label:"Result",  val: isC?"✓ Correct":"✗ Incorrect", color: isC?T.success:T.danger},
-                {label:"Concept", val: q.concept,   color: T.text},
-                {label:"Subject", val: q.subject,   color: subjColors[q.subject]||T.dim},
-                {label:"Type",    val: q.qtype,     color: T.dim},
-                isC
-                  ? {label:"Why correct", val: q.correctReason, color: T.success}
-                  : {label:"Why wrong",   val: q.wrongReason,   color: T.danger},
-                q.resource && {label:"Review", val: q.resource, color: T.accent},
-                q.notes    && {label:"Notes",  val: q.notes,    color: T.dim},
-              ].filter(Boolean).filter(x=>x.val);
-
-              return <FlipCard key={q.id} T={T} front={q.ankiFront} answer={q.ankiBack||q.concept||""} backLines={backLines} session={sess?.name}/>;
+              return <FlipCard key={q.id} T={T} front={q.ankiFront} answer={q.ankiBack||q.concept||""} session={sess?.name}/>;
             })}
           </div>
         </>)}
