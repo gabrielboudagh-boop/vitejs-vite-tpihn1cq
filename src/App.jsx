@@ -1675,7 +1675,7 @@ return (
       {/* Tabs */}
       <TabBar T={T} tabs={[["sessions","📁  Sessions"],["topics","🔍  Topics"],["analytics","📊  Analytics"],["flashcards",`⚡  Flashcards${ankiTotal>0?" ("+ankiTotal+")":""}`]]} active={tab} onChange={setTab} style={{padding:"0 32px"}}/>
 
-      <div style={{padding:"20px 32px", paddingBottom:"90px"}}>
+      <div style={{padding:"20px 32px", paddingBottom:"100px"}}>
         {/* SESSIONS */}
         {tab==="sessions"&&(<>
           {sessions.length===0&&<div style={{textAlign:"center",color:T.muted,padding:"50px 0",fontSize:13}}>No {mode} sessions yet. Create your first session!</div>}
@@ -1920,17 +1920,15 @@ return (
         </>)}
       </div>
 
-      {/* Sticky bottom ad bar */}
+      {/* Sticky bottom ad — capped at 90 px so it never covers content */}
       <div style={{
         position:"fixed", bottom:0, left:0, right:0,
-        zIndex:90,
-        background: T.name==="dark" ? "rgba(7,9,15,0.92)" : "rgba(244,246,251,0.92)",
-        backdropFilter:"blur(10px)",
+        zIndex:90, maxHeight:90, overflow:"hidden",
+        background: T.name==="dark" ? "rgba(7,9,15,0.96)" : "rgba(244,246,251,0.96)",
         borderTop:`1px solid ${T.border}`,
-        padding:"4px 0",
-        display:"flex", justifyContent:"center",
+        display:"flex", justifyContent:"center", alignItems:"center",
       }}>
-        <AdBanner style={{ maxWidth:728, width:"100%" }} />
+        <AdBanner style={{ maxWidth:728, width:"100%", height:90 }} />
       </div>
 
       {/* New Session Modal */}
