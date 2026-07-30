@@ -637,7 +637,6 @@ function SessionDetail({session,onBack,onAddQuestion,mode,T}){
         <StatCard T={T} label="Incorrect" value={qs.length-correct} sub="questions"/>
         <StatCard T={T} label="Changed → Wrong" value={changedWrong} sub="trust your gut" color={T.danger}/>
       </div>
-      <AdBanner style={{ padding: "0 32px 4px" }} />
       <TabBar T={T} tabs={[["questions","≡  Questions"],["analytics","📊  Analytics"]]} active={tab} onChange={setTab} style={{padding:"0 32px"}}/>
       <div style={{padding:"18px 32px"}}>
         {tab==="questions"&&(<>
@@ -677,26 +676,29 @@ function SessionDetail({session,onBack,onAddQuestion,mode,T}){
         </>)}
         {tab==="analytics"&&(
           <div>
-            {/* Slide nav */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:10}}>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {[["🎯","Overview"],["📚","Subjects"],["⏱","Timing"],["❌","Mistakes"]].map(([icon,label],i)=>(
-                  <button key={i} onClick={()=>setAnalyticsSlide(i)} style={{
-                    background: analyticsSlide===i ? T.accent : T.raised,
-                    border: `1px solid ${analyticsSlide===i ? T.accent+"80" : T.border}`,
-                    borderRadius:20, padding:"6px 16px", fontSize:12,
-                    fontWeight: analyticsSlide===i ? 700 : 400,
-                    color: analyticsSlide===i ? "#fff" : T.muted,
-                    cursor:"pointer", display:"flex", alignItems:"center", gap:6,
-                    transition:"all 0.15s"
-                  }}>{icon} {label}</button>
-                ))}
+            {/* Carousel header: title + prev/next */}
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:18}}>
+              <button
+                onClick={()=>setAnalyticsSlide(s=>Math.max(0,s-1))}
+                disabled={analyticsSlide===0}
+                style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:10,width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:T.muted,cursor:analyticsSlide===0?"default":"pointer",opacity:analyticsSlide===0?0.25:1,flexShrink:0}}
+              >←</button>
+              <div style={{flex:1}}>
+                <div style={{fontSize:16,fontWeight:700,color:T.text}}>
+                  {["Session Overview","Subjects & Types","Timing & Patterns","Mistake Analysis"][analyticsSlide]}
+                </div>
+                <div style={{display:"flex",gap:6,marginTop:6}}>
+                  {[0,1,2,3].map(i=>(
+                    <button key={i} onClick={()=>setAnalyticsSlide(i)} style={{width:i===analyticsSlide?22:8,height:8,borderRadius:4,background:i===analyticsSlide?T.accent:T.raised,border:`1px solid ${i===analyticsSlide?T.accent:T.border}`,padding:0,cursor:"pointer",transition:"all 0.2s"}}/>
+                  ))}
+                  <span style={{fontSize:11,color:T.muted,marginLeft:6}}>{analyticsSlide+1} / 4</span>
+                </div>
               </div>
-              <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                <button onClick={()=>setAnalyticsSlide(s=>Math.max(0,s-1))} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"5px 10px",color:T.muted,cursor:"pointer",opacity:analyticsSlide===0?0.3:1}}>←</button>
-                <span style={{fontSize:11,color:T.muted,minWidth:32,textAlign:"center"}}>{analyticsSlide+1} / 4</span>
-                <button onClick={()=>setAnalyticsSlide(s=>Math.min(3,s+1))} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"5px 10px",color:T.muted,cursor:"pointer",opacity:analyticsSlide===3?0.3:1}}>→</button>
-              </div>
+              <button
+                onClick={()=>setAnalyticsSlide(s=>Math.min(3,s+1))}
+                disabled={analyticsSlide===3}
+                style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:10,width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:T.muted,cursor:analyticsSlide===3?"default":"pointer",opacity:analyticsSlide===3?0.25:1,flexShrink:0}}
+              >→</button>
             </div>
 
             {/* Slide 0: Overview */}
@@ -1655,12 +1657,10 @@ return (
         <StatCard T={T} label="Changed → Wrong" value={changedWrong} sub="Trust your gut!" color={T.danger}/>
       </div>
 
-      <AdBanner style={{ padding: "0 32px 4px" }} />
-
       {/* Tabs */}
       <TabBar T={T} tabs={[["sessions","📁  Sessions"],["topics","🔍  Topics"],["analytics","📊  Analytics"],["flashcards",`⚡  Flashcards${ankiTotal>0?" ("+ankiTotal+")":""}`]]} active={tab} onChange={setTab} style={{padding:"0 32px"}}/>
 
-      <div style={{padding:"20px 32px"}}>
+      <div style={{padding:"20px 32px", paddingBottom:"90px"}}>
         {/* SESSIONS */}
         {tab==="sessions"&&(<>
           {sessions.length===0&&<div style={{textAlign:"center",color:T.muted,padding:"50px 0",fontSize:13}}>No {mode} sessions yet. Create your first session!</div>}
@@ -1868,6 +1868,19 @@ return (
             })}
           </div>
         </>)}
+      </div>
+
+      {/* Sticky bottom ad bar */}
+      <div style={{
+        position:"fixed", bottom:0, left:0, right:0,
+        zIndex:90,
+        background: T.name==="dark" ? "rgba(7,9,15,0.92)" : "rgba(244,246,251,0.92)",
+        backdropFilter:"blur(10px)",
+        borderTop:`1px solid ${T.border}`,
+        padding:"4px 0",
+        display:"flex", justifyContent:"center",
+      }}>
+        <AdBanner style={{ maxWidth:728, width:"100%" }} />
       </div>
 
       {/* New Session Modal */}
