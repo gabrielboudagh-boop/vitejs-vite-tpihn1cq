@@ -599,6 +599,7 @@ function Wizard({onClose,onSave,mode,T}){
 function SessionDetail({session,onBack,onAddQuestion,mode,T}){
   const [tab,setTab]=useState("questions");
   const [expanded,setExpanded]=useState({});
+  const [analyticsSlide,setAnalyticsSlide]=useState(0);
   const qs=session.questions;
   const correct=qs.filter(q=>q.result==="correct").length;
   const score=pct(correct,qs.length);
@@ -675,40 +676,219 @@ function SessionDetail({session,onBack,onAddQuestion,mode,T}){
           ))}
         </>)}
         {tab==="analytics"&&(
-          <div style={{display:"flex",flexDirection:"column",gap:16}}>
-            {/* Subject + Type pie charts */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-              {[{title:"Score by Subject",data:bySubject},{title:"Score by Question Type",data:byType}].map(({title,data:d})=>(
-                <Card key={title} T={T} style={{padding:"20px 20px"}}>
-                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>{title}</div>
-                  <SubjectPieChart data={d} T={T}/>
-                </Card>
-              ))}
+          <div>
+            {/* Slide nav */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:10}}>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {[["🎯","Overview"],["📚","Subjects"],["⏱","Timing"],["❌","Mistakes"]].map(([icon,label],i)=>(
+                  <button key={i} onClick={()=>setAnalyticsSlide(i)} style={{
+                    background: analyticsSlide===i ? T.accent : T.raised,
+                    border: `1px solid ${analyticsSlide===i ? T.accent+"80" : T.border}`,
+                    borderRadius:20, padding:"6px 16px", fontSize:12,
+                    fontWeight: analyticsSlide===i ? 700 : 400,
+                    color: analyticsSlide===i ? "#fff" : T.muted,
+                    cursor:"pointer", display:"flex", alignItems:"center", gap:6,
+                    transition:"all 0.15s"
+                  }}>{icon} {label}</button>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                <button onClick={()=>setAnalyticsSlide(s=>Math.max(0,s-1))} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"5px 10px",color:T.muted,cursor:"pointer",opacity:analyticsSlide===0?0.3:1}}>←</button>
+                <span style={{fontSize:11,color:T.muted,minWidth:32,textAlign:"center"}}>{analyticsSlide+1} / 4</span>
+                <button onClick={()=>setAnalyticsSlide(s=>Math.min(3,s+1))} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"5px 10px",color:T.muted,cursor:"pointer",opacity:analyticsSlide===3?0.3:1}}>→</button>
+              </div>
             </div>
-            {/* Why wrong + answer changes */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-              <Card T={T} style={{padding:"20px 20px"}}>
-                <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:14}}>Why Wrong</div>
-                <WrongReasonDonut byReason={wrongReasons} T={T} size={110} inner={34} outer={50}/>
-              </Card>
-              <Card T={T} style={{padding:"20px 20px"}}>
-                <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:14}}>Answer Changes</div>
-                <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                  {ANSWER_CHANGES.filter(a=>a!=="No change").map(a=>{
-                    const cnt=qs.filter(q=>q.answerChange===a).length;
-                    const color=a==="Incorrect → Correct"?T.success:a==="Correct → Incorrect"?T.danger:T.warn;
-                    const icon=a==="Incorrect → Correct"?"📈":a==="Correct → Incorrect"?"📉":"↔️";
-                    return (
-                      <div key={a} style={{background:color+"12",border:`1px solid ${color}28`,borderRadius:8,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
-                        <span style={{fontSize:16}}>{icon}</span>
-                        <span style={{fontSize:11,color:T.dim,flex:1}}>{a}</span>
-                        <span style={{fontSize:16,fontWeight:700,color}}>{cnt}</span>
+
+            {/* Slide 0: Overview */}
+            {analyticsSlide===0&&(
+              <div className="fade-in" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+                <Card T={T} style={{padding:"28px 24px",display:"flex",flexDirection:"column",alignItems:"center",gap:16}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase"}}>Session Score</div>
+                  <div style={{position:"relative",width:200,height:200}}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={[{name:"Correct",value:correct||0.001},{name:"Incorrect",value:(qs.length-correct)||0.001}]}
+                          cx="50%" cy="50%" innerRadius={68} outerRadius={90} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
+                          <Cell fill={T.scoreColor(score)}/>
+                          <Cell fill={T.name==="dark"?"#1e293b":"#e5e7eb"}/>
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+                      <div style={{fontSize:38,fontWeight:800,color:T.scoreColor(score),lineHeight:1}}>{score}%</div>
+                      <div style={{fontSize:11,color:T.muted,marginTop:4}}>correct</div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:28}}>
+                    {[{l:"✓ Correct",v:correct,c:T.success},{l:"✗ Incorrect",v:qs.length-correct,c:T.danger}].map(({l,v,c})=>(
+                      <div key={l} style={{textAlign:"center"}}>
+                        <div style={{fontSize:26,fontWeight:700,color:c}}>{v}</div>
+                        <div style={{fontSize:11,color:T.muted}}>{l}</div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  <Card T={T} style={{padding:"18px 20px",background:T.scoreColor(score)+"12",border:`1px solid ${T.scoreColor(score)}30`}}>
+                    <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Status</div>
+                    <div style={{fontSize:17,fontWeight:700,color:T.scoreColor(score)}}>
+                      {score>=75?"On Track 🎯":score>=60?"Getting There ⚡":"Needs Work 📚"}
+                    </div>
+                    <div style={{fontSize:12,color:T.muted,marginTop:4}}>
+                      {score>=75?"Strong session — keep the momentum":score>=60?"Review your misses carefully":"Focus on flagged concepts below"}
+                    </div>
+                  </Card>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    {[
+                      {l:"Total",v:qs.length,c:T.dim},
+                      {l:"Correct",v:correct,c:T.success},
+                      {l:"Incorrect",v:qs.length-correct,c:T.danger},
+                      {l:"Changed → Wrong",v:changedWrong,c:T.warn},
+                    ].map(({l,v,c})=>(
+                      <Card key={l} T={T} style={{padding:"14px 16px"}}>
+                        <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>{l}</div>
+                        <div style={{fontSize:24,fontWeight:700,color:c}}>{v}</div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Slide 1: Subjects & Types */}
+            {analyticsSlide===1&&(
+              <div className="fade-in" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+                <Card T={T} style={{padding:"20px 22px"}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>Score by Subject</div>
+                  {Object.entries(bySubject).length===0
+                    ?<div style={{color:T.muted,fontSize:12,textAlign:"center",padding:"30px 0"}}>No data yet.</div>
+                    :Object.entries(bySubject).sort((a,b)=>pct(b[1].c,b[1].t)-pct(a[1].c,a[1].t)).map(([subj,d])=>{
+                      const p=pct(d.c,d.t);
+                      return(
+                        <div key={subj} style={{marginBottom:14}}>
+                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                            <span style={{fontSize:12,color:T.dim}}>{subj}</span>
+                            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                              <span style={{fontSize:10,color:T.muted}}>{d.c}/{d.t}</span>
+                              <span style={{fontSize:12,fontWeight:700,color:T.scoreColor(p),minWidth:34,textAlign:"right"}}>{p}%</span>
+                            </div>
+                          </div>
+                          <div style={{height:7,background:T.raised,borderRadius:4,overflow:"hidden"}}>
+                            <div style={{height:"100%",width:`${p}%`,background:subjColors[subj]||T.scoreColor(p),borderRadius:4,transition:"width 0.5s ease"}}/>
+                          </div>
+                        </div>
+                      );
+                    })
+                  }
+                </Card>
+                <Card T={T} style={{padding:"20px 22px"}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>Score by Question Type</div>
+                  {Object.entries(byType).length===0
+                    ?<div style={{color:T.muted,fontSize:12,textAlign:"center",padding:"30px 0"}}>No data yet.</div>
+                    :Object.entries(byType).sort((a,b)=>pct(b[1].c,b[1].t)-pct(a[1].c,a[1].t)).map(([qtype,d])=>{
+                      const p=pct(d.c,d.t);
+                      return(
+                        <div key={qtype} style={{marginBottom:14}}>
+                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                            <span style={{fontSize:12,color:T.dim}}>{qtype}</span>
+                            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                              <span style={{fontSize:10,color:T.muted}}>{d.c}/{d.t}</span>
+                              <span style={{fontSize:12,fontWeight:700,color:T.scoreColor(p),minWidth:34,textAlign:"right"}}>{p}%</span>
+                            </div>
+                          </div>
+                          <div style={{height:7,background:T.raised,borderRadius:4,overflow:"hidden"}}>
+                            <div style={{height:"100%",width:`${p}%`,background:T.scoreColor(p),borderRadius:4,transition:"width 0.5s ease"}}/>
+                          </div>
+                        </div>
+                      );
+                    })
+                  }
+                </Card>
+              </div>
+            )}
+
+            {/* Slide 2: Timing & Patterns */}
+            {analyticsSlide===2&&(
+              <div className="fade-in" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+                <Card T={T} style={{padding:"20px 22px"}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>Time per Question</div>
+                  {[
+                    {label:"Under the limit",icon:"⚡",color:T.success},
+                    {label:"At the limit",icon:"🕐",color:T.warn},
+                    {label:"Over the limit",icon:"🚨",color:T.danger},
+                  ].map(({label,icon,color})=>{
+                    const count=qs.filter(q=>q.time===label).length;
+                    const p=qs.length?Math.round((count/qs.length)*100):0;
+                    return(
+                      <div key={label} style={{background:color+"10",border:`1px solid ${color}28`,borderRadius:10,padding:"14px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:12}}>
+                        <span style={{fontSize:22}}>{icon}</span>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:12,color:T.dim,marginBottom:6}}>{label}</div>
+                          <div style={{height:5,background:T.raised,borderRadius:3,overflow:"hidden"}}>
+                            <div style={{height:"100%",width:`${p}%`,background:color,borderRadius:3,transition:"width 0.6s ease"}}/>
+                          </div>
+                        </div>
+                        <div style={{textAlign:"right"}}>
+                          <div style={{fontSize:20,fontWeight:700,color}}>{count}</div>
+                          <div style={{fontSize:10,color:T.muted}}>{p}%</div>
+                        </div>
                       </div>
                     );
                   })}
-                </div>
-              </Card>
-            </div>
+                </Card>
+                <Card T={T} style={{padding:"20px 22px"}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>Answer Changes</div>
+                  {ANSWER_CHANGES.map(a=>{
+                    const cnt=qs.filter(q=>q.answerChange===a).length;
+                    const color=a==="No change"?T.dim:a==="Incorrect → Correct"?T.success:a==="Correct → Incorrect"?T.danger:T.warn;
+                    const icon=a==="No change"?"➡️":a==="Incorrect → Correct"?"📈":a==="Correct → Incorrect"?"📉":"🔁";
+                    const p=qs.length?Math.round((cnt/qs.length)*100):0;
+                    return(
+                      <div key={a} style={{background:color+"10",border:`1px solid ${color}28`,borderRadius:10,padding:"14px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:12}}>
+                        <span style={{fontSize:18}}>{icon}</span>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:11,color:T.dim,marginBottom:6}}>{a}</div>
+                          <div style={{height:5,background:T.raised,borderRadius:3,overflow:"hidden"}}>
+                            <div style={{height:"100%",width:`${p}%`,background:color,borderRadius:3,transition:"width 0.6s ease"}}/>
+                          </div>
+                        </div>
+                        <div style={{textAlign:"right"}}>
+                          <div style={{fontSize:18,fontWeight:700,color}}>{cnt}</div>
+                          <div style={{fontSize:10,color:T.muted}}>{p}%</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </Card>
+              </div>
+            )}
+
+            {/* Slide 3: Mistakes */}
+            {analyticsSlide===3&&(
+              <div className="fade-in" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+                <Card T={T} style={{padding:"20px 22px"}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:14}}>Why You Got It Wrong</div>
+                  <WrongReasonDonut byReason={wrongReasons} T={T} size={160} inner={52} outer={72}/>
+                </Card>
+                <Card T={T} style={{padding:"20px 22px"}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:14}}>Concepts to Review</div>
+                  {qs.filter(q=>q.result==="incorrect"&&q.concept).length===0
+                    ?<div style={{textAlign:"center",color:T.muted,padding:"30px 0",fontSize:12}}>No incorrect answers — great session! 🎯</div>
+                    :<div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:300,overflowY:"auto"}}>
+                        {qs.filter(q=>q.result==="incorrect"&&q.concept).map(q=>(
+                          <div key={q.id} style={{background:T.raised,borderRadius:8,padding:"10px 12px",borderLeft:`3px solid ${T.danger}`}}>
+                            <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:3}}>{q.concept}</div>
+                            <div style={{fontSize:11,color:T.muted,display:"flex",gap:8,flexWrap:"wrap"}}>
+                              {q.subject&&<span style={{color:subjColors[q.subject]||T.dim}}>{q.subject}</span>}
+                              {q.wrongReason&&<span>· {q.wrongReason}</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                  }
+                </Card>
+              </div>
+            )}
           </div>
         )}
       </div>
