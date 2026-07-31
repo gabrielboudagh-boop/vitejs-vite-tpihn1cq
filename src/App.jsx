@@ -595,11 +595,65 @@ function Wizard({onClose,onSave,mode,T}){
 }
 
 
+// ── Edit Question Modal ────────────────────────────────────────────────────────
+function EditQuestionModal({question,mode,T,onSave,onClose}){
+  const [data,setData]=useState({...question});
+  const cfg=MODES[mode];
+  const set=(k,v)=>setData(d=>({...d,[k]:v}));
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:600,padding:20}}>
+      <div className="fade-in" style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:18,width:"100%",maxWidth:540,maxHeight:"90vh",overflowY:"auto",display:"flex",flexDirection:"column"}}>
+        <div style={{padding:"18px 24px 14px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:T.surface,zIndex:10}}>
+          <div style={{fontSize:15,fontWeight:600,color:T.text}}>Edit Question</div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:T.muted,fontSize:20,cursor:"pointer",lineHeight:1}}>×</button>
+        </div>
+        <div style={{padding:"20px 24px",display:"flex",flexDirection:"column",gap:14,flex:1}}>
+          <div>
+            <Lbl T={T}>Result</Lbl>
+            <div style={{display:"flex",gap:10}}>
+              {["correct","incorrect"].map(r=>(
+                <button key={r} onClick={()=>set("result",r)} style={{flex:1,background:data.result===r?(r==="correct"?T.success+"22":T.danger+"22"):T.raised,border:`1px solid ${data.result===r?(r==="correct"?T.success:T.danger):T.border}`,borderRadius:8,padding:"9px",color:data.result===r?(r==="correct"?T.success:T.danger):T.muted,fontWeight:data.result===r?600:400,cursor:"pointer",fontSize:13,transition:"all 0.15s"}}>{r==="correct"?"✓ Correct":"✗ Incorrect"}</button>
+              ))}
+            </div>
+          </div>
+          {data.result==="correct"
+            ?<div><Lbl T={T}>Why Correct</Lbl><Sel T={T} value={data.correctReason||""} onChange={e=>set("correctReason",e.target.value)}><option value="">Select...</option>{CORRECT_REASONS.map(r=><option key={r}>{r}</option>)}</Sel></div>
+            :<div><Lbl T={T}>Why Wrong</Lbl><Sel T={T} value={data.wrongReason||""} onChange={e=>set("wrongReason",e.target.value)}><option value="">Select...</option>{WRONG_REASONS.map(r=><option key={r}>{r}</option>)}</Sel></div>
+          }
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div><Lbl T={T}>Time</Lbl><Sel T={T} value={data.time||""} onChange={e=>set("time",e.target.value)}><option value="">Select...</option>{["Under the limit","At the limit","Over the limit"].map(t=><option key={t}>{t}</option>)}</Sel></div>
+            <div><Lbl T={T}>Answer Change</Lbl><Sel T={T} value={data.answerChange||""} onChange={e=>set("answerChange",e.target.value)}><option value="">Select...</option>{ANSWER_CHANGES.map(a=><option key={a}>{a}</option>)}</Sel></div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div><Lbl T={T}>Subject</Lbl><Sel T={T} value={data.subject||""} onChange={e=>set("subject",e.target.value)}><option value="">Select...</option>{cfg.subjects.map(s=><option key={s}>{s}</option>)}</Sel></div>
+            <div><Lbl T={T}>Question Type</Lbl><Sel T={T} value={data.qtype||""} onChange={e=>set("qtype",e.target.value)}><option value="">Select...</option>{cfg.qtypes.map(t=><option key={t}>{t}</option>)}</Sel></div>
+          </div>
+          <div><Lbl T={T}>Concept Tested</Lbl><Inp T={T} value={data.concept||""} onChange={e=>set("concept",e.target.value)} placeholder="e.g. Giant cell arteritis..."/></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div><Lbl T={T}>Question #</Lbl><Inp T={T} value={data.qnum||""} onChange={e=>set("qnum",e.target.value)} placeholder="Optional"/></div>
+            <div><Lbl T={T}>QBank</Lbl><Sel T={T} value={data.qbank||""} onChange={e=>set("qbank",e.target.value)}><option value="">Select...</option>{(QBANKS_MAP[mode]||QBANKS_MAP.USMLE).map(q=><option key={q}>{q}</option>)}</Sel></div>
+          </div>
+          <div><Lbl T={T}>Anki Front</Lbl><Inp T={T} value={data.ankiFront||""} onChange={e=>set("ankiFront",e.target.value)} placeholder="Front of flashcard"/></div>
+          <div><Lbl T={T}>Anki Back</Lbl><Inp T={T} value={data.ankiBack||""} onChange={e=>set("ankiBack",e.target.value)} placeholder="Back of flashcard"/></div>
+          <div><Lbl T={T}>Summary</Lbl><Inp T={T} textarea value={data.summary||""} onChange={e=>set("summary",e.target.value)} placeholder="Brief summary..." style={{height:70}}/></div>
+          <div><Lbl T={T}>Resource</Lbl><Inp T={T} value={data.resource||""} onChange={e=>set("resource",e.target.value)} placeholder="e.g. FA p.342..."/></div>
+          <div><Lbl T={T}>Notes</Lbl><Inp T={T} textarea value={data.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Your notes..." style={{height:70}}/></div>
+        </div>
+        <div style={{padding:"14px 24px",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"flex-end",gap:8,position:"sticky",bottom:0,background:T.surface}}>
+          <button onClick={onClose} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 18px",color:T.muted,cursor:"pointer",fontSize:13}}>Cancel</button>
+          <button onClick={()=>onSave(data)} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 22px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Save Changes ✓</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── SESSION DETAIL ─────────────────────────────────────────────────────────────
-function SessionDetail({session,sessions,onBack,onAddQuestion,mode,T}){
+function SessionDetail({session,sessions,onBack,onAddQuestion,onUpdateQuestion,mode,T}){
   const [tab,setTab]=useState("questions");
   const [expanded,setExpanded]=useState({});
   const [analyticsSlide,setAnalyticsSlide]=useState(0);
+  const [editingQ,setEditingQ]=useState(null);
   const qs=session.questions;
   const correct=qs.filter(q=>q.result==="correct").length;
   const score=pct(correct,qs.length);
@@ -665,7 +719,7 @@ function SessionDetail({session,sessions,onBack,onAddQuestion,mode,T}){
                 </div>
                 <div style={{display:"flex",gap:10,alignItems:"center",justifyContent:"flex-end"}}>
                   <button onClick={()=>setExpanded(e=>({...e,[q.id]:!e[q.id]}))} style={{background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:12}}>{expanded[q.id]?"▲":"▼"} Notes</button>
-                  <span style={{color:"#fb923c",fontSize:12,cursor:"pointer"}}>✏ Edit</span>
+                  <span onClick={()=>setEditingQ(q)} style={{color:"#fb923c",fontSize:12,cursor:"pointer"}}>✏ Edit</span>
                 </div>
               </div>
               {expanded[q.id]&&(
@@ -908,6 +962,7 @@ function SessionDetail({session,sessions,onBack,onAddQuestion,mode,T}){
           </div>
         )}
       </div>
+      {editingQ&&<EditQuestionModal question={editingQ} mode={mode} T={T} onSave={(updated)=>{onUpdateQuestion(updated);setEditingQ(null);}} onClose={()=>setEditingQ(null)}/>}
     </div>
   );
 }
@@ -1008,9 +1063,86 @@ const SAMPLE_DATA={
       {id:202,qnum:"3.2",date:"May 7",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"Incorrect → Correct",subject:"Heme/Onc",qtype:"Management",concept:"CML treatment",qbank:"NBME",ankiFront:"",summary:"",resource:"",notes:""},
     ]},
     {id:3,name:"NBME 11",date:"2026-04-22",questions:[{id:301,qnum:"2.1",date:"Apr 22",result:"incorrect",wrongReason:"Ran out of time",time:"Over the limit",answerChange:"No change",subject:"Psych",qtype:"Diagnosis",concept:"Bipolar vs MDD",qbank:"NBME",ankiFront:"",summary:"",resource:"",notes:""}]},
-    {id:4,name:"Amboss Session 4/19/26",date:"2026-04-18",questions:[{id:401,qnum:"1.1",date:"Apr 18",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Renal",qtype:"Management",concept:"AKI management",qbank:"Amboss",ankiFront:"",summary:"",resource:"",notes:""}]},
+    {id:4,name:"Amboss Session 4/19/26",date:"2026-04-18",questions:[{id:401,qnum:"1.1",date:"Apr 18",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Renal",qtype:"Management",concept:"AKI management",qbank:"Amboss",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""}]},
+    {id:5,name:"USMLE Demo — Block 1",date:"2026-07-28",questions:[
+      {id:501,qnum:"Q1",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Cardiology",qtype:"Management",concept:"STEMI management",qbank:"UWorld",ankiFront:"45M crushing chest pain, ST elevation V2-V4 → next best step?",ankiBack:"Activate cath lab for primary PCI (door-to-balloon < 90 min)",summary:"",resource:"FA p.290",notes:""},
+      {id:502,qnum:"Q2",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"Pulmonology",qtype:"Diagnosis",concept:"Hypersensitivity pneumonitis",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"Bilateral infiltrates + bird exposure + improves away from home",resource:"Pathoma Ch.13",notes:"Distinguish from sarcoidosis"},
+      {id:503,qnum:"Q3",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Neurology",qtype:"Diagnosis",concept:"Wernicke encephalopathy",qbank:"UWorld",ankiFront:"Alcoholic: confusion + ophthalmoplegia + ataxia → diagnosis?",ankiBack:"Wernicke encephalopathy (thiamine/B1 deficiency)",summary:"",resource:"",notes:""},
+      {id:504,qnum:"Q4",date:"Jul 28",result:"correct",correctReason:"Guessed",time:"At the limit",answerChange:"No change",subject:"OB/GYN",qtype:"Management",concept:"Preeclampsia management",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:505,qnum:"Q5",date:"Jul 28",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"Incorrect → Correct",subject:"GI",qtype:"Pathophysiology",concept:"Celiac disease",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"Villous atrophy + anti-tTG Ab → biopsy confirms",resource:"FA p.372",notes:"IgA anti-tTG first-line; biopsy confirms"},
+      {id:506,qnum:"Q6",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Renal",qtype:"Management",concept:"Hyperkalemia treatment",qbank:"UWorld",ankiFront:"K+ 6.8 + peaked T waves → first drug to give?",ankiBack:"IV calcium gluconate (stabilizes cardiac membrane)",summary:"",resource:"",notes:""},
+      {id:507,qnum:"Q7",date:"Jul 28",result:"incorrect",wrongReason:"Silly mistake / misread",time:"Under the limit",answerChange:"No change",subject:"MSK",qtype:"Diagnosis",concept:"Gout vs pseudogout",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"Gout = negative birefringent; Pseudogout = positive birefringent",resource:"",notes:"Misread birefringence"},
+      {id:508,qnum:"Q8",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Derm",qtype:"Diagnosis",concept:"Pemphigus vulgaris",qbank:"UWorld",ankiFront:"Flaccid bullae + positive Nikolsky sign → diagnosis?",ankiBack:"Pemphigus vulgaris (IgG anti-desmoglein 1 & 3)",summary:"",resource:"",notes:""},
+      {id:509,qnum:"Q9",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"Heme/Onc",qtype:"Management",concept:"Tumor lysis syndrome",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"",resource:"FA p.430",notes:"Give allopurinol or rasburicase prophylactically"},
+      {id:510,qnum:"Q10",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"ID",qtype:"Pharmacology",concept:"MRSA treatment",qbank:"UWorld",ankiFront:"MRSA bacteremia → drug of choice?",ankiBack:"Vancomycin IV (or daptomycin for bacteremia)",summary:"",resource:"",notes:""},
+      {id:511,qnum:"Q11",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Endo",qtype:"Diagnosis",concept:"Primary hyperaldosteronism",qbank:"UWorld",ankiFront:"HTN + hypokalemia + metabolic alkalosis → next step?",ankiBack:"Aldosterone/renin ratio > 30 → primary hyperaldosteronism",summary:"",resource:"",notes:""},
+      {id:512,qnum:"Q12",date:"Jul 28",result:"incorrect",wrongReason:"Ran out of time",time:"Over the limit",answerChange:"No change",subject:"Peds",qtype:"Management",concept:"Kawasaki disease",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"Fever > 5 days + 4/5 criteria → IVIG + aspirin",resource:"FA p.650",notes:""},
+    ]},
+    {id:6,name:"USMLE Demo — Block 2",date:"2026-07-29",questions:[
+      {id:601,qnum:"Q13",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Psych",qtype:"Diagnosis",concept:"Bipolar I vs II",qbank:"UWorld",ankiFront:"Grandiosity + decreased sleep + pressured speech × 1 week → diagnosis?",ankiBack:"Bipolar I (manic episode ≥ 7 days or requires hospitalization)",summary:"",resource:"",notes:""},
+      {id:602,qnum:"Q14",date:"Jul 29",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"No change",subject:"Surgery",qtype:"Management",concept:"Appendicitis — perforated vs non-perforated",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"Perforated appendicitis needs IV abx before surgery",resource:"",notes:""},
+      {id:603,qnum:"Q15",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Biostats/Ethics",qtype:"Biostats/Ethics",concept:"Sensitivity vs specificity",qbank:"UWorld",ankiFront:"Test with 100% sensitivity is best used for...?",ankiBack:"Screening (rule OUT disease — SnNout)",summary:"",resource:"",notes:""},
+      {id:604,qnum:"Q16",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Cardiology",qtype:"Pharmacology",concept:"Beta-blocker use in heart failure",qbank:"UWorld",ankiFront:"Beta-blockers proven to reduce mortality in stable HFrEF?",ankiBack:"Carvedilol, metoprolol succinate, bisoprolol",summary:"",resource:"",notes:""},
+      {id:605,qnum:"Q17",date:"Jul 29",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"Neurology",qtype:"Management",concept:"Status epilepticus management",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"First: benzos → phenytoin/fosphenytoin → propofol/midazolam",resource:"FA p.536",notes:""},
+      {id:606,qnum:"Q18",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"Incorrect → Correct",subject:"Pulmonology",qtype:"Management",concept:"COPD exacerbation O2 target",qbank:"UWorld",ankiFront:"COPD exacerbation SpO2 85% → O2 target?",ankiBack:"Titrate O2 to 88-92% (avoid hyperoxia / hypoxic drive suppression)",summary:"",resource:"",notes:""},
+      {id:607,qnum:"Q19",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"GI",qtype:"Diagnosis",concept:"Hemochromatosis",qbank:"UWorld",ankiFront:"Bronze skin + cirrhosis + DM + joint pain → diagnosis?",ankiBack:"Hemochromatosis (iron overload); treat with phlebotomy",summary:"",resource:"",notes:""},
+      {id:608,qnum:"Q20",date:"Jul 29",result:"incorrect",wrongReason:"Silly mistake / misread",time:"At the limit",answerChange:"Correct → Incorrect",subject:"Renal",qtype:"Pathophysiology",concept:"SIADH vs DI",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"SIADH: low Na, concentrated urine; DI: high Na, dilute urine",resource:"",notes:"Changed correct answer — trust gut"},
+      {id:609,qnum:"Q21",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Heme/Onc",qtype:"Diagnosis",concept:"CML vs CLL",qbank:"UWorld",ankiFront:"Splenomegaly + basophilia + t(9;22) → diagnosis?",ankiBack:"CML — Philadelphia chromosome (BCR-ABL); treat with imatinib",summary:"",resource:"",notes:""},
+      {id:610,qnum:"Q22",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"ID",qtype:"Diagnosis",concept:"Lyme disease stages",qbank:"UWorld",ankiFront:"Bull's-eye rash after tick bite → organism?",ankiBack:"Borrelia burgdorferi; treat with doxycycline",summary:"",resource:"",notes:""},
+    ]},
   ],
-  MCAT:[],LSAT:[],
+  MCAT:[
+    {id:10,name:"MCAT Demo — Full Length",date:"2026-07-28",questions:[
+      {id:1001,qnum:"Q1",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"C/P",qtype:"Passage-based",concept:"Electrochemical cells",qbank:"AAMC Official",ankiFront:"Galvanic cell: electrons flow anode → cathode — which electrode is negative?",ankiBack:"Anode (oxidation occurs; releases electrons)",summary:"",resource:"Khan Academy Chem",notes:""},
+      {id:1002,qnum:"Q2",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"At the limit",answerChange:"No change",subject:"C/P",qtype:"Discrete",concept:"Henderson-Hasselbalch equation",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"pH = pKa + log([A-]/[HA])",resource:"Khan Academy Chem",notes:""},
+      {id:1003,qnum:"Q3",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"CARS",qtype:"Critical analysis",concept:"Author's main argument",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:1004,qnum:"Q4",date:"Jul 28",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"Over the limit",answerChange:"Incorrect → Correct",subject:"B/B",qtype:"Passage-based",concept:"DNA replication enzymes",qbank:"AAMC Official",ankiFront:"Enzyme that removes RNA primer in prokaryotes?",ankiBack:"DNA Pol I (5'→3' exonuclease removes primer)",summary:"",resource:"Kaplan Bio Ch.4",notes:""},
+      {id:1005,qnum:"Q5",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Psych/Soc",qtype:"Passage-based",concept:"Classical vs operant conditioning",qbank:"AAMC Official",ankiFront:"Pavlov's dog salivating at bell → learning type?",ankiBack:"Classical conditioning (neutral stimulus paired with unconditioned stimulus)",summary:"",resource:"",notes:""},
+      {id:1006,qnum:"Q6",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"C/P",qtype:"Data analysis",concept:"Boyle's Law",qbank:"AAMC Official",ankiFront:"At constant temperature, doubling volume → pressure?",ankiBack:"Pressure halves (PV = constant at constant T)",summary:"",resource:"",notes:""},
+      {id:1007,qnum:"Q7",date:"Jul 28",result:"incorrect",wrongReason:"Silly mistake / misread",time:"Under the limit",answerChange:"No change",subject:"CARS",qtype:"Critical analysis",concept:"Passage inference question",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"Must be supported by passage — no outside knowledge",resource:"",notes:"Went too broad on inference"},
+      {id:1008,qnum:"Q8",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"B/B",qtype:"Passage-based",concept:"Enzyme kinetics — Km and Vmax",qbank:"AAMC Official",ankiFront:"Competitive inhibitor effect on Km and Vmax?",ankiBack:"Km increases, Vmax unchanged (overcome with excess substrate)",summary:"",resource:"Kaplan Bio",notes:""},
+      {id:1009,qnum:"Q9",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"At the limit",answerChange:"No change",subject:"Psych/Soc",qtype:"Research interpretation",concept:"Social determinants of health",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:1010,qnum:"Q10",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"C/P",qtype:"Passage-based",concept:"Amino acid optical isomers",qbank:"AAMC Official",ankiFront:"Which amino acid has NO optical isomer (no chiral center)?",ankiBack:"Glycine (side chain is H — no asymmetric carbon)",summary:"",resource:"Princeton Review",notes:""},
+      {id:1011,qnum:"Q11",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"B/B",qtype:"Passage-based",concept:"PCR process steps",qbank:"AAMC Official",ankiFront:"PCR step where template strands separate?",ankiBack:"Denaturation (~95°C)",summary:"",resource:"",notes:""},
+      {id:1012,qnum:"Q12",date:"Jul 28",result:"correct",correctReason:"Guessed",time:"At the limit",answerChange:"No change",subject:"CARS",qtype:"Critical analysis",concept:"Weakening an argument",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:1013,qnum:"Q13",date:"Jul 28",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"No change",subject:"Psych/Soc",qtype:"Passage-based",concept:"Attribution theory",qbank:"AAMC Official",ankiFront:"Fundamental attribution error: tendency to over-attribute to...?",ankiBack:"Dispositional (internal) factors, underestimating situational factors",summary:"",resource:"Khan Academy Psych",notes:""},
+      {id:1014,qnum:"Q14",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"Incorrect → Correct",subject:"C/P",qtype:"Discrete",concept:"Le Chatelier's principle",qbank:"AAMC Official",ankiFront:"Adding more reactant to equilibrium → shift direction?",ankiBack:"Shifts toward products (forward direction)",summary:"",resource:"",notes:""},
+      {id:1015,qnum:"Q15",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"B/B",qtype:"Passage-based",concept:"Lac operon regulation",qbank:"AAMC Official",ankiFront:"Lac operon — when is it maximally expressed?",ankiBack:"High lactose + low glucose (cAMP high → CAP active, repressor off)",summary:"",resource:"",notes:""},
+      {id:1016,qnum:"Q16",date:"Jul 28",result:"incorrect",wrongReason:"Ran out of time",time:"Over the limit",answerChange:"No change",subject:"CARS",qtype:"Critical analysis",concept:"Author's tone",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:1017,qnum:"Q17",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Psych/Soc",qtype:"Discrete",concept:"Erikson's stages of development",qbank:"AAMC Official",ankiFront:"Erikson stage for adolescence (12-18 years)?",ankiBack:"Identity vs. Role Confusion",summary:"",resource:"",notes:""},
+      {id:1018,qnum:"Q18",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"C/P",qtype:"Passage-based",concept:"Electrophoresis principles",qbank:"AAMC Official",ankiFront:"In gel electrophoresis, smaller fragments travel...?",ankiBack:"Farther (smaller molecules travel further from the well)",summary:"",resource:"",notes:""},
+      {id:1019,qnum:"Q19",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"At the limit",answerChange:"No change",subject:"B/B",qtype:"Research interpretation",concept:"Hardy-Weinberg equilibrium",qbank:"AAMC Official",ankiFront:"Hardy-Weinberg: what does 2pq represent?",ankiBack:"Frequency of heterozygotes in the population",summary:"",resource:"",notes:""},
+      {id:1020,qnum:"Q20",date:"Jul 28",result:"incorrect",wrongReason:"Silly mistake / misread",time:"Under the limit",answerChange:"Correct → Incorrect",subject:"Psych/Soc",qtype:"Passage-based",concept:"Health disparities and SES",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:"Changed correct answer — review social determinants"},
+      {id:1021,qnum:"Q21",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"B/B",qtype:"Discrete",concept:"Cellular respiration ATP yield",qbank:"AAMC Official",ankiFront:"Net ATP yield from 1 glucose via aerobic respiration?",ankiBack:"30-32 ATP (theoretical maximum)",summary:"",resource:"",notes:""},
+      {id:1022,qnum:"Q22",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"C/P",qtype:"Discrete",concept:"Ohm's law and circuits",qbank:"AAMC Official",ankiFront:"V = IR: doubling resistance at constant voltage → current?",ankiBack:"Current halves (I = V/R)",summary:"",resource:"",notes:""},
+    ]},
+  ],
+  LSAT:[
+    {id:20,name:"LSAT Demo — PrepTest 90",date:"2026-07-28",questions:[
+      {id:2001,qnum:"Q1",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Strengthen",concept:"Causal argument strengthening",qbank:"LSAC Official",ankiFront:"To strengthen a causal argument, the best answer...?",ankiBack:"Eliminates alternative causes OR confirms the proposed mechanism",summary:"",resource:"PowerScore LR Bible",notes:""},
+      {id:2002,qnum:"Q2",date:"Jul 28",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Assumption",concept:"Necessary assumption — negation test",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Negate the answer — if it destroys the conclusion, it's necessary",resource:"PowerScore LR Bible",notes:""},
+      {id:2003,qnum:"Q3",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Analytical Reasoning",qtype:"Inference",concept:"Linear sequencing game",qbank:"LSAC Official",ankiFront:"6-slot linear: A before B, B before C → slots available for A?",ankiBack:"Slots 1-4 (needs at least B and C after it)",summary:"",resource:"7Sage",notes:""},
+      {id:2004,qnum:"Q4",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"Reading Comprehension",qtype:"Inference",concept:"Author's attitude in passage",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Find explicit tone words before selecting author attitude",resource:"Manhattan Prep RC",notes:""},
+      {id:2005,qnum:"Q5",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Weaken",concept:"Weakening a correlation-causation argument",qbank:"LSAC Official",ankiFront:"Best way to weaken a correlation → causation claim?",ankiBack:"Show a confounding variable explains both phenomena",summary:"",resource:"",notes:""},
+      {id:2006,qnum:"Q6",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"Incorrect → Correct",subject:"Analytical Reasoning",qtype:"Must Be True",concept:"Grouping game constraints",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"7Sage",notes:"Drew diagram and corrected answer"},
+      {id:2007,qnum:"Q7",date:"Jul 28",result:"incorrect",wrongReason:"Silly mistake / misread",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Flaw",concept:"Ad hominem fallacy",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Ad hominem: attacking the person, not the argument",resource:"",notes:"Misidentified the flaw type"},
+      {id:2008,qnum:"Q8",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Reading Comprehension",qtype:"Inference",concept:"Comparative passage structure",qbank:"LSAC Official",ankiFront:"In comparative passage questions, what's key?",ankiBack:"Find where both authors agree AND fundamentally disagree",summary:"",resource:"",notes:""},
+      {id:2009,qnum:"Q9",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"At the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Inference",concept:"Must Be True strategy",qbank:"LSAC Official",ankiFront:"For Must Be True, the correct answer must...?",ankiBack:"Follow directly from the stimulus — no new information added",summary:"",resource:"",notes:""},
+      {id:2010,qnum:"Q10",date:"Jul 28",result:"incorrect",wrongReason:"Ran out of time",time:"Over the limit",answerChange:"No change",subject:"Analytical Reasoning",qtype:"Cannot Be True",concept:"Hybrid game",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Complex hybrid game — flag and return; do deductions first",resource:"7Sage Advanced Games",notes:""},
+      {id:2011,qnum:"Q11",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Parallel",concept:"Parallel reasoning structure",qbank:"LSAC Official",ankiFront:"In parallel reasoning, match the...?",ankiBack:"Argument structure (logical form), not the content or subject",summary:"",resource:"",notes:""},
+      {id:2012,qnum:"Q12",date:"Jul 28",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"Correct → Incorrect",subject:"Reading Comprehension",qtype:"Inference",concept:"Central purpose of passage",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Main point ≠ first sentence — check entire paragraph and conclusion",resource:"",notes:"Changed correct answer — costly"},
+      {id:2013,qnum:"Q13",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Method",concept:"Method of reasoning",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:2014,qnum:"Q14",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Analytical Reasoning",qtype:"Must Be True",concept:"Sequencing game chain deductions",qbank:"LSAC Official",ankiFront:"Most powerful deductions in sequencing games come from...?",ankiBack:"Combining rules with shared variables (chain deductions)",summary:"",resource:"7Sage",notes:""},
+      {id:2015,qnum:"Q15",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Strengthen",concept:"Survey/study argument strengthen",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:2016,qnum:"Q16",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"Reading Comprehension",qtype:"Inference",concept:"Specific detail question",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Always return to passage for detail questions",resource:"",notes:""},
+      {id:2017,qnum:"Q17",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Main Point",concept:"Conclusion indicator words",qbank:"LSAC Official",ankiFront:"Conclusion indicator words to look for?",ankiBack:"Therefore, thus, hence, so, consequently, it follows that",summary:"",resource:"",notes:""},
+      {id:2018,qnum:"Q18",date:"Jul 28",result:"correct",correctReason:"Guessed",time:"At the limit",answerChange:"No change",subject:"Analytical Reasoning",qtype:"Inference",concept:"In/out selection game",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:2019,qnum:"Q19",date:"Jul 28",result:"incorrect",wrongReason:"Silly mistake / misread",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Assumption",concept:"Sufficient vs necessary assumption",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Sufficient assumption: answer alone MAKES conclusion true",resource:"PowerScore LR Bible",notes:"Confused sufficient with necessary assumption"},
+      {id:2020,qnum:"Q20",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Reading Comprehension",qtype:"Inference",concept:"Function of a paragraph",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:2021,qnum:"Q21",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Weaken",concept:"Plan/proposal weaken",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:2022,qnum:"Q22",date:"Jul 28",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"No change",subject:"Analytical Reasoning",qtype:"Cannot Be True",concept:"In/out grouping game",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"7Sage",notes:""},
+    ]},
+  ],
 };
 
 
@@ -1461,8 +1593,8 @@ export default function App(){
     const key = `vimavima_data_${user.email}`;
     try {
       const raw = localStorage.getItem(key);
-      setSessionsByMode(raw ? JSON.parse(raw) : {USMLE:[],MCAT:[],LSAT:[]});
-    } catch { setSessionsByMode({USMLE:[],MCAT:[],LSAT:[]}); }
+      setSessionsByMode(raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(SAMPLE_DATA)));
+    } catch { setSessionsByMode(JSON.parse(JSON.stringify(SAMPLE_DATA))); }
   }, [user?.email]);
 
   // Save every change back to localStorage immediately
@@ -1509,6 +1641,7 @@ export default function App(){
   },[allQ]);
 
   function addQuestion(qdata){setSessions(prev=>prev.map(s=>s.id===activeId?{...s,questions:[...s.questions,qdata]}:s));}
+  function updateQuestion(qdata){setSessions(prev=>prev.map(s=>s.id===activeId?{...s,questions:s.questions.map(q=>q.id===qdata.id?qdata:q)}:s));}
   function createSession(){
     if(!newSess.name)return;
     const ns={id:Date.now(),name:newSess.name,date:newSess.date||new Date().toISOString().split("T")[0],questions:[]};
@@ -1571,7 +1704,7 @@ if (user && !user.track) {
 if (!splashDone) return <SplashScreen dark={darkMode} onDone={() => setSplashDone(true)} />;
 if(view==="session"&&activeSess) return (
   <>
-    <SessionDetail session={activeSess} sessions={sessions} onBack={()=>setView("home")} onAddQuestion={()=>setShowWizard(true)} mode={mode} T={T}/>
+    <SessionDetail session={activeSess} sessions={sessions} onBack={()=>setView("home")} onAddQuestion={()=>setShowWizard(true)} onUpdateQuestion={updateQuestion} mode={mode} T={T}/>
     {showWizard&&<Wizard onClose={()=>setShowWizard(false)} onSave={addQuestion} mode={mode} T={T}/>}
   </>
 );
