@@ -448,7 +448,8 @@ function WrongReasonDonut({byReason, T, size=140, inner=44, outer=62}) {
 function SubjectPieChart({data, T}) {
   const entries = Object.entries(data);
   if (entries.length === 0) return <div style={{fontSize:12,color:T.muted}}>No data yet.</div>;
-  const pd = entries.map(([name,v]) => ({name, value:v.t, correct:v.c, p:pct(v.c,v.t), color:subjColors[name]||T.accent}));
+  const _fc=['#5b8fbd','#8272c2','#4da6a0','#b878a0','#a89040','#40a8a0','#c86060','#40a878','#b88860','#8878c0'];
+  const pd = entries.map(([name,v],i) => ({name, value:v.t, correct:v.c, p:pct(v.c,v.t), color:subjColors[name]||_fc[i%_fc.length]}));
   return (
     <div style={{display:"flex",gap:16,alignItems:"flex-start"}}>
       <div style={{width:130,height:130,flexShrink:0}}>
@@ -1286,6 +1287,100 @@ function TopicBrowser({ T, allQ, sessions, cfg }) {
   );
 }
 
+// ── Flashcards Panel ────────────────────────────────────────────────────────
+function FlashcardsPanel({allQ,sessions,T,ankiTotal}){
+  const [fcSession,setFcSession]=useState("All");
+  const [fcSubject,setFcSubject]=useState("All");
+  const [fcSearch,setFcSearch]=useState("");
+  const ankiCards=allQ.filter(q=>q.ankiFront&&q.ankiFront.trim());
+  const filteredCards=ankiCards
+    .filter(q=>{
+      if(fcSession==="All")return true;
+      const sess=sessions.find(s=>s.questions.some(sq=>sq.id===q.id));
+      return String(sess?.id)===fcSession;
+    })
+    .filter(q=>fcSubject==="All"||q.subject===fcSubject)
+    .filter(q=>!fcSearch||(q.concept||"").toLowerCase().includes(fcSearch.toLowerCase())||(q.ankiFront||"").toLowerCase().includes(fcSearch.toLowerCase()));
+  const cardSessions=sessions.filter(s=>s.questions.some(q=>q.ankiFront&&q.ankiFront.trim()));
+  const cardSubjects=[...new Set(ankiCards.map(q=>q.subject).filter(Boolean))];
+  const hasFilters=fcSession!=="All"||fcSubject!=="All"||fcSearch;
+  const downloadAll=()=>{
+    const rows=ankiCards.map(q=>{const back=(q.ankiBack||q.concept||"").replace(/\t/g," ");return `${q.ankiFront.replace(/\t/g," ")}\t${back}`;}).join("\n");
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([rows],{type:"text/plain"}));a.download="vimavima_anki.txt";a.click();
+  };
+  return (<>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <div>
+        <div style={{fontSize:16,fontWeight:600,color:T.text,marginBottom:3}}>Flashcards</div>
+        <div style={{fontSize:12,color:T.muted}}>{hasFilters?`${filteredCards.length} of ${ankiTotal}`:ankiTotal} cards · Click any card to flip</div>
+      </div>
+      {ankiTotal>0&&<button onClick={downloadAll} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 20px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>⬇ Download .apkg Deck</button>}
+    </div>
+    <div style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"10px 14px",marginBottom:16,fontSize:12,color:T.dim,display:"flex",gap:10,alignItems:"center"}}>
+      <span style={{fontSize:16}}>💡</span>
+      <span>Each card has a <b style={{color:T.text}}>front</b> (cue) and a <b style={{color:T.text}}>back</b> (answer). Click to flip. Download exports .txt for Anki → File → Import.</span>
+    </div>
+    {ankiTotal===0?(
+      <div style={{textAlign:"center",color:T.muted,padding:"50px 0",fontSize:13}}>
+        <div style={{fontSize:36,marginBottom:12}}>⚡</div>
+        <div style={{color:T.dim,marginBottom:6,fontWeight:600}}>No flashcards yet</div>
+        <div style={{fontSize:12}}>When logging a question, fill in the <b style={{color:T.text}}>“Flashcard 1-liner”</b> step to create a card.</div>
+      </div>
+    ):(
+      <div style={{display:"flex",gap:18,alignItems:"flex-start"}}>
+        <div style={{width:188,flexShrink:0,display:"flex",flexDirection:"column",gap:12,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"16px 14px"}}>
+          <div style={{fontSize:10,color:T.muted,letterSpacing:"0.9px",textTransform:"uppercase",fontWeight:600}}>Filter Cards</div>
+          <div>
+            <div style={{fontSize:10,color:T.muted,letterSpacing:"0.7px",textTransform:"uppercase",marginBottom:5}}>Search</div>
+            <input placeholder="Concept or keyword..." value={fcSearch} onChange={e=>setFcSearch(e.target.value)}
+              style={{width:"100%",background:T.raised,border:"1px solid "+T.border,borderRadius:7,padding:"7px 10px",color:T.text,fontSize:11,boxSizing:"border-box"}}/>
+          </div>
+          {cardSessions.length>0&&(
+            <div>
+              <div style={{fontSize:10,color:T.muted,letterSpacing:"0.7px",textTransform:"uppercase",marginBottom:5}}>Session</div>
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                {[{id:"All",name:"All Sessions"},...cardSessions.map(s=>({id:String(s.id),name:s.name}))].map(item=>(
+                  <button key={item.id} onClick={()=>setFcSession(item.id)}
+                    style={{background:fcSession===item.id?T.accent+"22":T.raised,border:"1px solid "+(fcSession===item.id?T.accent+"60":T.border),borderRadius:6,padding:"6px 10px",color:fcSession===item.id?T.accent:T.dim,cursor:"pointer",fontSize:11,textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",transition:"all 0.15s"}}>
+                    {item.name.length>22?item.name.substring(0,22)+"…":item.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {cardSubjects.length>0&&(
+            <div>
+              <div style={{fontSize:10,color:T.muted,letterSpacing:"0.7px",textTransform:"uppercase",marginBottom:5}}>Subject</div>
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                <button onClick={()=>setFcSubject("All")}
+                  style={{background:fcSubject==="All"?T.accent+"22":T.raised,border:"1px solid "+(fcSubject==="All"?T.accent+"60":T.border),borderRadius:6,padding:"6px 10px",color:fcSubject==="All"?T.accent:T.dim,cursor:"pointer",fontSize:11,textAlign:"left",transition:"all 0.15s"}}>
+                  All Subjects
+                </button>
+                {cardSubjects.map(s=>(
+                  <button key={s} onClick={()=>setFcSubject(fcSubject===s?"All":s)}
+                    style={{background:fcSubject===s?(subjColors[s]||T.accent)+"22":T.raised,border:"1px solid "+(fcSubject===s?(subjColors[s]||T.accent)+"60":T.border),borderRadius:6,padding:"6px 10px",color:fcSubject===s?(subjColors[s]||T.accent):T.dim,cursor:"pointer",fontSize:11,textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",transition:"all 0.15s"}}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {hasFilters&&<button onClick={()=>{setFcSession("All");setFcSubject("All");setFcSearch("");}} style={{background:"none",border:"none",color:T.accent,fontSize:11,cursor:"pointer",textAlign:"left",padding:0}}>✕ Clear filters</button>}
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          {filteredCards.length===0?(
+            <div style={{textAlign:"center",color:T.muted,padding:"40px 0",fontSize:13}}>No cards match your filters.</div>
+          ):(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+              {filteredCards.map(q=>{const sess=sessions.find(s=>s.questions.some(sq=>sq.id===q.id));return <FlipCard key={q.id} T={T} front={q.ankiFront} answer={q.ankiBack||q.concept||""} session={sess?.name}/>;})}
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+  </>);
+}
+
 // ── Auth / Onboarding ────────────────────────────────────────────────────────
 const TRACKS = [
   { id:"MCAT",  label:"Pre-Med",     sub:"MCAT prep — C/P, CARS, B/B, Psych/Soc",   icon:"🔬" },
@@ -2009,46 +2104,7 @@ return (
         </>)}
 
         {/* FLASHCARDS */}
-        {tab==="flashcards"&&(<>
-          {/* Header row */}
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <div>
-              <div style={{fontSize:16,fontWeight:600,color:T.text,marginBottom:3}}>Flashcards</div>
-              <div style={{fontSize:12,color:T.muted}}>{ankiTotal} cards ready · Click any card to flip · Download for Anki</div>
-            </div>
-            {ankiTotal>0&&<button onClick={()=>{
-              const rows=allQ.filter(q=>q.ankiFront&&q.ankiFront.trim()).map(q=>{
-                const back=(q.ankiBack||q.concept||"").replace(/\t/g," ");
-                return `${q.ankiFront.replace(/\t/g," ")}\t${back}`;
-              }).join("\n");
-              const a=document.createElement("a");
-              a.href=URL.createObjectURL(new Blob([rows],{type:"text/plain"}));
-              a.download="vimavima_anki.txt"; a.click();
-            }} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 20px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>⬇ Download .apkg Deck</button>}
-          </div>
-
-          {/* How it works note */}
-          <div style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"10px 14px",marginBottom:20,fontSize:12,color:T.dim,display:"flex",gap:10,alignItems:"center"}}>
-            <span style={{fontSize:16}}>💡</span>
-            <span>Each card has a <b style={{color:T.text}}>front</b> (your 1-liner cue) and a <b style={{color:T.text}}>back</b> (answer details). Click to flip. Download exports a .txt file — open Anki → File → Import → select the file.</span>
-          </div>
-
-          {allQ.filter(q=>q.ankiFront).length===0&&(
-            <div style={{textAlign:"center",color:T.muted,padding:"50px 0",fontSize:13}}>
-              <div style={{fontSize:36,marginBottom:12}}>⚡</div>
-              <div style={{color:T.dim,marginBottom:6,fontWeight:600}}>No flashcards yet</div>
-              <div style={{fontSize:12}}>When logging a question, fill in the <b style={{color:T.text}}>"Flashcard 1-liner"</b> step to create a card automatically.</div>
-            </div>
-          )}
-
-          {/* Flip cards grid */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
-            {allQ.filter(q=>q.ankiFront&&q.ankiFront.trim()).map(q=>{
-              const sess=sessions.find(s=>s.questions.some(sq=>sq.id===q.id));
-              return <FlipCard key={q.id} T={T} front={q.ankiFront} answer={q.ankiBack||q.concept||""} session={sess?.name}/>;
-            })}
-          </div>
-        </>)}
+        {tab==="flashcards"&&<FlashcardsPanel allQ={allQ} sessions={sessions} T={T} ankiTotal={ankiTotal}/>}
       </div>
 
       {/* New Session Modal */}
