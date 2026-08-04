@@ -1320,13 +1320,6 @@ function FlashcardsPanel({allQ,sessions,T,ankiTotal}){
       <span style={{fontSize:16}}>💡</span>
       <span>Each card has a <b style={{color:T.text}}>front</b> (cue) and a <b style={{color:T.text}}>back</b> (answer). Click to flip. Download exports .txt for Anki → File → Import.</span>
     </div>
-    {ankiTotal===0?(
-      <div style={{textAlign:"center",color:T.muted,padding:"50px 0",fontSize:13}}>
-        <div style={{fontSize:36,marginBottom:12}}>⚡</div>
-        <div style={{color:T.dim,marginBottom:6,fontWeight:600}}>No flashcards yet</div>
-        <div style={{fontSize:12}}>When logging a question, fill in the <b style={{color:T.text}}>“Flashcard 1-liner”</b> step to create a card.</div>
-      </div>
-    ):(
       <div style={{display:"flex",gap:18,alignItems:"flex-start"}}>
         <div style={{width:188,flexShrink:0,display:"flex",flexDirection:"column",gap:12,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"16px 14px"}}>
           <div style={{fontSize:10,color:T.muted,letterSpacing:"0.9px",textTransform:"uppercase",fontWeight:600}}>Filter Cards</div>
@@ -1368,7 +1361,13 @@ function FlashcardsPanel({allQ,sessions,T,ankiTotal}){
           {hasFilters&&<button onClick={()=>{setFcSession("All");setFcSubject("All");setFcSearch("");}} style={{background:"none",border:"none",color:T.accent,fontSize:11,cursor:"pointer",textAlign:"left",padding:0}}>✕ Clear filters</button>}
         </div>
         <div style={{flex:1,minWidth:0}}>
-          {filteredCards.length===0?(
+          {ankiTotal===0?(
+            <div style={{textAlign:"center",color:T.muted,padding:"50px 0",fontSize:13}}>
+              <div style={{fontSize:36,marginBottom:12}}>⚡</div>
+              <div style={{color:T.dim,marginBottom:6,fontWeight:600}}>No flashcards yet</div>
+              <div style={{fontSize:12}}>When logging a question, fill in the <b style={{color:T.text}}>“Flashcard 1-liner”</b> step to create a card.</div>
+            </div>
+          ):filteredCards.length===0?(
             <div style={{textAlign:"center",color:T.muted,padding:"40px 0",fontSize:13}}>No cards match your filters.</div>
           ):(
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
@@ -1377,7 +1376,6 @@ function FlashcardsPanel({allQ,sessions,T,ankiTotal}){
           )}
         </div>
       </div>
-    )}
   </>);
 }
 
