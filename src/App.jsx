@@ -203,15 +203,15 @@ function SplashScreen({ dark, onDone }) {
         {/* Gold glow overlay — sits over just the ladder in the center */}
         <div style={{
           position: "absolute",
-          top: "15%",
-          left: "42%",
-          width: "16%",
-          height: "70%",
+          top: "18%",
+          left: "43.5%",
+          width: "13%",
+          height: "64%",
           background: "#FFD700",
-          borderRadius: 3,
-          opacity: phase === "glow" ? 0.85 : 0,
+          borderRadius: 2,
+          opacity: phase === "glow" ? 0.75 : 0,
           transition: "opacity 0.5s ease",
-          filter: "blur(6px)",
+          filter: "blur(2.5px)",
           mixBlendMode: "screen",
           pointerEvents: "none",
         }}/>
