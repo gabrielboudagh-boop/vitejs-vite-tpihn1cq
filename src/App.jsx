@@ -482,14 +482,16 @@ function SubjectPieChart({data, T}) {
 
 
 // ── WIZARD ────────────────────────────────────────────────────────────────────
-const STEPS=["result","time","change","why","category","anki","summary","notes"];
-const STEP_LABELS=["Correct or incorrect?","Time taken","Answer changed?","Why?","Subject & Category","Flashcard (front & back)","Question summary","Reflection & notes"];
+const STEPS=["result","time","change","why","category","summary","anki","notes"];
+const STEP_LABELS=["Correct or incorrect?","Time taken","Answer changed?","Why?","What was this about?","Question summary","Flashcard","Reflection & notes"];
 
 function Wizard({onClose,onSave,mode,T}){
   const [step,setStep]=useState(0);
-  const [data,setData]=useState({result:"",time:"",answerChange:"",wrongReason:"",correctReason:"",subject:"",qtype:"",concept:"",qnum:"",qbank:"",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""});
+  const [data,setData]=useState({result:"",time:"",answerChange:"",wrongReason:"",correctReason:"",subject:"",qtype:"",concept:"",qnum:"",qbank:"",ankiFront:"",ankiBack:"",summary:"",wrongAction:"",nextApproach:"",resource:"",notes:""});
   const [aiText,setAiText]=useState(""); const [aiLoading,setAiLoading]=useState(false);
   const [aiAnki,setAiAnki]=useState(""); const [ankiLoading,setAnkiLoading]=useState(false);
+  const [aiAnkiBack,setAiAnkiBack]=useState(""); const [ankiBackLoading,setAnkiBackLoading]=useState(false);
+  const [submitted,setSubmitted]=useState(false);
   const cfg=MODES[mode];
   const set=(k,v)=>setData(d=>({...d,[k]:v}));
   const next=()=>setStep(s=>Math.min(s+1,STEPS.length-1));
@@ -498,10 +500,19 @@ function Wizard({onClose,onSave,mode,T}){
 
   useEffect(()=>{
     const s=STEPS[step];
-    if(s==="anki"&&!data.ankiFront&&data.concept){
-      setAnkiLoading(true);setAiAnki("");
-      fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,messages:[{role:"user",content:`Create one concise Anki flashcard FRONT for a ${mode} question about "${data.concept}" (${data.qtype||""}, ${data.subject||""}). Max 20 words, exam-vignette style cue. Return ONLY the front text, nothing else.`}]})})
-      .then(r=>r.json()).then(j=>{setAiAnki(j.content?.find(b=>b.type==="text")?.text?.trim()||"");setAnkiLoading(false);}).catch(()=>setAnkiLoading(false));
+    if(s==="anki"&&data.concept){
+      const wrongCtx=data.wrongAction?` Student noted: "${data.wrongAction}".`:data.wrongReason?` Got it wrong because: ${data.wrongReason}.`:"";
+      const approachCtx=data.nextApproach?` Next time approach: "${data.nextApproach}".`:"";
+      if(!data.ankiFront){
+        setAnkiLoading(true);setAiAnki("");
+        fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,messages:[{role:"user",content:`Create one concise Anki flashcard FRONT for a ${mode} question about "${data.concept}" (${data.qtype||""}, ${data.subject||""}).${wrongCtx}${approachCtx} Make it a conceptual cue testing the core mechanism, exam-vignette style. Max 20 words. Return ONLY the front text.`}]})})
+        .then(r=>r.json()).then(j=>{setAiAnki(j.content?.find(b=>b.type==="text")?.text?.trim()||"");setAnkiLoading(false);}).catch(()=>setAnkiLoading(false));
+      }
+      if(!data.ankiBack){
+        setAnkiBackLoading(true);setAiAnkiBack("");
+        fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,messages:[{role:"user",content:`Create one concise Anki flashcard BACK (answer) for a ${mode} question about "${data.concept}" (${data.qtype||""}, ${data.subject||""}). Give the key fact, mechanism, diagnosis, or next step in 1-2 lines. Max 25 words. Return ONLY the answer text.`}]})})
+        .then(r=>r.json()).then(j=>{setAiAnkiBack(j.content?.find(b=>b.type==="text")?.text?.trim()||"");setAnkiBackLoading(false);}).catch(()=>setAnkiBackLoading(false));
+      }
     }
     if(s==="notes"){
       setAiLoading(true);setAiText("");
@@ -510,7 +521,21 @@ function Wizard({onClose,onSave,mode,T}){
     }
   },[step]);
 
-  const finish=()=>{onSave({...data,id:Date.now(),date:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})});onClose();};
+  const finish=()=>{onSave({...data,id:Date.now(),date:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})});setSubmitted(true);};
+  const resetWizard=()=>{setData({result:"",time:"",answerChange:"",wrongReason:"",correctReason:"",subject:"",qtype:"",concept:"",qnum:"",qbank:"",ankiFront:"",ankiBack:"",summary:"",wrongAction:"",nextApproach:"",resource:"",notes:""});setStep(0);setSubmitted(false);setAiText("");setAiAnki("");setAiAnkiBack("");};
+  if(submitted) return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,padding:20}}>
+      <div className="fade-in" style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:18,width:"100%",maxWidth:420,padding:"44px 32px",textAlign:"center"}}>
+        <div style={{fontSize:52,marginBottom:14}}>✅</div>
+        <div style={{fontSize:21,fontWeight:700,color:T.text,marginBottom:8}}>Question Logged!</div>
+        <div style={{fontSize:13,color:T.muted,marginBottom:30}}>Great job reflecting on this one. Keep the momentum going.</div>
+        <div style={{display:"flex",gap:12,justifyContent:"center"}}>
+          <button onClick={resetWizard} style={{background:T.accent,border:"none",borderRadius:8,padding:"11px 24px",color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer"}}>Log Next Question →</button>
+          <button onClick={onClose} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"11px 20px",color:T.muted,fontSize:14,cursor:"pointer"}}>Done</button>
+        </div>
+      </div>
+    </div>
+  );
 
   const Choice=({selected,onSelect,icon,title,sub,selBg})=>(
     <button onClick={onSelect} style={{width:"100%",background:selected?(selBg||T.accentGlow):T.raised,border:`1px solid ${selected?T.accent+"60":T.border}`,borderRadius:12,padding:"17px 20px",display:"flex",alignItems:"center",gap:16,cursor:"pointer",marginBottom:10,textAlign:"left",transition:"all 0.15s"}}>
@@ -544,14 +569,13 @@ function Wizard({onClose,onSave,mode,T}){
             <div style={{textAlign:"center",marginBottom:20}}>
               <div style={{fontSize:34,marginBottom:8}}>⚡</div>
               <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Flashcard</div>
-              <div style={{fontSize:13,color:T.muted}}>Front question + back answer</div>
+              <div style={{fontSize:13,color:T.muted}}>AI-generated card based on your reflection</div>
             </div>
 
             {/* FRONT */}
             <Lbl T={T}>Front — Question / Cue</Lbl>
             <Inp T={T} placeholder="e.g. 55M jaw claudication + vision loss → next step?" value={data.ankiFront} onChange={e=>set("ankiFront",e.target.value)} style={{marginBottom:8}}/>
-            {/* AI suggestion */}
-            <div style={{background:T.raised,border:"1px solid "+T.border,borderRadius:10,padding:"10px 14px",marginBottom:16}}>
+            <div style={{background:T.raised,border:"1px solid "+T.border,borderRadius:10,padding:"10px 14px",marginBottom:14}}>
               <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:6}}>✨ AI SUGGESTED FRONT</div>
               {ankiLoading?<div style={{color:T.muted,fontSize:12,fontStyle:"italic"}}>Generating suggestion...</div>
               :aiAnki?<><div style={{fontSize:13,color:T.text,lineHeight:1.5,marginBottom:8}}>{aiAnki}</div><button onClick={()=>set("ankiFront",aiAnki)} style={{background:T.accent,border:"none",borderRadius:6,padding:"5px 12px",color:"#fff",fontSize:11,cursor:"pointer"}}>Use this →</button></>
@@ -560,7 +584,13 @@ function Wizard({onClose,onSave,mode,T}){
 
             {/* BACK */}
             <Lbl T={T}>Back — Answer</Lbl>
-            <Inp T={T} placeholder="e.g. Giant cell arteritis → temporal artery biopsy" value={data.ankiBack} onChange={e=>set("ankiBack",e.target.value)} style={{marginBottom:16}}/>
+            <Inp T={T} placeholder="e.g. Giant cell arteritis → temporal artery biopsy" value={data.ankiBack} onChange={e=>set("ankiBack",e.target.value)} style={{marginBottom:8}}/>
+            <div style={{background:T.raised,border:"1px solid "+T.border,borderRadius:10,padding:"10px 14px",marginBottom:16}}>
+              <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:6}}>✨ AI SUGGESTED BACK</div>
+              {ankiBackLoading?<div style={{color:T.muted,fontSize:12,fontStyle:"italic"}}>Generating answer...</div>
+              :aiAnkiBack?<><div style={{fontSize:13,color:T.text,lineHeight:1.5,marginBottom:8}}>{aiAnkiBack}</div><button onClick={()=>set("ankiBack",aiAnkiBack)} style={{background:T.success,border:"none",borderRadius:6,padding:"5px 12px",color:"#fff",fontSize:11,cursor:"pointer"}}>Use this →</button></>
+              :<div style={{fontSize:12,color:T.muted}}>Fill in concept for an AI answer suggestion.</div>}
+            </div>
 
             {/* Preview — both sides */}
             {(data.ankiFront||data.ankiBack)&&(
@@ -583,12 +613,34 @@ function Wizard({onClose,onSave,mode,T}){
               </div>
             </div>)}
           </>)}
-          {s==="summary"&&(<><div style={{textAlign:"center",marginBottom:22}}><div style={{fontSize:34,marginBottom:8}}>📄</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Question Summary</div><div style={{fontSize:13,color:T.muted}}>Brief note on what was asked</div></div><Lbl T={T}>Summary</Lbl><Inp T={T} textarea placeholder="Brief summary..." value={data.summary} onChange={e=>set("summary",e.target.value)} style={{height:110}}/><div style={{marginTop:14}}><Lbl T={T}>Screenshot</Lbl><div style={{border:`1px dashed ${T.border}`,borderRadius:8,padding:"12px 16px",display:"inline-flex",alignItems:"center",gap:8,cursor:"pointer",color:T.muted,fontSize:13}}>📎 Attach screenshot</div></div></>)}
+          {s==="summary"&&(<>
+            <div style={{textAlign:"center",marginBottom:18}}>
+              <div style={{fontSize:34,marginBottom:8}}>📄</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Question Summary</div>
+              <div style={{fontSize:13,color:T.muted}}>Cement the learning in your own words</div>
+            </div>
+            <div style={{background:T.name==="dark"?"#0e1624":"#f0f4ff",border:`1px solid ${T.name==="dark"?"#3b4a6040":"#c7d2fe"}`,borderRadius:10,padding:"10px 14px",marginBottom:14}}>
+              <div style={{fontSize:11,color:T.name==="dark"?"#a5b4fc":T.accent,fontWeight:600,marginBottom:4}}>💡 Purpose of this step</div>
+              <div style={{fontSize:12,color:T.dim,lineHeight:1.65}}>In your own words, describe what this question was asking, what the answer choices were about, and what key concept they were trying to get you to think about. Writing it yourself cements the material far better than re-reading.</div>
+            </div>
+            <Lbl T={T}>What was this question about?</Lbl>
+            <Inp T={T} textarea placeholder="Describe the stem, the answer choices, and the core concept being tested..." value={data.summary} onChange={e=>set("summary",e.target.value)} style={{height:90,marginBottom:14}}/>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div>
+                <Lbl T={T}>{data.result==="incorrect"?"What did I do wrong?":"Key insight / takeaway"}</Lbl>
+                <Inp T={T} textarea placeholder={data.result==="incorrect"?"What specifically led to your mistake?":"What made this question click for you?"} value={data.wrongAction} onChange={e=>set("wrongAction",e.target.value)} style={{height:80}}/>
+              </div>
+              <div>
+                <Lbl T={T}>Next time approach</Lbl>
+                <Inp T={T} textarea placeholder="Next time I see this type of question, I will..." value={data.nextApproach} onChange={e=>set("nextApproach",e.target.value)} style={{height:80}}/>
+              </div>
+            </div>
+          </>)}
           {s==="notes"&&(<><div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:34,marginBottom:8}}>💡</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Reflection & Notes</div><div style={{fontSize:13,color:T.muted}}>Cement what you learned</div></div><div style={{background:T.name==="dark"?"#0e0e2a":"#eff2ff",border:`1px solid ${T.name==="dark"?"#3730a360":"#c7d2fe"}`,borderRadius:12,padding:"14px 16px",marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span>✨</span><span style={{fontSize:10,fontWeight:700,color:T.name==="dark"?"#a5b4fc":T.accent,letterSpacing:"0.8px"}}>AI STUDY INSIGHT</span></div>{aiLoading?<div style={{color:T.muted,fontSize:12,fontStyle:"italic"}}>Generating...</div>:aiText?<div style={{color:T.name==="dark"?"#c7d2fe":T.dim,fontSize:12,lineHeight:1.75,whiteSpace:"pre-wrap"}}>{aiText}</div>:<div style={{fontSize:12,color:T.muted}}>Fill in subject/concept above.</div>}</div><div style={{marginBottom:14}}><Lbl T={T}>Resource to Review</Lbl><Inp T={T} placeholder="e.g. FA p.342, Pathoma Ch.3..." value={data.resource} onChange={e=>set("resource",e.target.value)}/></div><div><Lbl T={T}>Personal Notes</Lbl><Inp T={T} textarea placeholder="Your own notes..." value={data.notes} onChange={e=>set("notes",e.target.value)} style={{height:72}}/></div><div style={{marginTop:12,background:data.result==="correct"?T.success+"18":T.danger+"18",border:`1px solid ${data.result==="correct"?T.success+"30":T.danger+"30"}`,borderRadius:8,padding:"10px 14px",fontSize:12,color:data.result==="correct"?T.success:T.danger}}>{data.result==="correct"?"✅  Great job! Add notes and submit.":"📚  Review the concept, add resources, then submit."}</div></>)}
         </div>
         {step>0&&(<div style={{padding:"12px 24px",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",bottom:0,background:T.surface}}>
           <button onClick={back} style={{background:"none",border:"none",color:T.muted,fontSize:13,cursor:"pointer"}}>← Back</button>
-          {step===STEPS.length-1?<button onClick={finish} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 22px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Submit ✓</button>:["category","anki","summary"].includes(s)?<button onClick={next} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 20px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Next →</button>:<div/>}
+          {step===STEPS.length-1?<button onClick={finish} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 22px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Submit ✓</button>:["category","summary","anki"].includes(s)?<button onClick={next} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 20px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Next →</button>:<div/>}
         </div>)}
       </div>
     </div>
@@ -685,13 +737,7 @@ function SessionDetail({session,sessions,onBack,onAddQuestion,onUpdateQuestion,m
             <div style={{fontSize:12,color:T.muted,marginTop:3}}>{session.date}</div>
           </div>
         </div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <button onClick={()=>exportExcel(session)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"7px 14px",color:T.dim,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-            📊 Export Excel
-          </button>
-          {ankiReady>0&&<button onClick={()=>downloadApkg(session, mode, ANKI_SERVER_URL)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"7px 14px",color:T.accent,fontSize:12,cursor:"pointer"}}>⚡ Download Anki ({ankiReady})</button>}
-          <button onClick={onAddQuestion} style={{background:T.accent,border:"none",borderRadius:8,padding:"8px 18px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Log Question</button>
-        </div>
+        <div/>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,padding:"20px 32px"}}>
         <StatCard T={T} label="Total" value={qs.length} sub="questions"/>
@@ -699,7 +745,18 @@ function SessionDetail({session,sessions,onBack,onAddQuestion,onUpdateQuestion,m
         <StatCard T={T} label="Incorrect" value={qs.length-correct} sub="questions"/>
         <StatCard T={T} label="Changed → Wrong" value={changedWrong} sub="trust your gut" color={T.danger}/>
       </div>
-      <TabBar T={T} tabs={[["questions","≡  Questions"],["analytics","📊  Analytics"]]} active={tab} onChange={setTab} style={{padding:"0 32px"}}/>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${T.border}`,padding:"0 32px"}}>
+        <div style={{display:"flex",overflowX:"auto"}}>
+          {[["questions","≡  Questions"],["analytics","📊  Analytics"]].map(([id,label])=>(
+            <button key={id} onClick={()=>setTab(id)} style={{background:"none",border:"none",borderBottom:tab===id?`2px solid ${T.accent}`:"2px solid transparent",padding:"12px 20px",fontSize:13,fontWeight:tab===id?600:400,color:tab===id?T.text:T.muted,cursor:"pointer",whiteSpace:"nowrap",transition:"color 0.15s"}}>{label}</button>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:8,alignItems:"center",padding:"6px 0"}}>
+          <button onClick={()=>exportExcel(session)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"6px 12px",color:T.dim,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>📊 Export Excel</button>
+          {ankiReady>0&&<button onClick={()=>downloadApkg(session, mode, ANKI_SERVER_URL)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"6px 12px",color:T.accent,fontSize:12,cursor:"pointer"}}>⚡ Anki ({ankiReady})</button>}
+          <button onClick={onAddQuestion} style={{background:T.accent,border:"none",borderRadius:8,padding:"7px 16px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Log Question</button>
+        </div>
+      </div>
       <div style={{padding:"18px 32px"}}>
         {tab==="questions"&&(<>
           <div style={{display:"grid",gridTemplateColumns:"110px 56px 78px 1fr 180px",gap:10,padding:"6px 14px",marginBottom:6}}>
@@ -1820,6 +1877,9 @@ return (
     padding: 0,
     overflowX: "hidden"
   }}>
+    {darkMode && (
+      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:9998,boxShadow:"inset 0 0 180px rgba(59,110,255,0.07), inset 0 0 60px rgba(59,110,255,0.04)"}}/>
+    )}
     
     {/* Top Header */}
     <header style={{
