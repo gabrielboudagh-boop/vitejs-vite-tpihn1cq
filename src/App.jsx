@@ -114,6 +114,15 @@ const QBANKS_MAP = {
   MCAT: ["UWorld MCAT","Kaplan","Princeton Review","Blueprint","AAMC Official","Khan Academy","Other"],
   LSAT: ["7Sage","PowerScore","Princeton Review","Manhattan Prep","LSAC Official","Khan Academy","Other"],
 };
+const CAR_SKILLS=[
+  {key:"mainIdea",label:"Main Idea",desc:"Author's central point in one sentence",placeholder:"The author argues that..."},
+  {key:"tone",label:"Tone",desc:"Author's tone toward the subject",placeholder:"e.g. Skeptical, supportive, neutral, critical, mixed..."},
+  {key:"arguments",label:"Arguments",desc:"What was the author trying to prove?",placeholder:"The main argument is..."},
+  {key:"author",label:"The Author",desc:"Author's opinions, beliefs, and what they care about",placeholder:"The author believes... / The author is concerned about..."},
+  {key:"contrastingTheories",label:"Contrasting Theories",desc:"Any opposing views or alternative frameworks presented",placeholder:"None / Yes — Theory A argues X vs Theory B which argues Y..."},
+  {key:"inference",label:"Inference / Logic",desc:"Questions that required a leap beyond the passage",placeholder:"No traps / Yes — Q3 required outside knowledge..."},
+];
+const RC_WRONG_REASONS=["Misread the passage","Got the tone wrong","Confused contrasting theories","Made too big an inference","Ran out of time","Misidentified the main idea","Ignored the author's perspective","Outside knowledge crept in"];
  
 const pct = (c,t) => t ? Math.round((c/t)*100) : 0;
  
@@ -485,7 +494,7 @@ function SubjectPieChart({data, T}) {
 const STEPS=["result","time","change","why","category","summary","anki","notes"];
 const STEP_LABELS=["Correct or incorrect?","Time taken","Answer changed?","Why?","What was this about?","Question summary","Flashcard","Reflection & notes"];
 
-function Wizard({onClose,onSave,mode,T}){
+function Wizard({onClose,onSave,mode,T,onSwitchToPassage}){
   const [step,setStep]=useState(0);
   const [data,setData]=useState({result:"",time:"",answerChange:"",wrongReason:"",correctReason:"",subject:"",qtype:"",concept:"",qnum:"",qbank:"",ankiFront:"",ankiBack:"",summary:"",wrongAction:"",nextApproach:"",resource:"",notes:""});
   const [aiText,setAiText]=useState(""); const [aiLoading,setAiLoading]=useState(false);
@@ -564,7 +573,7 @@ function Wizard({onClose,onSave,mode,T}){
           {s==="change"&&(<><div style={{textAlign:"center",marginBottom:26}}><div style={{fontSize:34,marginBottom:8}}>🔄</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Did you change your answer?</div><div style={{fontSize:13,color:T.muted}}>Track your second-guessing patterns</div></div>{ANSWER_CHANGES.map(c=><Choice key={c} selected={data.answerChange===c} onSelect={()=>autoNext("answerChange",c)} icon={c==="No change"?"➡️":c==="Incorrect → Correct"?"✅":c==="Correct → Incorrect"?"❌":"🔁"} title={c} selBg={c==="Incorrect → Correct"?T.success+"18":c==="Correct → Incorrect"?T.danger+"18":T.warn+"18"}/>)}</>)}
           {s==="why"&&data.result==="correct"&&(<><div style={{textAlign:"center",marginBottom:26}}><div style={{fontSize:34,marginBottom:8}}>✅</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Why were you correct?</div><div style={{fontSize:13,color:T.muted}}>Understanding your wins matters too</div></div>{CORRECT_REASONS.map(r=><Choice key={r} selected={data.correctReason===r} onSelect={()=>autoNext("correctReason",r)} icon={r==="Right reasoning"?"🎯":r==="Guessed"?"🎲":"⚠️"} title={r}/>)}</>)}
           {s==="why"&&data.result!=="correct"&&(<><div style={{textAlign:"center",marginBottom:26}}><div style={{fontSize:34,marginBottom:8}}>❌</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Why did you get it wrong?</div><div style={{fontSize:13,color:T.muted}}>Identify your weak points</div></div>{WRONG_REASONS.map(r=><Choice key={r} selected={data.wrongReason===r} onSelect={()=>autoNext("wrongReason",r)} icon={r==="Didn't know the material"?"📚":r==="Knew material, wrong algorithm"?"🧠":r==="Ran out of time"?"⏰":"😅"} title={r}/>)}</>)}
-          {s==="category"&&(<><div style={{textAlign:"center",marginBottom:22}}><div style={{fontSize:34,marginBottom:8}}>⚡</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>What was this about?</div><div style={{fontSize:13,color:T.muted}}>Categorize the question</div></div><div style={{display:"grid",gap:14}}><div><Lbl T={T}>Subject</Lbl><Sel T={T} value={data.subject} onChange={e=>set("subject",e.target.value)}><option value="">Select subject...</option>{cfg.subjects.map(s=><option key={s}>{s}</option>)}</Sel></div><div><Lbl T={T}>Question Type</Lbl><Sel T={T} value={data.qtype} onChange={e=>set("qtype",e.target.value)}><option value="">Select type...</option>{cfg.qtypes.map(t=><option key={t}>{t}</option>)}</Sel></div><div><Lbl T={T}>Concept Tested</Lbl><Inp T={T} placeholder="e.g. Giant cell arteritis..." value={data.concept} onChange={e=>set("concept",e.target.value)}/></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><Lbl T={T}>Question #</Lbl><Inp T={T} placeholder="Optional" value={data.qnum} onChange={e=>set("qnum",e.target.value)}/></div><div><Lbl T={T}>QBank</Lbl><Sel T={T} value={data.qbank} onChange={e=>set("qbank",e.target.value)}><option value="">Select...</option>{(QBANKS_MAP[mode]||QBANKS_MAP.USMLE).map(q=><option key={q}>{q}</option>)}</Sel></div></div></div></>)}
+          {s==="category"&&(<><div style={{textAlign:"center",marginBottom:22}}><div style={{fontSize:34,marginBottom:8}}>⚡</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>What was this about?</div><div style={{fontSize:13,color:T.muted}}>Categorize the question</div></div><div style={{display:"grid",gap:14}}><div><Lbl T={T}>Subject</Lbl><Sel T={T} value={data.subject} onChange={e=>set("subject",e.target.value)}><option value="">Select subject...</option>{cfg.subjects.map(s=><option key={s}>{s}</option>)}</Sel></div><div><Lbl T={T}>Question Type</Lbl><Sel T={T} value={data.qtype} onChange={e=>set("qtype",e.target.value)}><option value="">Select type...</option>{cfg.qtypes.map(t=><option key={t}>{t}</option>)}</Sel></div><div><Lbl T={T}>Concept Tested</Lbl><Inp T={T} placeholder="e.g. Giant cell arteritis..." value={data.concept} onChange={e=>set("concept",e.target.value)}/></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><Lbl T={T}>Question #</Lbl><Inp T={T} placeholder="Optional" value={data.qnum} onChange={e=>set("qnum",e.target.value)}/></div><div><Lbl T={T}>QBank</Lbl><Sel T={T} value={data.qbank} onChange={e=>set("qbank",e.target.value)}><option value="">Select...</option>{(QBANKS_MAP[mode]||QBANKS_MAP.USMLE).map(q=><option key={q}>{q}</option>)}</Sel></div></div></div>{(data.subject==="CARS"||data.subject==="Reading Comprehension")&&onSwitchToPassage&&(<div style={{marginTop:14,background:T.accent+"10",border:`1px solid ${T.accent}35`,borderRadius:10,padding:"12px 14px"}}><div style={{fontSize:11,fontWeight:600,color:T.accent,marginBottom:4}}>📖 Passage Analysis Mode available</div><div style={{fontSize:11,color:T.dim,marginBottom:8,lineHeight:1.5}}>This section uses the CAR Skills Matrix for deeper process diagnostics. Output is a process note, not a flashcard — because RC mistakes are reasoning failures, not knowledge gaps.</div><button onClick={onSwitchToPassage} style={{background:T.accent,border:"none",borderRadius:6,padding:"6px 14px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>Switch to Passage Analysis →</button></div>)}</>)}
           {s==="anki"&&(<>
             <div style={{textAlign:"center",marginBottom:20}}>
               <div style={{fontSize:34,marginBottom:8}}>⚡</div>
@@ -648,6 +657,223 @@ function Wizard({onClose,onSave,mode,T}){
 }
 
 
+// ── Passage Wizard ────────────────────────────────────────────────────────────
+function PassageWizard({onClose,onSave,mode,T}){
+  const [step,setStep]=useState(0);
+  const [numQuestions,setNumQuestions]=useState(3);
+  const [passageTitle,setPassageTitle]=useState("");
+  const [matrix,setMatrix]=useState({mainIdea:"",tone:"",arguments:"",author:"",contrastingTheories:"",inference:""});
+  const [questions,setQuestions]=useState([]);
+  const [currentQ,setCurrentQ]=useState(0);
+  const [currentQData,setCurrentQData]=useState({result:"",carSkill:"",wrongReason:""});
+  const [processMistake,setProcessMistake]=useState("");
+  const [processNote,setProcessNote]=useState("");
+  const [aiCorrection,setAiCorrection]=useState(""); const [aiCorrLoading,setAiCorrLoading]=useState(false);
+  const [submitted,setSubmitted]=useState(false);
+  const subject=mode==="MCAT"?"CARS":"Reading Comprehension";
+
+  const initQuestions=()=>{
+    setQuestions(Array.from({length:numQuestions},(_,i)=>({num:i+1,result:"",carSkill:"",wrongReason:""})));
+    setStep(1);
+  };
+
+  useEffect(()=>{
+    if(step===3){
+      setAiCorrLoading(true);setAiCorrection("");
+      const wrongQs=questions.filter(q=>q.result==="incorrect");
+      const wrongSkills=[...new Set(wrongQs.map(q=>q.carSkill).filter(Boolean))].join(", ")||"unknown";
+      const wrongReasonsList=[...new Set(wrongQs.map(q=>q.wrongReason).filter(Boolean))].join(", ")||"unknown";
+      const prompt=`A ${mode} student completed a ${subject} passage. ${wrongQs.length}/${questions.length} questions wrong. CAR skills missed: ${wrongSkills}. Error patterns: ${wrongReasonsList}. Matrix — Tone: "${matrix.tone}", Main Idea: "${matrix.mainIdea}", Contrasting Theories: "${matrix.contrastingTheories}". Student's process note: "${processMistake}". Write 2-3 sentences of specific, actionable process correction for what to do differently next time. Focus on reading approach, not content knowledge.`;
+      fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:300,messages:[{role:"user",content:prompt}]})})
+      .then(r=>r.json()).then(j=>{setAiCorrection(j.content?.find(b=>b.type==="text")?.text||"");setAiCorrLoading(false);}).catch(()=>setAiCorrLoading(false));
+    }
+  },[step]);
+
+  const saveCurrentQ=()=>{
+    const updated=questions.map((q,i)=>i===currentQ?{...q,...currentQData}:q);
+    setQuestions(updated);
+    setCurrentQData({result:"",carSkill:"",wrongReason:""});
+    if(currentQ<numQuestions-1){setCurrentQ(q=>q+1);}
+    else{setStep(3);}
+  };
+
+  const finish=()=>{
+    const allPassageQs=questions.map((q,i)=>i===currentQ&&currentQData.result?{...q,...currentQData}:q);
+    onSave({
+      id:Date.now(),
+      date:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"}),
+      type:"passage",subject,
+      passageTitle:passageTitle||`${subject} Passage`,
+      matrix,questions:allPassageQs,processMistake,processNote,aiCorrection,
+      result:allPassageQs.filter(q=>q.result==="correct").length>=allPassageQs.length/2?"correct":"incorrect",
+      qtype:mode==="MCAT"?"Critical analysis":"Inference",
+      concept:passageTitle||`${subject} Passage`,
+    });
+    setSubmitted(true);
+  };
+
+  if(submitted) return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,padding:20}}>
+      <div className="fade-in" style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:18,width:"100%",maxWidth:420,padding:"44px 32px",textAlign:"center"}}>
+        <div style={{fontSize:52,marginBottom:14}}>📖</div>
+        <div style={{fontSize:21,fontWeight:700,color:T.text,marginBottom:8}}>Passage Logged!</div>
+        <div style={{fontSize:13,color:T.muted,marginBottom:30}}>Process note saved. Keep refining your approach.</div>
+        <button onClick={onClose} style={{background:T.accent,border:"none",borderRadius:8,padding:"11px 24px",color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer"}}>Done</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,padding:20}}>
+      <div className="fade-in" style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:18,width:"100%",maxWidth:560,maxHeight:"92vh",overflowY:"auto",display:"flex",flexDirection:"column"}}>
+        <div style={{padding:"20px 24px 14px",borderBottom:`1px solid ${T.border}`,position:"sticky",top:0,background:T.surface,zIndex:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+            <div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:15,fontWeight:600,color:T.text}}>📖 Passage Analysis</span>
+                <span style={{fontSize:10,background:T.accent+"22",color:T.accent,borderRadius:5,padding:"1px 7px",fontWeight:600}}>{subject}</span>
+              </div>
+              <div style={{fontSize:12,color:T.muted,marginTop:2}}>
+                {step===0?"Passage setup":step===1?"CAR Skills Matrix":step===2?`Question ${currentQ+1} of ${numQuestions}`:"Passage Debrief"}
+              </div>
+            </div>
+            <button onClick={onClose} style={{background:"none",border:"none",color:T.muted,fontSize:20,cursor:"pointer",lineHeight:1}}>×</button>
+          </div>
+          <div style={{display:"flex",gap:4}}>
+            {[0,1,2,3].map(i=><div key={i} style={{flex:1,height:4,borderRadius:2,background:i<=step?T.accent:T.raised,transition:"background 0.25s"}}/>)}
+          </div>
+          <div style={{fontSize:11,color:T.muted,textAlign:"center",marginTop:5}}>Step {step+1} of 4</div>
+        </div>
+
+        <div style={{padding:"24px",flex:1}}>
+          {step===0&&(<>
+            <div style={{textAlign:"center",marginBottom:20}}>
+              <div style={{fontSize:34,marginBottom:8}}>📖</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Passage Setup</div>
+              <div style={{fontSize:13,color:T.muted}}>Let's analyze the passage before reviewing your questions</div>
+            </div>
+            <div style={{background:T.name==="dark"?"#0e1624":"#f0f4ff",border:`1px solid ${T.name==="dark"?"#3b4a6040":"#c7d2fe"}`,borderRadius:10,padding:"12px 14px",marginBottom:18}}>
+              <div style={{fontSize:11,color:T.name==="dark"?"#a5b4fc":T.accent,fontWeight:600,marginBottom:4}}>📌 Passage Analysis Mode</div>
+              <div style={{fontSize:12,color:T.dim,lineHeight:1.6}}>Uses the <b style={{color:T.text}}>CAR Skills Matrix</b> to identify process errors. Output is a <b style={{color:T.text}}>process note</b>, not a flashcard — RC mistakes are reasoning failures, not knowledge gaps.</div>
+            </div>
+            <div style={{display:"grid",gap:14}}>
+              <div><Lbl T={T}>Passage Label (optional)</Lbl><Inp T={T} placeholder="e.g. Passage 3, Science & Society..." value={passageTitle} onChange={e=>setPassageTitle(e.target.value)}/></div>
+              <div>
+                <Lbl T={T}>How many questions from this passage?</Lbl>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
+                  {[1,2,3,4,5,6,7,8].map(n=>(
+                    <button key={n} onClick={()=>setNumQuestions(n)} style={{width:42,height:42,borderRadius:8,background:numQuestions===n?T.accent:T.raised,border:`1px solid ${numQuestions===n?T.accent:T.border}`,color:numQuestions===n?"#fff":T.dim,fontWeight:numQuestions===n?700:400,fontSize:14,cursor:"pointer",transition:"all 0.15s"}}>{n}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>)}
+
+          {step===1&&(<>
+            <div style={{textAlign:"center",marginBottom:18}}>
+              <div style={{fontSize:34,marginBottom:8}}>🧠</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>CAR Skills Matrix</div>
+              <div style={{fontSize:13,color:T.muted}}>Analyze the passage structure before reviewing your answers</div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {CAR_SKILLS.map(skill=>(
+                <div key={skill.key} style={{background:T.raised,borderRadius:10,padding:"12px 14px"}}>
+                  <div style={{fontSize:10,fontWeight:700,color:T.accent,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:3}}>{skill.label}</div>
+                  <div style={{fontSize:11,color:T.muted,marginBottom:7}}>{skill.desc}</div>
+                  <Inp T={T} textarea placeholder={skill.placeholder} value={matrix[skill.key]} onChange={e=>setMatrix(m=>({...m,[skill.key]:e.target.value}))} style={{height:54,background:T.surface}}/>
+                </div>
+              ))}
+            </div>
+          </>)}
+
+          {step===2&&(<>
+            <div style={{textAlign:"center",marginBottom:18}}>
+              <div style={{fontSize:34,marginBottom:8}}>❓</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Question {currentQ+1} of {numQuestions}</div>
+              <div style={{fontSize:13,color:T.muted}}>Review against your matrix analysis</div>
+            </div>
+            <div style={{marginBottom:14}}>
+              <Lbl T={T}>Did you get it right?</Lbl>
+              <div style={{display:"flex",gap:10}}>
+                {["correct","incorrect"].map(r=>(
+                  <button key={r} onClick={()=>setCurrentQData(d=>({...d,result:r}))} style={{flex:1,background:currentQData.result===r?(r==="correct"?T.success+"22":T.danger+"22"):T.raised,border:`1px solid ${currentQData.result===r?(r==="correct"?T.success:T.danger):T.border}`,borderRadius:8,padding:"10px",color:currentQData.result===r?(r==="correct"?T.success:T.danger):T.muted,fontWeight:currentQData.result===r?600:400,cursor:"pointer",fontSize:13,transition:"all 0.15s"}}>
+                    {r==="correct"?"✓ Correct":"✗ Incorrect"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{marginBottom:14}}>
+              <Lbl T={T}>Which CAR skill was being tested?</Lbl>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                {CAR_SKILLS.map(skill=>(
+                  <button key={skill.key} onClick={()=>setCurrentQData(d=>({...d,carSkill:skill.label}))} style={{background:currentQData.carSkill===skill.label?T.accent+"22":T.raised,border:`1px solid ${currentQData.carSkill===skill.label?T.accent+"60":T.border}`,borderRadius:8,padding:"8px 10px",color:currentQData.carSkill===skill.label?T.accent:T.dim,fontSize:12,cursor:"pointer",textAlign:"left",transition:"all 0.15s"}}>{skill.label}</button>
+                ))}
+              </div>
+            </div>
+            {currentQData.result==="incorrect"&&(
+              <div style={{marginBottom:14}}>
+                <Lbl T={T}>Why did you get it wrong?</Lbl>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {RC_WRONG_REASONS.map(reason=>(
+                    <button key={reason} onClick={()=>setCurrentQData(d=>({...d,wrongReason:reason}))} style={{background:currentQData.wrongReason===reason?T.danger+"18":T.raised,border:`1px solid ${currentQData.wrongReason===reason?T.danger+"60":T.border}`,borderRadius:8,padding:"9px 14px",color:currentQData.wrongReason===reason?T.danger:T.dim,fontSize:12,cursor:"pointer",textAlign:"left",transition:"all 0.15s"}}>{reason}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{display:"flex",gap:6,justifyContent:"center",marginTop:8}}>
+              {Array.from({length:numQuestions},(_,i)=>(
+                <div key={i} style={{width:i===currentQ?20:8,height:8,borderRadius:4,background:questions[i]?.result==="correct"?T.success:questions[i]?.result==="incorrect"?T.danger:i===currentQ?T.accent:T.raised,transition:"all 0.2s"}}/>
+              ))}
+            </div>
+          </>)}
+
+          {step===3&&(<>
+            <div style={{textAlign:"center",marginBottom:18}}>
+              <div style={{fontSize:34,marginBottom:8}}>🎯</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Passage Debrief</div>
+              <div style={{fontSize:13,color:T.muted}}>Identify the process error, not the content gap</div>
+            </div>
+            <div style={{background:T.raised,borderRadius:10,padding:"12px 14px",marginBottom:14}}>
+              <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:8}}>PASSAGE RESULTS</div>
+              <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
+                <span style={{fontSize:14,color:T.success,fontWeight:600}}>✓ {questions.filter(q=>q.result==="correct").length} correct</span>
+                <span style={{fontSize:14,color:T.danger,fontWeight:600}}>✗ {questions.filter(q=>q.result==="incorrect").length} incorrect</span>
+                {questions.filter(q=>q.result==="incorrect"&&q.carSkill).length>0&&(
+                  <span style={{fontSize:11,color:T.muted}}>Skills missed: {[...new Set(questions.filter(q=>q.result==="incorrect").map(q=>q.carSkill).filter(Boolean))].join(", ")}</span>
+                )}
+              </div>
+            </div>
+            <div style={{marginBottom:14}}>
+              <Lbl T={T}>What was your main process mistake on this passage?</Lbl>
+              <Inp T={T} textarea placeholder="e.g. I tracked details instead of following the author's argument structure..." value={processMistake} onChange={e=>setProcessMistake(e.target.value)} style={{height:80}}/>
+            </div>
+            <div style={{background:T.name==="dark"?"#0e0e2a":"#eff2ff",border:`1px solid ${T.name==="dark"?"#3730a360":"#c7d2fe"}`,borderRadius:12,padding:"14px 16px",marginBottom:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                <span>✨</span><span style={{fontSize:10,fontWeight:700,color:T.name==="dark"?"#a5b4fc":T.accent,letterSpacing:"0.8px"}}>AI PROCESS CORRECTION</span>
+              </div>
+              {aiCorrLoading?<div style={{color:T.muted,fontSize:12,fontStyle:"italic"}}>Generating process correction...</div>
+              :aiCorrection?<div style={{color:T.name==="dark"?"#c7d2fe":T.dim,fontSize:12,lineHeight:1.75,whiteSpace:"pre-wrap"}}>{aiCorrection}</div>
+              :<div style={{fontSize:12,color:T.muted}}>Fill in your process mistake above first.</div>}
+            </div>
+            <div>
+              <Lbl T={T}>One-line process note (saved to session history)</Lbl>
+              <Inp T={T} placeholder="e.g. Passage 3: confused contrasting theories — re-read pivot sentences next time" value={processNote} onChange={e=>setProcessNote(e.target.value)}/>
+            </div>
+          </>)}
+        </div>
+
+        <div style={{padding:"12px 24px",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",bottom:0,background:T.surface}}>
+          {step>0?<button onClick={()=>{if(step===2&&currentQ>0){setCurrentQ(q=>q-1);setCurrentQData({result:questions[currentQ-1]?.result||"",carSkill:questions[currentQ-1]?.carSkill||"",wrongReason:questions[currentQ-1]?.wrongReason||""});}else{setStep(s=>s-1);}}} style={{background:"none",border:"none",color:T.muted,fontSize:13,cursor:"pointer"}}>← Back</button>:<div/>}
+          {step===0&&<button onClick={initQuestions} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 20px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Start Matrix Analysis →</button>}
+          {step===1&&<button onClick={()=>setStep(2)} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 20px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Review Questions →</button>}
+          {step===2&&<button onClick={saveCurrentQ} disabled={!currentQData.result} style={{background:currentQData.result?T.accent:T.raised,border:"none",borderRadius:8,padding:"9px 20px",color:currentQData.result?"#fff":T.muted,fontSize:13,fontWeight:600,cursor:currentQData.result?"pointer":"not-allowed",opacity:currentQData.result?1:0.5}}>{currentQ<numQuestions-1?"Next Question →":"Go to Debrief →"}</button>}
+          {step===3&&<button onClick={finish} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 22px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Save Passage ✓</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Edit Question Modal ────────────────────────────────────────────────────────
 function EditQuestionModal({question,mode,T,onSave,onClose}){
   const [data,setData]=useState({...question});
@@ -702,29 +928,31 @@ function EditQuestionModal({question,mode,T,onSave,onClose}){
 }
 
 // ── SESSION DETAIL ─────────────────────────────────────────────────────────────
-function SessionDetail({session,sessions,onBack,onAddQuestion,onUpdateQuestion,mode,T}){
+function SessionDetail({session,sessions,onBack,onAddQuestion,onAddPassage,onUpdateQuestion,mode,T}){
   const [tab,setTab]=useState("questions");
   const [expanded,setExpanded]=useState({});
   const [analyticsSlide,setAnalyticsSlide]=useState(0);
   const [editingQ,setEditingQ]=useState(null);
   const qs=session.questions;
-  const correct=qs.filter(q=>q.result==="correct").length;
-  const score=pct(correct,qs.length);
-  const changedWrong=qs.filter(q=>q.answerChange==="Correct → Incorrect").length;
-  const ankiReady=qs.filter(q=>q.ankiFront&&q.ankiFront.trim()).length;
+  const regularQs=qs.filter(q=>q.type!=="passage");
+  const passages=qs.filter(q=>q.type==="passage");
+  const correct=regularQs.filter(q=>q.result==="correct").length;
+  const score=pct(correct,regularQs.length);
+  const changedWrong=regularQs.filter(q=>q.answerChange==="Correct → Incorrect").length;
+  const ankiReady=regularQs.filter(q=>q.ankiFront&&q.ankiFront.trim()).length;
   const bySubject={},byType={},wrongReasons={};
-  qs.forEach(q=>{
+  regularQs.forEach(q=>{
     if(!bySubject[q.subject])bySubject[q.subject]={c:0,t:0};bySubject[q.subject].t++;if(q.result==="correct")bySubject[q.subject].c++;
     if(!byType[q.qtype])byType[q.qtype]={c:0,t:0};byType[q.qtype].t++;if(q.result==="correct")byType[q.qtype].c++;
     if(q.result==="incorrect"&&q.wrongReason)wrongReasons[q.wrongReason]=(wrongReasons[q.wrongReason]||0)+1;
   });
   const timingData=[
-    {name:"Under the limit",value:qs.filter(q=>q.time==="Under the limit").length,color:T.success,icon:"⚡"},
-    {name:"At the limit",value:qs.filter(q=>q.time==="At the limit").length,color:T.warn,icon:"🕐"},
-    {name:"Over the limit",value:qs.filter(q=>q.time==="Over the limit").length,color:T.danger,icon:"🚨"},
+    {name:"Under the limit",value:regularQs.filter(q=>q.time==="Under the limit").length,color:T.success,icon:"⚡"},
+    {name:"At the limit",value:regularQs.filter(q=>q.time==="At the limit").length,color:T.warn,icon:"🕐"},
+    {name:"Over the limit",value:regularQs.filter(q=>q.time==="Over the limit").length,color:T.danger,icon:"🚨"},
   ].filter(d=>d.value>0);
-  const answerData=ANSWER_CHANGES.map(a=>({name:a,value:qs.filter(q=>q.answerChange===a).length,color:a==="No change"?T.dim:a==="Incorrect → Correct"?T.success:a==="Correct → Incorrect"?T.danger:T.warn,icon:a==="No change"?"➡️":a==="Incorrect → Correct"?"📈":a==="Correct → Incorrect"?"📉":"🔁"})).filter(d=>d.value>0);
-  const progressData=[...sessions].sort((a,b)=>new Date(a.date)-new Date(b.date)).filter(s=>s.questions.length>0).map(s=>{const t=s.questions.length,c=s.questions.filter(q=>q.result==="correct").length;return{name:s.name.length>12?s.name.substring(0,12)+'…':s.name,score:Math.round((c/t)*100),isCurrent:s.id===session.id,date:s.date};});
+  const answerData=ANSWER_CHANGES.map(a=>({name:a,value:regularQs.filter(q=>q.answerChange===a).length,color:a==="No change"?T.dim:a==="Incorrect → Correct"?T.success:a==="Correct → Incorrect"?T.danger:T.warn,icon:a==="No change"?"➡️":a==="Incorrect → Correct"?"📈":a==="Correct → Incorrect"?"📉":"🔁"})).filter(d=>d.value>0);
+  const progressData=[...sessions].sort((a,b)=>new Date(a.date)-new Date(b.date)).filter(s=>s.questions.filter(q=>q.type!=="passage").length>0).map(s=>{const rqs=s.questions.filter(q=>q.type!=="passage");const t=rqs.length,c=rqs.filter(q=>q.result==="correct").length;return{name:s.name.length>12?s.name.substring(0,12)+'…':s.name,score:Math.round((c/t)*100),isCurrent:s.id===session.id,date:s.date};});
 
   return (
     <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'DM Sans',sans-serif"}}>
@@ -740,9 +968,9 @@ function SessionDetail({session,sessions,onBack,onAddQuestion,onUpdateQuestion,m
         <div/>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,padding:"20px 32px"}}>
-        <StatCard T={T} label="Total" value={qs.length} sub="questions"/>
-        <StatCard T={T} label="Score" value={`${score}%`} sub={`${correct}/${qs.length}`} color={T.scoreColor(score)}/>
-        <StatCard T={T} label="Incorrect" value={qs.length-correct} sub="questions"/>
+        <StatCard T={T} label="Total" value={regularQs.length} sub={passages.length>0?`+${passages.length} passage${passages.length>1?"s":""}`:">questions"}/>
+        <StatCard T={T} label="Score" value={`${score}%`} sub={`${correct}/${regularQs.length}`} color={T.scoreColor(score)}/>
+        <StatCard T={T} label="Incorrect" value={regularQs.length-correct} sub="questions"/>
         <StatCard T={T} label="Changed → Wrong" value={changedWrong} sub="trust your gut" color={T.danger}/>
       </div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${T.border}`,padding:"0 32px"}}>
@@ -754,6 +982,7 @@ function SessionDetail({session,sessions,onBack,onAddQuestion,onUpdateQuestion,m
         <div style={{display:"flex",gap:8,alignItems:"center",padding:"6px 0"}}>
           <button onClick={()=>exportExcel(session)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"6px 12px",color:T.dim,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>📊 Export Excel</button>
           {ankiReady>0&&<button onClick={()=>downloadApkg(session, mode, ANKI_SERVER_URL)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"6px 12px",color:T.accent,fontSize:12,cursor:"pointer"}}>⚡ Anki ({ankiReady})</button>}
+          {(mode==="MCAT"||mode==="LSAT")&&onAddPassage&&<button onClick={onAddPassage} style={{background:T.raised,border:`1px solid ${T.accent}40`,borderRadius:8,padding:"7px 13px",color:T.accent,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>📖 Passage</button>}
           <button onClick={onAddQuestion} style={{background:T.accent,border:"none",borderRadius:8,padding:"7px 16px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Log Question</button>
         </div>
       </div>
@@ -763,7 +992,32 @@ function SessionDetail({session,sessions,onBack,onAddQuestion,onUpdateQuestion,m
             {["RESULT","Q#","DATE","SUBJECT / CONCEPT","ACTIONS"].map(h=><div key={h} style={{fontSize:9,color:T.muted,letterSpacing:"0.9px"}}>{h}</div>)}
           </div>
           {qs.length===0&&<div style={{textAlign:"center",color:T.muted,padding:"50px 0",fontSize:13}}>No questions yet.</div>}
-          {qs.map(q=>(
+          {qs.map(q=>q.type==="passage"?(
+            <Card key={q.id} T={T} style={{marginBottom:8,border:`1px solid ${T.accent}30`,background:T.name==="dark"?"#090d1a":T.surface}}>
+              <div style={{padding:"13px 14px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{fontSize:18}}>📖</span>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:600,color:T.text}}>{q.passageTitle||"Passage Analysis"}</div>
+                      <div style={{fontSize:11,color:T.muted,marginTop:2}}>{q.date} · {q.questions?.length||0} Q · <span style={{color:T.success}}>{q.questions?.filter(qq=>qq.result==="correct").length||0} ✓</span> <span style={{color:T.danger}}>{q.questions?.filter(qq=>qq.result==="incorrect").length||0} ✗</span></div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                    <span style={{fontSize:10,background:T.accent+"22",color:T.accent,borderRadius:5,padding:"2px 8px",fontWeight:600}}>{q.subject}</span>
+                    <button onClick={()=>setExpanded(e=>({...e,[q.id]:!e[q.id]}))} style={{background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:12}}>{expanded[q.id]?"▲":"▼"} Details</button>
+                  </div>
+                </div>
+                {expanded[q.id]&&(
+                  <div style={{borderTop:`1px solid ${T.border}`,marginTop:12,paddingTop:12}}>
+                    {q.matrix&&Object.values(q.matrix).some(Boolean)&&(<div style={{marginBottom:12}}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:8}}>CAR SKILLS MATRIX</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{CAR_SKILLS.filter(s=>q.matrix[s.key]).map(skill=>(<div key={skill.key} style={{background:T.raised,borderRadius:6,padding:"7px 10px"}}><div style={{fontSize:9,color:T.accent,letterSpacing:"0.6px",fontWeight:600,marginBottom:3}}>{skill.label.toUpperCase()}</div><div style={{fontSize:11,color:T.dim}}>{q.matrix[skill.key]}</div></div>))}</div></div>)}
+                    {q.processNote&&<div style={{marginBottom:8}}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>PROCESS NOTE</div><div style={{fontSize:12,color:T.warn,background:T.warn+"12",borderRadius:6,padding:"8px 10px"}}>{q.processNote}</div></div>}
+                    {q.aiCorrection&&<div><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>AI PROCESS CORRECTION</div><div style={{fontSize:12,color:T.dim,lineHeight:1.65}}>{q.aiCorrection}</div></div>}
+                  </div>
+                )}
+              </div>
+            </Card>
+          ):(
             <Card key={q.id} T={T} style={{marginBottom:8}}>
               <div style={{display:"grid",gridTemplateColumns:"110px 56px 78px 1fr 180px",gap:10,padding:"13px 14px",alignItems:"center"}}>
                 <ResultBadge result={q.result} T={T}/>
@@ -1761,6 +2015,7 @@ export default function App(){
   const [view,setView]=useState("home");
   const [activeId,setActiveId]=useState(null);
   const [showWizard,setShowWizard]=useState(false);
+  const [showPassageWizard,setShowPassageWizard]=useState(false);
   const [showNewSession,setShowNewSession]=useState(false);
   const [newSess,setNewSess]=useState({name:"",date:""});
   const [tab,setTab]=useState("sessions");
@@ -1769,15 +2024,15 @@ export default function App(){
   const [filterResult,setFilterResult]=useState("All");
 
   const activeSess=sessions.find(s=>s.id===activeId);
-  const allQ=sessions.flatMap(s=>s.questions);
+  const allQ=sessions.flatMap(s=>s.questions).filter(q=>q.type!=="passage");
   const totalC=allQ.filter(q=>q.result==="correct").length;
   const overallPct=pct(totalC,allQ.length);
   const changedWrong=allQ.filter(q=>q.answerChange==="Correct → Incorrect").length;
   const recentSess=[...sessions].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
-  const recentQs=recentSess?.questions||[];
+  const recentQs=(recentSess?.questions||[]).filter(q=>q.type!=="passage");
   const recentPct=pct(recentQs.filter(q=>q.result==="correct").length,recentQs.length);
   const ankiTotal=allQ.filter(q=>q.ankiFront&&q.ankiFront.trim()).length;
-  const allProgressData=[...sessions].sort((a,b)=>new Date(a.date)-new Date(b.date)).filter(s=>s.questions.length>0).map(s=>{const t=s.questions.length,c=s.questions.filter(q=>q.result==="correct").length;return{name:s.name.length>12?s.name.substring(0,12)+'…':s.name,score:Math.round((c/t)*100),date:s.date};});
+  const allProgressData=[...sessions].sort((a,b)=>new Date(a.date)-new Date(b.date)).filter(s=>s.questions.filter(q=>q.type!=="passage").length>0).map(s=>{const rqs=s.questions.filter(q=>q.type!=="passage");const t=rqs.length,c=rqs.filter(q=>q.result==="correct").length;return{name:s.name.length>12?s.name.substring(0,12)+'…':s.name,score:Math.round((c/t)*100),date:s.date};});
 
   const analytics=useMemo(()=>{
     const bySubject={},byType={},byReason={},byChange={};
@@ -1854,8 +2109,9 @@ if (user && !user.track) {
 if (!splashDone) return <SplashScreen dark={darkMode} onDone={() => setSplashDone(true)} />;
 if(view==="session"&&activeSess) return (
   <>
-    <SessionDetail session={activeSess} sessions={sessions} onBack={()=>setView("home")} onAddQuestion={()=>setShowWizard(true)} onUpdateQuestion={updateQuestion} mode={mode} T={T}/>
-    {showWizard&&<Wizard onClose={()=>setShowWizard(false)} onSave={addQuestion} mode={mode} T={T}/>}
+    <SessionDetail session={activeSess} sessions={sessions} onBack={()=>setView("home")} onAddQuestion={()=>setShowWizard(true)} onAddPassage={()=>setShowPassageWizard(true)} onUpdateQuestion={updateQuestion} mode={mode} T={T}/>
+    {showWizard&&<Wizard onClose={()=>setShowWizard(false)} onSave={addQuestion} mode={mode} T={T} onSwitchToPassage={()=>{setShowWizard(false);setShowPassageWizard(true);}}/> }
+    {showPassageWizard&&<PassageWizard onClose={()=>setShowPassageWizard(false)} onSave={addQuestion} mode={mode} T={T}/>}
   </>
 );
   const handleLogout = async () => {
