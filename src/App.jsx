@@ -129,9 +129,9 @@ const pct = (c,t) => t ? Math.round((c/t)*100) : 0;
 // ── Themes ───────────────────────────────────────────────────────────────────
 const COLORS = ['#5b8fbd', '#8272c2', '#4da6a0', '#9668b2'];
 const DARK = {
-  bg:"#07090f", surface:"#0d1020", raised:"#131728",
-  border:"rgba(100,140,255,0.09)", borderHov:"rgba(100,140,255,0.22)",
-  text:"#dce8ff", muted:"#4e6080", dim:"#8aa0c0",
+  bg:"#07090f", surface:"#0e1121", raised:"#141829",
+  border:"rgba(100,140,255,0.13)", borderHov:"rgba(100,140,255,0.26)",
+  text:"#dce8ff", muted:"#8896b0", dim:"#a0b4cc",
   accent:"#3b6eff", accentGlow:"rgba(59,110,255,0.18)",
   success:"#3dab80", danger:"#c86060", warn:"#b8943a", gold:"#a88e50",
   scoreColor:(p)=>p>=75?"#3dab80":p>=60?"#b8943a":"#c86060",
@@ -139,8 +139,8 @@ const DARK = {
 };
 const LIGHT = {
   bg:"#f4f6fb", surface:"#ffffff", raised:"#eef1f8",
-  border:"rgba(0,0,0,0.07)", borderHov:"rgba(0,0,0,0.16)",
-  text:"#0a0d1a", muted:"#9ba8be", dim:"#4a5568",
+  border:"rgba(0,0,0,0.09)", borderHov:"rgba(0,0,0,0.18)",
+  text:"#0a0d1a", muted:"#64748b", dim:"#374151",
   accent:"#0055d4", accentGlow:"rgba(0,85,212,0.10)",
   success:"#2a8a60", danger:"#a84848", warn:"#9a7828", gold:"#8a7020",
   scoreColor:(p)=>p>=75?"#2a8a60":p>=60?"#9a7828":"#a84848",
@@ -148,12 +148,12 @@ const LIGHT = {
 };
  
 const subjColors = {
-  Cardiology:"#5b8fbd",  Pulmonology:"#4da6a0",  Neurology:"#8272c2",  "OB/GYN":"#b878a0",
-  GI:"#a89040",          Renal:"#40a8a0",          MSK:"#7a9860",          Derm:"#b88860",
-  "Heme/Onc":"#a86060", ID:"#40a878",             Endo:"#8878c0",         Peds:"#b09060",
-  Psych:"#9868b0",       Surgery:"#6888a0",        "Biostats/Ethics":"#6888a0", Other:"#6a7e90",
-  "C/P":"#5b8fbd","CARS":"#40a878","B/B":"#8272c2","Psych/Soc":"#b878a0",
-  "Logical Reasoning":"#a89040","Analytical Reasoning":"#4da6a0","Reading Comprehension":"#8878c0",
+  Cardiology:"#3b82f6",  Pulmonology:"#06b6d4",  Neurology:"#8b5cf6",  "OB/GYN":"#ec4899",
+  GI:"#f59e0b",          Renal:"#10b981",          MSK:"#84cc16",          Derm:"#f97316",
+  "Heme/Onc":"#ef4444", ID:"#14b8a6",             Endo:"#a78bfa",         Peds:"#fb923c",
+  Psych:"#c084fc",       Surgery:"#6366f1",        "Biostats/Ethics":"#64748b", Other:"#94a3b8",
+  "C/P":"#3b82f6","CARS":"#10b981","B/B":"#8b5cf6","Psych/Soc":"#ec4899",
+  "Logical Reasoning":"#f59e0b","Analytical Reasoning":"#06b6d4","Reading Comprehension":"#6366f1",
 };
  
 // ── AdBanner ─────────────────────────────────────────────────────────────────
@@ -734,7 +734,7 @@ function PassageWizard({onClose,onSave,mode,T}){
                 <span style={{fontSize:10,background:T.accent+"22",color:T.accent,borderRadius:5,padding:"1px 7px",fontWeight:600}}>{subject}</span>
               </div>
               <div style={{fontSize:12,color:T.muted,marginTop:2}}>
-                {step===0?"Passage setup":step===1?"CAR Skills Matrix":step===2?`Question ${currentQ+1} of ${numQuestions}`:"Passage Debrief"}
+                {step===0?"Passage setup":step===1?(mode==="MCAT"?"CAR Skills Matrix":"LSAT Matrix"):step===2?`Question ${currentQ+1} of ${numQuestions}`:"Passage Debrief"}
               </div>
             </div>
             <button onClick={onClose} style={{background:"none",border:"none",color:T.muted,fontSize:20,cursor:"pointer",lineHeight:1}}>×</button>
@@ -772,7 +772,7 @@ function PassageWizard({onClose,onSave,mode,T}){
           {step===1&&(<>
             <div style={{textAlign:"center",marginBottom:18}}>
               <div style={{fontSize:34,marginBottom:8}}>🧠</div>
-              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>CAR Skills Matrix</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>{mode==="MCAT"?"CAR Skills Matrix":"LSAT Matrix"}</div>
               <div style={{fontSize:13,color:T.muted}}>Analyze the passage structure before reviewing your answers</div>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -1010,7 +1010,7 @@ function SessionDetail({session,sessions,onBack,onAddQuestion,onAddPassage,onUpd
                 </div>
                 {expanded[q.id]&&(
                   <div style={{borderTop:`1px solid ${T.border}`,marginTop:12,paddingTop:12}}>
-                    {q.matrix&&Object.values(q.matrix).some(Boolean)&&(<div style={{marginBottom:12}}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:8}}>CAR SKILLS MATRIX</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{CAR_SKILLS.filter(s=>q.matrix[s.key]).map(skill=>(<div key={skill.key} style={{background:T.raised,borderRadius:6,padding:"7px 10px"}}><div style={{fontSize:9,color:T.accent,letterSpacing:"0.6px",fontWeight:600,marginBottom:3}}>{skill.label.toUpperCase()}</div><div style={{fontSize:11,color:T.dim}}>{q.matrix[skill.key]}</div></div>))}</div></div>)}
+                    {q.matrix&&Object.values(q.matrix).some(Boolean)&&(<div style={{marginBottom:12}}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:8}}>{q.subject==="CARS"?"CAR SKILLS MATRIX":"LSAT MATRIX"}</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{CAR_SKILLS.filter(s=>q.matrix[s.key]).map(skill=>(<div key={skill.key} style={{background:T.raised,borderRadius:6,padding:"7px 10px"}}><div style={{fontSize:9,color:T.accent,letterSpacing:"0.6px",fontWeight:600,marginBottom:3}}>{skill.label.toUpperCase()}</div><div style={{fontSize:11,color:T.dim}}>{q.matrix[skill.key]}</div></div>))}</div></div>)}
                     {q.processNote&&<div style={{marginBottom:8}}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>PROCESS NOTE</div><div style={{fontSize:12,color:T.warn,background:T.warn+"12",borderRadius:6,padding:"8px 10px"}}>{q.processNote}</div></div>}
                     {q.aiCorrection&&<div><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>AI PROCESS CORRECTION</div><div style={{fontSize:12,color:T.dim,lineHeight:1.65}}>{q.aiCorrection}</div></div>}
                   </div>
@@ -1247,10 +1247,10 @@ function SessionDetail({session,sessions,onBack,onAddQuestion,onAddPassage,onUpd
                       </div>
                       <div style={{height:230}}>
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={progressData} margin={{top:10,right:16,left:-10,bottom:0}}>
+                          <LineChart data={progressData} margin={{top:10,right:16,left:-10,bottom:40}}>
                             <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
-                            <XAxis dataKey="name" tick={{fontSize:10,fill:T.muted}} axisLine={{stroke:T.border}} tickLine={false}/>
-                            <YAxis domain={[0,100]} tick={{fontSize:10,fill:T.muted}} axisLine={false} tickLine={false}/>
+                            <XAxis dataKey="name" tick={{fontSize:10,fill:T.dim,fontWeight:500}} axisLine={{stroke:T.border}} tickLine={false} angle={-35} textAnchor="end" interval={0} height={60}/>
+                            <YAxis domain={[0,100]} tick={{fontSize:10,fill:T.dim,fontWeight:500}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
                             <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:12,color:T.text}} formatter={(v)=>[`${v}%`,"Score"]}/>
                             <ReferenceLine y={75} stroke={T.success} strokeDasharray="4 4" strokeOpacity={0.5}/>
                             <ReferenceLine y={60} stroke={T.warn} strokeDasharray="4 4" strokeOpacity={0.5}/>
@@ -1629,19 +1629,19 @@ function FlashcardsPanel({allQ,sessions,T,ankiTotal}){
     </div>
     <div style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"10px 14px",marginBottom:16,fontSize:12,color:T.dim,display:"flex",gap:10,alignItems:"center"}}>
       <span style={{fontSize:16}}>💡</span>
-      <span>Each card has a <b style={{color:T.text}}>front</b> (cue) and a <b style={{color:T.text}}>back</b> (answer). Click to flip. Download exports .txt for Anki → File → Import.</span>
+      <span style={{color:T.dim}}>Each card has a <b style={{color:T.text}}>front</b> (cue) and a <b style={{color:T.text}}>back</b> (answer). Click to flip. Download exports .txt for Anki → File → Import.</span>
     </div>
       <div style={{display:"flex",gap:18,alignItems:"flex-start"}}>
         <div style={{width:188,flexShrink:0,display:"flex",flexDirection:"column",gap:12,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"16px 14px"}}>
-          <div style={{fontSize:10,color:T.muted,letterSpacing:"0.9px",textTransform:"uppercase",fontWeight:600}}>Filter Cards</div>
+          <div style={{fontSize:10,color:T.dim,letterSpacing:"0.9px",textTransform:"uppercase",fontWeight:600}}>Filter Cards</div>
           <div>
-            <div style={{fontSize:10,color:T.muted,letterSpacing:"0.7px",textTransform:"uppercase",marginBottom:5}}>Search</div>
+            <div style={{fontSize:10,color:T.dim,letterSpacing:"0.7px",textTransform:"uppercase",marginBottom:5}}>Search</div>
             <input placeholder="Concept or keyword..." value={fcSearch} onChange={e=>setFcSearch(e.target.value)}
               style={{width:"100%",background:T.raised,border:"1px solid "+T.border,borderRadius:7,padding:"7px 10px",color:T.text,fontSize:11,boxSizing:"border-box"}}/>
           </div>
           {cardSessions.length>0&&(
             <div>
-              <div style={{fontSize:10,color:T.muted,letterSpacing:"0.7px",textTransform:"uppercase",marginBottom:5}}>Session</div>
+              <div style={{fontSize:10,color:T.dim,letterSpacing:"0.7px",textTransform:"uppercase",marginBottom:5}}>Session</div>
               <div style={{display:"flex",flexDirection:"column",gap:3}}>
                 {[{id:"All",name:"All Sessions"},...cardSessions.map(s=>({id:String(s.id),name:s.name}))].map(item=>(
                   <button key={item.id} onClick={()=>setFcSession(item.id)}
@@ -1654,7 +1654,7 @@ function FlashcardsPanel({allQ,sessions,T,ankiTotal}){
           )}
           {cardSubjects.length>0&&(
             <div>
-              <div style={{fontSize:10,color:T.muted,letterSpacing:"0.7px",textTransform:"uppercase",marginBottom:5}}>Subject</div>
+              <div style={{fontSize:10,color:T.dim,letterSpacing:"0.7px",textTransform:"uppercase",marginBottom:5}}>Subject</div>
               <div style={{display:"flex",flexDirection:"column",gap:3}}>
                 <button onClick={()=>setFcSubject("All")}
                   style={{background:fcSubject==="All"?T.accent+"22":T.raised,border:"1px solid "+(fcSubject==="All"?T.accent+"60":T.border),borderRadius:6,padding:"6px 10px",color:fcSubject==="All"?T.accent:T.dim,cursor:"pointer",fontSize:11,textAlign:"left",transition:"all 0.15s"}}>
@@ -2394,10 +2394,10 @@ return (
                   <div style={{fontSize:12,color:T.muted,marginBottom:20}}>{allProgressData.length} sessions tracked</div>
                   <div style={{height:280}}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={allProgressData} margin={{top:10,right:20,left:-10,bottom:0}}>
+                          <LineChart data={allProgressData} margin={{top:10,right:20,left:-10,bottom:40}}>
                         <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
-                        <XAxis dataKey="name" tick={{fontSize:10,fill:T.muted}} axisLine={{stroke:T.border}} tickLine={false}/>
-                        <YAxis domain={[0,100]} tick={{fontSize:10,fill:T.muted}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
+                        <XAxis dataKey="name" tick={{fontSize:10,fill:T.dim,fontWeight:500}} axisLine={{stroke:T.border}} tickLine={false} angle={-35} textAnchor="end" interval={0} height={60}/>
+                        <YAxis domain={[0,100]} tick={{fontSize:10,fill:T.dim,fontWeight:500}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
                         <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:12,color:T.text}} formatter={(v)=>[`${v}%`,"Score"]}/>
                         <ReferenceLine y={75} stroke={T.success} strokeDasharray="4 4" strokeOpacity={0.5}/>
                         <ReferenceLine y={60} stroke={T.warn} strokeDasharray="4 4" strokeOpacity={0.5}/>
