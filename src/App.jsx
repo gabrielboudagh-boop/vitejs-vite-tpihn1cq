@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
-import { supabase } from './supabase.js'  //
+import { supabase } from './supabase.js'
+import LandingPage from './LandingPage.jsx';
+import BlogPage from './BlogPage.jsx';  //
 // ── Fonts ────────────────────────────────────────────────────────────────────
 const fontLink = document.createElement("link");
 fontLink.rel = "stylesheet";
@@ -1924,7 +1926,7 @@ function AuthScreen({ onAuth, T }) {
 }
 
 // ── MAIN APP ───────────────────────────────────────────────────────────────────
-export default function App(){
+function VimaApp(){
   const [splashDone,setSplashDone]=useState(false);
   const [user, setUser] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -1955,17 +1957,7 @@ export default function App(){
     return () => subscription.unsubscribe();
   }, []);
 
-  // Inject AdSense script once the user is authenticated (not on login screen)
-  useEffect(() => {
-    if (!user) return;
-    if (document.querySelector('script[src*="adsbygoogle"]')) return;
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4179326594130154";
-    script.crossOrigin = "anonymous";
-    document.head.appendChild(script);
-  }, [user]);
-
+  // AdSense removed from authenticated app — ads are public-only (see LandingPage.jsx / BlogPage.jsx)
   // 
   const [darkMode,setDarkMode]=useState(true);
   const T=darkMode?DARK:LIGHT;
@@ -2437,4 +2429,16 @@ return (
       )}
     </div>
   );
+}
+
+// ── Public Router ─────────────────────────────────────────────────────────────
+// PUBLIC: / and /blog/* → ads allowed, no auth required
+// Anything else (/app, unknown) → authenticated VimaApp, no ads
+export default function App() {
+  const path = window.location.pathname;
+  if (path === "/" || path === "/demo") return <LandingPage />;
+  if (path === "/blog" || path.startsWith("/blog/")) {
+    return <BlogPage slug={path.replace(/^\/blog\/?/, "") || ""} />;
+  }
+  return <VimaApp />;
 }
