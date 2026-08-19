@@ -305,8 +305,8 @@ export default function LandingPage() {
         backdropFilter:"blur(12px)",borderBottom:`1px solid ${C.border}`,
         padding:"14px 32px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:20}}>🪜</span>
-          <span style={{fontSize:16,fontWeight:700,color:C.text,letterSpacing:"-0.3px"}}>VIMA VIMA</span>
+          {/* Logo replaced here */}
+          <img src={image_0.png} alt="Vima Vima Logo" style={{height: 24, width: 'auto', display: 'block'}} />
         </div>
         <div style={{display:"flex",alignItems:"center",gap:18}}>
           <a href="/blog" style={{fontSize:13,color:C.muted,fontWeight:500}}>Guides</a>
