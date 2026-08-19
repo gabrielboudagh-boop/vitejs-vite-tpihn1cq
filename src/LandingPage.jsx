@@ -3,12 +3,24 @@ import { supabase } from "./supabase.js";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
  
 // ── Brand tokens (mirrors DARK theme) ────────────────────────────────────────
-const C = {
+const DARK_C = {
   bg:"#07090f", surface:"#0e1121", raised:"#141829",
   border:"rgba(100,140,255,0.13)", text:"#dce8ff",
   muted:"#8896b0", dim:"#a0b4cc", accent:"#3b6eff",
   success:"#3dab80", danger:"#c86060", warn:"#b8943a",
+  isDark: true,
 };
+const LIGHT_C = {
+  bg:"#f5f7fa", surface:"#ffffff", raised:"#eef1f8",
+  border:"rgba(0,0,0,0.08)", text:"#0a0d1a",
+  muted:"#9ba8be", dim:"#4a5568", accent:"#0055d4",
+  success:"#16a34a", danger:"#dc2626", warn:"#d97706",
+  isDark: false,
+};
+ 
+// Auto-switch: 6am-8pm = light, 8pm-6am = dark
+const hour = new Date().getHours();
+const C = (hour >= 6 && hour < 20) ? LIGHT_C : DARK_C;
 const PIE_COLORS = ["#3b82f6","#10b981","#8b5cf6","#f59e0b","#ec4899","#06b6d4","#f97316"];
 const DEMO_SUBJECTS = {
   USMLE:["Cardiology","Neurology","GI","Renal","Pulmonology","Derm","MSK"],
@@ -309,7 +321,7 @@ export default function LandingPage() {
             alt="VIMA VIMA"
             style={{
               height:64,
-              filter:"invert(1) brightness(1.05)",
+              filter:C.isDark?"invert(1) brightness(1.05)":"none",
               objectFit:"contain",
             }}
           />
