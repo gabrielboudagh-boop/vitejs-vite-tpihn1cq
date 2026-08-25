@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import logoSvg from "./2EkJA01.svg";
 
 const C = {
   bg:"#07090f", surface:"#0e1121", raised:"#141829",
@@ -188,9 +189,8 @@ function Layout({ children }) {
         borderBottom:`1px solid ${C.border}`,padding:"14px 32px",
         display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <a href="/" style={{display:"flex",alignItems:"center",gap:8,textDecoration:"none"}}>
-            <span style={{fontSize:20}}>🪜</span>
-            <span style={{fontSize:15,fontWeight:700,color:C.text}}>VIMA VIMA</span>
+          <a href="/" style={{display:"flex",alignItems:"center",textDecoration:"none"}}>
+            <img src={logoSvg} alt="VIMA VIMA" style={{display:"block",height:28,width:"auto",maxWidth:180}} />
           </a>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:18}}>
