@@ -679,6 +679,240 @@ function ExitModal({ onClose }) {
   );
 }
 
+// ── Showcase Slides ─────────────────────────────────────────────────────────
+function QuestionLogSlide() {
+  const fields = [
+    ["Subject",        "Cardiology"],
+    ["Question Type",  "Diagnosis"],
+    ["Timing",         "Over the limit"],
+    ["Answer Change",  "Incorrect → Incorrect"],
+    ["Confidence",     "Low confidence"],
+    ["Mistake Reason", "Didn't know the material"],
+    ["Concept Tag",    "Aortic dissection vs. STEMI"],
+  ];
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
+        <div>
+          <div style={{fontSize:11,color:C.muted,letterSpacing:"0.6px",textTransform:"uppercase",marginBottom:6}}>
+            USMLE Step 1 · Block 4 · Question 12
+          </div>
+          <span style={{background:C.danger+"22",border:`1px solid ${C.danger}40`,borderRadius:6,
+            padding:"3px 10px",fontSize:12,color:C.danger,fontWeight:600}}>✗  Incorrect</span>
+        </div>
+        <div style={{fontSize:11,color:C.muted+"80"}}>Sep 1, 2026</div>
+      </div>
+      <div>
+        {fields.map(([label, value]) => (
+          <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+            padding:"9px 0",borderBottom:`1px solid ${C.border}`}}>
+            <span style={{fontSize:11,color:C.muted,textTransform:"uppercase",letterSpacing:"0.5px"}}>{label}</span>
+            <span style={{fontSize:13,color:C.text,fontWeight:500}}>{value}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{marginTop:16,display:"flex",alignItems:"center",gap:8,background:C.accent+"12",
+        border:`1px solid ${C.accent}25`,borderRadius:8,padding:"9px 14px"}}>
+        <span style={{fontSize:12,color:C.accent,fontWeight:500}}>⚡ Flagged for Anki export</span>
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsSlide() {
+  const subjects = [
+    { name:"Cardiology",   pct:67, c:C.warn },
+    { name:"Renal",        pct:40, c:C.danger },
+    { name:"Neurology",    pct:100,c:C.success },
+    { name:"Pulmonology",  pct:75, c:C.success },
+    { name:"Pharmacology", pct:58, c:C.warn },
+  ];
+  return (
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:20}}>
+        {[
+          {l:"Session Score",v:"68%",c:C.warn},
+          {l:"Questions",    v:"20", c:C.text},
+          {l:"Weak Spot",    v:"Renal",c:C.danger},
+        ].map(s => (
+          <div key={s.l} style={{background:C.raised,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
+            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:4}}>{s.l}</div>
+            <div style={{fontSize:18,fontWeight:700,color:s.c,lineHeight:1}}>{s.v}</div>
+          </div>
+        ))}
+      </div>
+      {subjects.map(s => (
+        <div key={s.name} style={{marginBottom:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+            <span style={{fontSize:12,color:C.dim}}>{s.name}</span>
+            <span style={{fontSize:12,fontWeight:600,color:s.c}}>{s.pct}%</span>
+          </div>
+          <div style={{height:5,background:C.raised,borderRadius:99,overflow:"hidden"}}>
+            <div style={{height:"100%",width:`${s.pct}%`,background:s.c,borderRadius:99}}/>
+          </div>
+        </div>
+      ))}
+      <div style={{marginTop:14,background:C.warn+"12",border:`1px solid ${C.warn}28`,borderRadius:8,padding:"9px 12px"}}>
+        <span style={{fontSize:12,color:C.warn}}>⚠  Pattern: You change answers to wrong 3× this session</span>
+      </div>
+    </div>
+  );
+}
+
+function AnkiSlide() {
+  const [flipped, setFlipped]             = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
+  const flip = () => {
+    if (transitioning) return;
+    setTransitioning(true);
+    setTimeout(() => { setFlipped(f => !f); setTransitioning(false); }, 200);
+  };
+  return (
+    <div>
+      <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:14}}>
+        AI-generated from your missed question · Cardiology
+      </div>
+      <div onClick={flip} style={{
+        cursor:"pointer",
+        background:flipped ? C.accent+"18" : C.raised,
+        border:`1px solid ${flipped ? C.accent+"50" : C.border}`,
+        borderRadius:12, padding:"20px",
+        opacity:transitioning ? 0 : 1,
+        transform:transitioning ? "scale(0.97)" : "scale(1)",
+        transition:"opacity 0.2s ease, transform 0.2s ease, background 0.3s, border-color 0.3s",
+        minHeight:175,
+      }}>
+        {!flipped ? (
+          <div>
+            <div style={{fontSize:10,color:C.accent,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:12,fontWeight:600}}>Front</div>
+            <p style={{fontSize:13,color:C.text,lineHeight:1.7,marginBottom:14}}>
+              A 52-year-old man presents with sudden, severe tearing chest pain radiating to the back.
+              BP is 162/90 in the right arm and 134/78 in the left. CXR shows a widened mediastinum.
+              <br/><br/>What is the most likely diagnosis?
+            </p>
+            <div style={{textAlign:"right",fontSize:11,color:C.muted}}>tap to reveal →</div>
+          </div>
+        ) : (
+          <div>
+            <div style={{fontSize:10,color:C.accent,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:10,fontWeight:600}}>Back</div>
+            <div style={{fontSize:15,fontWeight:700,color:C.text,marginBottom:12}}>Aortic Dissection (Type A)</div>
+            <div style={{display:"flex",flexDirection:"column",gap:7}}>
+              {[
+                "Tearing/ripping quality — not pressure-like (ACS)",
+                "Radiates to the back, not jaw or left arm",
+                "BP differential ≥20 mmHg between arms",
+                "Widened mediastinum on CXR",
+                "Troponin usually negative in early presentation",
+              ].map(b => (
+                <div key={b} style={{display:"flex",gap:8}}>
+                  <span style={{color:C.accent,flexShrink:0}}>·</span>
+                  <span style={{fontSize:12,color:C.dim,lineHeight:1.5}}>{b}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <div style={{textAlign:"center",marginTop:10,fontSize:11,color:C.muted}}>
+        {flipped ? "← tap to flip back" : "Part of your .apkg Anki export"}
+      </div>
+    </div>
+  );
+}
+
+const SHOWCASE_META = [
+  { tag:"Question Log",          icon:"📋", label:"USMLE Step 1 · 8-step entry" },
+  { tag:"Performance Analytics", icon:"📊", label:"Live session breakdown" },
+  { tag:"Anki Flashcard",        icon:"⚡", label:"AI-generated · tap to flip" },
+];
+
+function ShowcaseCarousel() {
+  const [active, setActive] = useState(0);
+  const [fade, setFade]     = useState(true);
+  const pendingRef          = useRef(0);
+
+  const goTo = (idx) => {
+    if (idx === active || !fade) return;
+    pendingRef.current = idx;
+    setFade(false);
+  };
+
+  useEffect(() => {
+    if (!fade) {
+      const t = setTimeout(() => { setActive(pendingRef.current); setFade(true); }, 220);
+      return () => clearTimeout(t);
+    }
+  }, [fade]);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      pendingRef.current = (active + 1) % 3;
+      setFade(false);
+    }, 5500);
+    return () => clearInterval(t);
+  }, [active]);
+
+  return (
+    <section style={{background:C.bg,padding:"64px 24px"}}>
+      <div style={{maxWidth:820,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:36}}>
+          <div style={{fontSize:11,color:C.accent,fontWeight:600,letterSpacing:"1.2px",textTransform:"uppercase",marginBottom:10}}>
+            See it in action
+          </div>
+          <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:10}}>
+            Your data, structured and actionable
+          </h2>
+          <p style={{fontSize:14,color:C.muted,lineHeight:1.65,maxWidth:500,margin:"0 auto"}}>
+            Every question you log builds a precise diagnostic picture of exactly where your score is leaking.
+          </p>
+        </div>
+        <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap"}}>
+          {SHOWCASE_META.map((m, i) => (
+            <button key={i} onClick={() => goTo(i)} style={{
+              background:i===active ? C.surface : "transparent",
+              border:`1px solid ${i===active ? C.accent+"50" : C.border}`,
+              borderRadius:999, padding:"8px 18px", cursor:"pointer",
+              fontFamily:"'DM Sans',sans-serif", transition:"all 0.2s ease",
+              display:"flex", alignItems:"center", gap:7,
+            }}>
+              <span style={{fontSize:14}}>{m.icon}</span>
+              <span style={{fontSize:13,fontWeight:i===active?600:400,color:i===active?C.text:C.muted}}>{m.tag}</span>
+            </button>
+          ))}
+        </div>
+        <div style={{
+          background:C.surface, border:`1px solid ${C.border}`,
+          borderRadius:20, padding:"28px",
+          minHeight:360,
+          opacity:fade?1:0,
+          transform:fade?"translateY(0px)":"translateY(7px)",
+          transition:"opacity 0.22s ease, transform 0.22s ease",
+          boxShadow:`0 0 80px ${C.accent}07`,
+        }}>
+          <div style={{fontSize:11,color:C.muted,fontWeight:500,letterSpacing:"0.5px",marginBottom:18,
+            display:"flex",alignItems:"center",gap:6}}>
+            <span style={{width:6,height:6,borderRadius:3,background:C.accent,display:"inline-block",flexShrink:0}}/>
+            {SHOWCASE_META[active].label}
+          </div>
+          {active === 0 && <QuestionLogSlide />}
+          {active === 1 && <AnalyticsSlide />}
+          {active === 2 && <AnkiSlide />}
+        </div>
+        <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:22}}>
+          {[0,1,2].map(i => (
+            <button key={i} onClick={() => goTo(i)} style={{
+              width:i===active?22:6, height:6, borderRadius:3,
+              background:i===active?C.accent:C.raised,
+              border:`1px solid ${i===active?C.accent:C.border}`,
+              padding:0, cursor:"pointer", transition:"all 0.3s ease",
+            }}/>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── Landing Page ──────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const demoRef = useRef(null);
@@ -736,7 +970,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section style={{maxWidth:760,margin:"0 auto",padding:"80px 24px 60px",textAlign:"center"}}>
+      <section style={{maxWidth:760,margin:"0 auto",padding:"44px 24px 32px",textAlign:"center"}}>
         <div style={{display:"inline-flex",alignItems:"center",gap:8,background:C.accent+"1a",
           border:`1px solid ${C.accent}30`,borderRadius:20,padding:"5px 14px",
           marginBottom:28,fontSize:12,color:C.accent,fontWeight:600}}>
@@ -781,6 +1015,8 @@ export default function LandingPage() {
           <InteractiveDemo/>
         </div>
       </section>
+
+      <ShowcaseCarousel />
 
       <AdUnit/>
 
@@ -899,37 +1135,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Blog preview */}
-      <section style={{maxWidth:900,margin:"0 auto",padding:"60px 24px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:10}}>
-          <h2 style={{fontSize:22,fontWeight:700,color:C.text}}>Study Strategy Guides</h2>
-          <a href="/blog" style={{fontSize:13,color:C.accent,fontWeight:500}}>All guides →</a>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",gap:14}}>
-          {[
-            {slug:"mcat-cars-framework",label:"MCAT",title:"MCAT CARS: The 6-Skill Framework That Separates 128 from 132"},
-            {slug:"usmle-step2-question-review",label:"USMLE",title:"USMLE Step 2 CK: How to Review a Practice Block for Maximum Retention"},
-            {slug:"lsat-rc-tone-questions",label:"LSAT",title:"LSAT Reading Comprehension: Why You Keep Missing Tone Questions"},
-            {slug:"spaced-repetition-anki-premed",label:"Study Strategy",title:"Building Your Personal Anki Deck from Real Exam Mistakes"},
-            {slug:"data-driven-score-improvement",label:"Study Strategy",title:"From 60% to 75%: The Data-Driven Approach to Closing Your Score Gap"},
-          ].map(a => (
-            <a key={a.slug} href={`/blog/${a.slug}`}
-              style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:12,padding:"18px",
-                display:"block",textDecoration:"none"}}>
-              <span style={{fontSize:10,background:C.accent+"20",color:C.accent,
-                borderRadius:5,padding:"2px 8px",fontWeight:600}}>{a.label}</span>
-              <div style={{fontSize:14,fontWeight:600,color:C.text,marginTop:10,lineHeight:1.45}}>{a.title}</div>
-              <div style={{fontSize:12,color:C.accent,marginTop:10}}>Read guide →</div>
-            </a>
-          ))}
-        </div>
-      </section>
-
       {/* Footer */}
       <footer style={{borderTop:`1px solid ${C.border}`,padding:"28px 24px",textAlign:"center"}}>
         <div style={{fontSize:13,color:C.muted,marginBottom:8,display:"flex",gap:20,justifyContent:"center",flexWrap:"wrap"}}>
           <a href="/" style={{color:C.muted}}>Home</a>
           <a href="/blog" style={{color:C.muted}}>Study Guides</a>
+          <a href="/contact" style={{color:C.muted}}>Contact</a>
           <a href="/app" style={{color:C.muted}}>Sign In</a>
           <a href="/terms" style={{color:C.muted}}>Terms of Service</a>
           <a href="/privacy" style={{color:C.muted}}>Privacy Policy</a>
