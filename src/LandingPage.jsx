@@ -1,34 +1,35 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase.js";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
- 
+import BrandLogo from "./BrandLogo.jsx";
+
 // ── Brand tokens (mirrors DARK theme) ────────────────────────────────────────
-const DARK_C = {
+const C = {
   bg:"#07090f", surface:"#0e1121", raised:"#141829",
   border:"rgba(100,140,255,0.13)", text:"#dce8ff",
   muted:"#8896b0", dim:"#a0b4cc", accent:"#3b6eff",
   success:"#3dab80", danger:"#c86060", warn:"#b8943a",
-  isDark: true,
 };
-const LIGHT_C = {
-  bg:"#f5f7fa", surface:"#ffffff", raised:"#eef1f8",
-  border:"rgba(0,0,0,0.08)", text:"#0a0d1a",
-  muted:"#9ba8be", dim:"#4a5568", accent:"#0055d4",
-  success:"#16a34a", danger:"#dc2626", warn:"#d97706",
-  isDark: false,
-};
- 
-// Auto-switch: 6am-8pm = light, 8pm-6am = dark
-const hour = new Date().getHours();
-const C = (hour >= 6 && hour < 20) ? LIGHT_C : DARK_C;
 const PIE_COLORS = ["#3b82f6","#10b981","#8b5cf6","#f59e0b","#ec4899","#06b6d4","#f97316"];
 const DEMO_SUBJECTS = {
   USMLE:["Cardiology","Neurology","GI","Renal","Pulmonology","Derm","MSK"],
   MCAT: ["C/P","CARS","B/B","Psych/Soc"],
   LSAT: ["Logical Reasoning","Analytical Reasoning","Reading Comprehension"],
 };
+const DEMO_QTYPES = {
+  USMLE:["Diagnosis","Management","Pathophysiology","Pharmacology","Biostats/Ethics"],
+  MCAT:["Passage-based","Discrete","Data analysis","Research interpretation","Critical analysis"],
+  LSAT:["Inference","Main Point","Strengthen","Weaken","Method"],
+};
+const DEMO_TIMING = ["Under the limit","At the limit","Over the limit"];
+const DEMO_ANSWER_CHANGES = ["No change","Incorrect → Correct","Correct → Incorrect","Incorrect → Incorrect"];
+const DEMO_CONFIDENCE = ["High confidence","Medium confidence","Low confidence"];
+const DEMO_REASONS = {
+  correct:["Right reasoning","Narrowed choices well","Educated guess"],
+  incorrect:["Didn't know the material","Wrong algorithm","Misread stem","Ran out of time"],
+};
 const DEMO_LIMIT = 5;
- 
+
 // ── AdSense (public pages only) ───────────────────────────────────────────────
 function injectAdSense() {
   if (document.querySelector('script[src*="adsbygoogle"]')) return;
@@ -38,7 +39,7 @@ function injectAdSense() {
   s.crossOrigin = "anonymous";
   document.head.appendChild(s);
 }
- 
+
 function AdUnit() {
   useEffect(() => {
     try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch(e) {}
@@ -51,9 +52,9 @@ function AdUnit() {
     </div>
   );
 }
- 
+
 // ── Interactive Demo ──────────────────────────────────────────────────────────
-function InteractiveDemo() {
+function LegacyInteractiveDemo() {
   const [exam, setExam]           = useState("USMLE");
   const [questions, setQuestions] = useState([]);
   const [result, setResult]       = useState("");
@@ -62,13 +63,13 @@ function InteractiveDemo() {
   const [email, setEmail]         = useState("");
   const [pass, setPass]           = useState("");
   const [linkStatus, setLinkStatus] = useState("idle"); // idle | working | done | error
- 
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) supabase.auth.signInAnonymously().catch(() => {});
     });
   }, []);
- 
+
   const addQuestion = () => {
     if (!result || !subject) return;
     setQuestions(prev => [...prev, {
@@ -77,7 +78,7 @@ function InteractiveDemo() {
     }]);
     setResult(""); setSubject("");
   };
- 
+
   const linkAccount = async () => {
     if (!email || !pass) return;
     setLinkStatus("working");
@@ -90,14 +91,14 @@ function InteractiveDemo() {
       setLinkStatus("done");
     }
   };
- 
+
   const correct  = questions.filter(q => q.result === "correct").length;
   const score    = questions.length ? Math.round((correct / questions.length) * 100) : 0;
   const bySubj   = {};
   questions.forEach(q => { bySubj[q.subject] = (bySubj[q.subject] || 0) + 1; });
   const pieData  = Object.entries(bySubj).map(([name, value]) => ({ name, value }));
   const isDone   = questions.length >= DEMO_LIMIT;
- 
+
   const btn = (active, danger) => ({
     flex:1, background: active ? (danger ? C.danger+"22" : C.success+"22") : C.raised,
     border: `1px solid ${active ? (danger ? C.danger : C.success) : C.border}`,
@@ -105,7 +106,7 @@ function InteractiveDemo() {
     borderRadius:8, padding:"10px", fontSize:13, cursor:"pointer",
     fontFamily:"'DM Sans',sans-serif", fontWeight: active ? 600 : 400, transition:"all 0.15s",
   });
- 
+
   return (
     <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,padding:"28px 24px",maxWidth:620,margin:"0 auto"}}>
       {/* Exam selector */}
@@ -125,7 +126,7 @@ function InteractiveDemo() {
           ))}
         </div>
       </div>
- 
+
       {/* Input area */}
       {!isDone ? (
         <div style={{marginBottom:22}}>
@@ -161,7 +162,7 @@ function InteractiveDemo() {
           <div style={{fontSize:12,color:C.muted}}>Create a free account to log unlimited sessions, Anki export, and full analytics.</div>
         </div>
       )}
- 
+
       {/* Analytics */}
       {questions.length > 0 && (
         <div>
@@ -201,7 +202,7 @@ function InteractiveDemo() {
               </div>
             </>
           )}
- 
+
           {/* Save prompt */}
           {questions.length >= 2 && (
             <div style={{borderTop:`1px solid ${C.border}`,paddingTop:16}}>
@@ -248,7 +249,411 @@ function InteractiveDemo() {
     </div>
   );
 }
- 
+
+function InteractiveDemo() {
+  const [exam, setExam]                 = useState("USMLE");
+  const [questions, setQuestions]       = useState([]);
+  const [result, setResult]             = useState("");
+  const [subject, setSubject]           = useState("");
+  const [qtype, setQtype]               = useState("");
+  const [timing, setTiming]             = useState("");
+  const [answerChange, setAnswerChange] = useState("");
+  const [confidence, setConfidence]     = useState("");
+  const [reason, setReason]             = useState("");
+  const [concept, setConcept]           = useState("");
+  const [showSave, setShowSave]         = useState(false);
+  const [email, setEmail]               = useState("");
+  const [pass, setPass]                 = useState("");
+  const [linkStatus, setLinkStatus]     = useState("idle");
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) supabase.auth.signInAnonymously().catch(() => {});
+    });
+  }, []);
+
+  const resetQuestionForm = () => {
+    setResult("");
+    setSubject("");
+    setQtype("");
+    setTiming("");
+    setAnswerChange("");
+    setConfidence("");
+    setReason("");
+    setConcept("");
+  };
+
+  const stepItems = [
+    { label:"1. Result", done: !!result },
+    { label:"2. Subject", done: !!subject },
+    { label:"3. Question Type", done: !!qtype },
+    { label:"4. Timing", done: !!timing },
+    { label:"5. Answer Change", done: !!answerChange },
+    { label:"6. Confidence", done: !!confidence },
+    { label:`7. ${result === "incorrect" ? "Mistake Reason" : "Why Correct"}`, done: !!reason },
+    { label:"8. Concept Tag", done: concept.trim().length >= 3 },
+  ];
+
+  const completedSteps = stepItems.filter(s => s.done).length;
+  const canLog = completedSteps === stepItems.length;
+  const isDone = questions.length >= DEMO_LIMIT;
+
+  const addQuestion = () => {
+    if (!canLog) return;
+    setQuestions(prev => [...prev, {
+      id: Date.now(),
+      exam,
+      result,
+      subject,
+      qtype,
+      timing,
+      answerChange,
+      confidence,
+      reason,
+      concept: concept.trim(),
+      date: new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" }),
+    }]);
+    resetQuestionForm();
+  };
+
+  const linkAccount = async () => {
+    if (!email || !pass) return;
+    setLinkStatus("working");
+    const { error } = await supabase.auth.updateUser({ email, password: pass });
+    if (error) {
+      const { error: e2 } = await supabase.auth.signUp({ email, password: pass });
+      setLinkStatus(e2 ? "error" : "done");
+    } else {
+      setLinkStatus("done");
+    }
+  };
+
+  const correct = questions.filter(q => q.result === "correct").length;
+  const score = questions.length ? Math.round((correct / questions.length) * 100) : 0;
+  const bySubj = {};
+  const byReason = {};
+  questions.forEach(q => {
+    bySubj[q.subject] = (bySubj[q.subject] || 0) + 1;
+    byReason[q.reason] = (byReason[q.reason] || 0) + 1;
+  });
+  const pieData = Object.entries(bySubj).map(([name, value]) => ({ name, value }));
+  const topPattern = Object.entries(byReason).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
+
+  const resultBtn = (active, danger) => ({
+    flex:1,
+    background: active ? (danger ? C.danger+"22" : C.success+"22") : C.raised,
+    border: `1px solid ${active ? (danger ? C.danger : C.success) : C.border}`,
+    color: active ? (danger ? C.danger : C.success) : C.dim,
+    borderRadius:8,
+    padding:"10px",
+    fontSize:13,
+    cursor:"pointer",
+    fontFamily:"'DM Sans',sans-serif",
+    fontWeight: active ? 600 : 400,
+    transition:"all 0.15s",
+  });
+
+  const selectStyle = {
+    width:"100%",
+    background:C.raised,
+    border:`1px solid ${C.border}`,
+    borderRadius:8,
+    padding:"9px 11px",
+    color:C.text,
+    fontSize:12,
+    fontFamily:"'DM Sans',sans-serif",
+  };
+
+  return (
+    <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,padding:"28px 24px",maxWidth:760,margin:"0 auto"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
+        <div>
+          <div style={{fontSize:17,fontWeight:700,color:C.text}}>Live Demo — 8-step reflection flow</div>
+          <div style={{fontSize:12,color:C.muted,marginTop:3}}>Simulate real post-block review and see analytics update as your dataset grows.</div>
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          {["USMLE","MCAT","LSAT"].map(e => (
+            <button
+              key={e}
+              onClick={() => { setExam(e); resetQuestionForm(); }}
+              style={{
+                background:exam===e?C.accent:C.raised,
+                border:`1px solid ${exam===e?C.accent:C.border}`,
+                borderRadius:7,
+                padding:"5px 12px",
+                color:exam===e?"#fff":C.dim,
+                fontSize:12,
+                fontWeight:exam===e?600:400,
+                cursor:"pointer",
+                fontFamily:"'DM Sans',sans-serif"
+              }}
+            >
+              {e}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {!isDone ? (
+        <div style={{marginBottom:22}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,alignItems:"center",gap:10}}>
+            <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase"}}>
+              Question {questions.length + 1} of {DEMO_LIMIT} · {completedSteps}/8 steps complete
+            </div>
+            <div style={{fontSize:11,color:C.accent,fontWeight:600}}>{Math.round((completedSteps / 8) * 100)}%</div>
+          </div>
+          <div style={{height:7,background:C.raised,borderRadius:999,overflow:"hidden",marginBottom:14}}>
+            <div style={{height:"100%",width:`${(completedSteps / 8) * 100}%`,background:C.accent,transition:"width 0.15s ease"}}/>
+          </div>
+
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+            {stepItems.map(s => (
+              <div key={s.label} style={{
+                fontSize:10,
+                borderRadius:999,
+                padding:"4px 9px",
+                border:`1px solid ${s.done ? C.accent+"66" : C.border}`,
+                background:s.done ? C.accent+"1f" : C.raised,
+                color:s.done ? C.accent : C.muted,
+                fontWeight:500,
+              }}>
+                {s.done ? "✓ " : "• "}{s.label}
+              </div>
+            ))}
+          </div>
+
+          <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:8}}>Step 1 · Result</div>
+          <div style={{display:"flex",gap:10,marginBottom:14}}>
+            <button onClick={() => { setResult("correct"); setReason(""); }} style={resultBtn(result==="correct",false)}>✓ Correct</button>
+            <button onClick={() => { setResult("incorrect"); setReason(""); }} style={resultBtn(result==="incorrect",true)}>✗ Incorrect</button>
+          </div>
+
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:10,marginBottom:10}}>
+            <div>
+              <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Step 2 · Subject</div>
+              <select value={subject} onChange={e => setSubject(e.target.value)} style={selectStyle}>
+                <option value="">Select subject</option>
+                {DEMO_SUBJECTS[exam].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Step 3 · Question type</div>
+              <select value={qtype} onChange={e => setQtype(e.target.value)} style={selectStyle}>
+                <option value="">Select type</option>
+                {DEMO_QTYPES[exam].map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Step 4 · Timing</div>
+              <select value={timing} onChange={e => setTiming(e.target.value)} style={selectStyle}>
+                <option value="">Select timing</option>
+                {DEMO_TIMING.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Step 5 · Answer change</div>
+              <select value={answerChange} onChange={e => setAnswerChange(e.target.value)} style={selectStyle}>
+                <option value="">Select answer-change behavior</option>
+                {DEMO_ANSWER_CHANGES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Step 6 · Confidence</div>
+              <select value={confidence} onChange={e => setConfidence(e.target.value)} style={selectStyle}>
+                <option value="">Select confidence</option>
+                {DEMO_CONFIDENCE.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>
+                {result === "incorrect" ? "Step 7 · Mistake reason" : "Step 7 · Why correct"}
+              </div>
+              <select value={reason} onChange={e => setReason(e.target.value)} style={selectStyle}>
+                <option value="">Select reason</option>
+                {(result === "incorrect" ? DEMO_REASONS.incorrect : DEMO_REASONS.correct).map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Step 8 · Concept tag</div>
+            <input
+              value={concept}
+              onChange={e => setConcept(e.target.value)}
+              placeholder="e.g., nephritic vs nephrotic syndrome, author's tone drift, assumption family"
+              style={{
+                width:"100%",
+                boxSizing:"border-box",
+                background:C.raised,
+                border:`1px solid ${C.border}`,
+                borderRadius:8,
+                padding:"10px 12px",
+                color:C.text,
+                fontSize:12,
+                fontFamily:"'DM Sans',sans-serif",
+                outline:"none",
+              }}
+            />
+          </div>
+
+          <button
+            onClick={addQuestion}
+            disabled={!canLog}
+            style={{
+              width:"100%",
+              background:canLog?C.accent:C.raised,
+              border:`1px solid ${canLog?C.accent:C.border}`,
+              borderRadius:8,
+              padding:"11px",
+              color:canLog?"#fff":C.muted,
+              fontSize:14,
+              fontWeight:600,
+              cursor:canLog?"pointer":"not-allowed",
+              opacity:canLog?1:0.55,
+              fontFamily:"'DM Sans',sans-serif",
+            }}
+          >
+            Log Question + Update Analytics →
+          </button>
+        </div>
+      ) : (
+        <div style={{background:C.accent+"14",border:`1px solid ${C.accent}30`,borderRadius:10,padding:"14px",marginBottom:20,textAlign:"center"}}>
+          <div style={{fontSize:14,fontWeight:600,color:C.accent,marginBottom:4}}>Demo complete 🎯</div>
+          <div style={{fontSize:12,color:C.muted}}>You just ran the full 8-step review cycle. Create a free account to log unlimited sessions.</div>
+        </div>
+      )}
+
+      {questions.length > 0 && (
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:16}}>
+            {[
+              {l:"Questions",v:questions.length,c:C.text},
+              {l:"Score",v:`${score}%`,c:score>=75?C.success:score>=60?C.warn:C.danger},
+              {l:"Correct",v:correct,c:C.success},
+              {l:"Top Pattern",v:topPattern,c:C.accent},
+            ].map(s => (
+              <div key={s.l} style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"11px 12px"}}>
+                <div style={{fontSize:9,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:5}}>{s.l}</div>
+                <div style={{fontSize:18,fontWeight:700,color:s.c,lineHeight:1.25}}>{s.v}</div>
+              </div>
+            ))}
+          </div>
+
+          {pieData.length > 0 && (
+            <>
+              <div style={{height:160,marginBottom:10}}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" outerRadius={68} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
+                      {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]}/>)}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,color:C.text}}
+                      formatter={(v) => [`${v} Q`, ""]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:14}}>
+                {pieData.map((d, i) => (
+                  <div key={d.name} style={{display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{width:8,height:8,borderRadius:2,background:PIE_COLORS[i%PIE_COLORS.length],flexShrink:0}}/>
+                    <span style={{fontSize:12,color:C.dim,flex:1}}>{d.name}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:PIE_COLORS[i%PIE_COLORS.length]}}>{d.value} Q</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <div style={{fontSize:11,color:C.muted,marginBottom:16,borderTop:`1px solid ${C.border}`,paddingTop:12}}>
+            Last entries: {questions.slice(-3).map(q => `${q.subject} / ${q.qtype} / ${q.result}`).join(" • ")}
+          </div>
+
+          {questions.length >= 2 && (
+            <div style={{borderTop:`1px solid ${C.border}`,paddingTop:16}}>
+              {!showSave ? (
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+                  <span style={{fontSize:12,color:C.muted}}>Save this demo data and continue inside the full app</span>
+                  <button
+                    onClick={() => setShowSave(true)}
+                    style={{
+                      background:C.accent,
+                      border:"none",
+                      borderRadius:8,
+                      padding:"8px 18px",
+                      color:"#fff",
+                      fontSize:13,
+                      fontWeight:600,
+                      cursor:"pointer",
+                      fontFamily:"'DM Sans',sans-serif"
+                    }}
+                  >
+                    Save Free →
+                  </button>
+                </div>
+              ) : linkStatus === "done" ? (
+                <div style={{textAlign:"center",color:C.success,fontSize:13,fontWeight:600}}>
+                  ✓ Account created! Check your email, then <a href="/app" style={{color:C.accent}}>open the full app →</a>
+                </div>
+              ) : (
+                <div>
+                  <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:10}}>Create your free account — your demo data carries over</div>
+                  {["email","password"].map((t, i) => (
+                    <input
+                      key={t}
+                      type={t}
+                      placeholder={t === "email" ? "you@email.com" : "Create password"}
+                      value={i===0?email:pass}
+                      onChange={e => i===0?setEmail(e.target.value):setPass(e.target.value)}
+                      style={{
+                        width:"100%",
+                        boxSizing:"border-box",
+                        background:C.raised,
+                        border:`1px solid ${C.border}`,
+                        borderRadius:8,
+                        padding:"9px 14px",
+                        color:C.text,
+                        fontSize:13,
+                        fontFamily:"'DM Sans',sans-serif",
+                        outline:"none",
+                        marginBottom:8
+                      }}
+                    />
+                  ))}
+                  {linkStatus==="error" && <div style={{color:C.danger,fontSize:12,marginBottom:8}}>Something went wrong — try again.</div>}
+                  <button
+                    onClick={linkAccount}
+                    disabled={!email || !pass || linkStatus === "working"}
+                    style={{
+                      width:"100%",
+                      background:C.accent,
+                      border:"none",
+                      borderRadius:8,
+                      padding:"10px",
+                      color:"#fff",
+                      fontSize:13,
+                      fontWeight:600,
+                      cursor:"pointer",
+                      fontFamily:"'DM Sans',sans-serif",
+                      opacity:!email||!pass?0.6:1
+                    }}
+                  >
+                    {linkStatus==="working" ? "Creating account…" : "Create Free Account →"}
+                  </button>
+                  <div style={{textAlign:"center",marginTop:8,fontSize:12,color:C.muted}}>
+                    Already have an account? <a href="/app" style={{color:C.accent}}>Sign in</a>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Exit-Intent Modal ─────────────────────────────────────────────────────────
 function ExitModal({ onClose }) {
   return (
@@ -273,12 +678,12 @@ function ExitModal({ onClose }) {
     </div>
   );
 }
- 
+
 // ── Landing Page ──────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const demoRef = useRef(null);
   const [showExitModal, setShowExitModal] = useState(false);
- 
+
   useEffect(() => {
     injectAdSense();
     if (!document.querySelector('link[href*="DM+Sans"]')) {
@@ -291,7 +696,7 @@ export default function LandingPage() {
     document.body.style.margin = "0";
     document.body.style.fontFamily = "'DM Sans', sans-serif";
   }, []);
- 
+
   // Exit-intent fires once per session when cursor leaves viewport top
   useEffect(() => {
     const handler = (e) => {
@@ -303,44 +708,33 @@ export default function LandingPage() {
     document.addEventListener("mouseleave", handler);
     return () => document.removeEventListener("mouseleave", handler);
   }, []);
- 
+
   const scrollToDemo = () => demoRef.current?.scrollIntoView({ behavior:"smooth" });
- 
+
   return (
     <div style={{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'DM Sans',sans-serif"}}>
       <style>{`*{box-sizing:border-box;margin:0;padding:0}a{color:${C.accent};text-decoration:none}a:hover{text-decoration:underline}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(100,140,255,0.2);border-radius:10px}`}</style>
- 
+
       {showExitModal && <ExitModal onClose={() => setShowExitModal(false)}/>}
- 
-      {/* Hero Header — centered logo + nav buttons below */}
-      <header style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"48px 24px 32px",textAlign:"center"}}>
-        {/* Logo */}
-        <div style={{display:"flex",justifyContent:"center",marginBottom:28}}>
-          <img
-            src={C.isDark
-              ? "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/Pgo8IURPQ1RZUEUgc3ZnIFBVQkxJQyAiLS8vVzNDLy9EVEQgU1ZHIDIwMDEwOTA0Ly9FTiIKICJodHRwOi8vd3d3LnczLm9yZy9UUi8yMDAxL1JFQy1TVkctMjAwMTA5MDQvRFREL3N2ZzEwLmR0ZCI+CjxzdmcgdmVyc2lvbj0iMS4wIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiB3aWR0aD0iNjAwLjAwMDAwMHB0IiBoZWlnaHQ9Ijk0LjAwMDAwMHB0IiB2aWV3Qm94PSIwIDAgNjAwLjAwMDAwMCA5NC4wMDAwMDAiCiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBtZWV0Ij4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMC4wMDAwMDAsOTQuMDAwMDAwKSBzY2FsZSgwLjA2NjY2NywtMC4wNjY2NjcpIgpmaWxsPSIjZmZmZmZmIiBzdHJva2U9Im5vbmUiPgo8cGF0aCBkPSJNODg4MiAxMzgwIGMwIC0yMSA0IC0yOSA4IC0xOSA0IDExIDQgMjcgMCAzOCAtNCAxMCAtOCAyIC04IC0xOXoiLz4KPHBhdGggZD0iTTEzNSAxMjc4IGMwIC04IDM4IC0xMTggODQgLTI0NSA0NyAtMTI3IDE0MCAtMzg5IDIwOSAtNTgzIGwxMjQKLTM1MiAxMzUgLTUgMTM1IC00IDM0IDEwMiBjMTggNTYgMTEzIDMyNCAyMTEgNTk1IDk4IDI3MiAxNzggNDk2IDE3OCA0OTkgMCA0Ci01OCA0IC0xMjkgMiBsLTEyOSAtNCAtODkgLTI3MCBjLTQ5IC0xNDkgLTExMSAtMzQ1IC0xMzkgLTQzNSAtMjggLTkxIC01NgotMTY0IC02MiAtMTYzIC03IDIgLTc3IDE5OCAtMTU3IDQzNSBsLTE0NSA0MzMgLTEzMCA0IGMtNzEgMiAtMTMwIC0yIC0xMzAgLTl6Ii8+CjxwYXRoIGQ9Ik0xMzY1IDEyODYgYy0xMSAtMTUzIDEgLTEyMDMgMTMgLTEyMDIgOSAxIDY0IDMgMTIyIDQgbDEwNSAyIDAgNjAwCjAgNjAwIC0xMjAgMCBjLTY2IDAgLTEyMCAtMiAtMTIwIC00eiIvPgo8cGF0aCBkPSJNMTgzMCA2OTIgbDAgLTYwMCAxMDcgLTUgYzEzNCAtNiAxMjMgLTUxIDExNSA0NzYgLTQgMjQzIC0yIDQ0MiA0CjQ0MiA5IDAgMTg5IC03MTYgMjE4IC04NjYgbDEwIC00OSAxMjIgMCAxMjIgMCAxMTEgNDY1IGM2MiAyNTUgMTE2IDQ2MCAxMjAKNDU2IDUgLTUgNiAtMjE0IDMgLTQ2NSBsLTUgLTQ1NiAxMTQgMCAxMTQgMCAwIDYwMCAwIDYwMSAtMTgzIC00IC0xODMgLTQKLTEwMCAtMzk4IGMtNTUgLTIxOSAtMTA2IC0zOTQgLTExMiAtMzkwIC03IDQgLTU3IDE4MyAtMTEyIDM5OCBsLTEwMCAzOTAKLTE4MiA0IC0xODMgNCAwIC01OTl6Ii8+CjxwYXRoIGQ9Ik0zNTU2IDEyNTYgYy0yMiAtNTggLTQzOCAtMTEyOCAtNDQ3IC0xMTQ4IC02IC0xNSAyMSAtMTggMTI0IC0xNQpsMTMyIDUgNDQgMTMxIDQ0IDEzMSAyNDMgMCAyNDMgMCAyMCAtNTYgYzExIC0zMSAzMyAtOTIgNDkgLTEzNSBsMjkgLTc5IDEzNQowIGMxMjggMCAxMzMgMSAxMTkgMjkgLTMzIDYxIC0zMCA2MSA0MzMgNjEgbDQ0OSAwIDEwIC00NiAxMCAtNDUgMTM1IDQgMTM1IDUKMjAzIDU2MiBjMTExIDMwOSAyMDYgNTc4IDIxMCA1OTYgNyAzMyA0IDM0IC0xMTkgMzQgbC0xMjYgMCAtMTMwIC00MDEgYy03MQotMjIxIC0xMzQgLTQyMCAtMTM5IC00NDMgLTE4IC03MiAtMjggLTQ5IC0xNzcgNDAyIGwtMTQ3IDQ0MiAtMTM2IDAgYy0xMjMgMAotMTM0IC0yIC0xMjQgLTI2IDM1IC04NSA2OSAtNzkgLTQ0NiAtNzkgbC00NzEgMCAtMTkgNTMgLTE5IDUyIC0xMjcgMCBjLTExOAowIC0xMjggLTIgLTE0MCAtMzR6IG0xNjUgLTMwNyBjOSAtMzEgNDUgLTEyOSA3OCAtMjE4IDMzIC04OSA1NiAtMTY2IDUyIC0xNzAKLTQgLTQgLTc4IC01IC0xNjQgLTMgbC0xNTcgNSA3MiAxOTUgYzM5IDEwNyA3NCAyMDYgNzggMjIxIDExIDM5IDIxIDMyIDQxCi0zMHogbTExOTIgLTQ1IGMxNiAtNDggMzEgLTk1IDM0IC0xMDUgNCAtMTUgLTk1IC0xOSAtNDU5IC0xOSBsLTQ2MyAwIC00MCA5NApjLTIyIDUxIC00MCA5OSAtNDAgMTA1IDAgNiAyMTEgMTEgNDcwIDExIGw0NzAgMCAyOCAtODZ6IG0xNDQgLTQwMSBjMTUgLTQyCjMyIC04NyAzNyAtMTAyIDggLTI1IC0xOCAtMjYgLTQ1MiAtMjIgbC00NTkgNCAtNDQgMTAxIC00MyAxMDEgNDY2IC00IDQ2NiAtMwoyOSAtNzV6Ii8+CjxwYXRoIGQ9Ik02MDAwIDY5MSBsMCAtNjAxIDExMyAwIGM2MSAwIDExNSAwIDEyMCAwIDQgMCA4IDI2OCA4IDU5NiBsMCA1OTcKLTEyMCA0IC0xMjEgNCAwIC02MDB6Ii8+CjxwYXRoIGQ9Ik02NDY1IDY5MSBsMCAtNTk5IDEwNSAtNSBjNTggLTIgMTExIC0zIDExNyAtMSA2IDIgOCAyMTQgNSA0NzEgLTQKMzQxIC0xIDQ2NCAxMSA0NTcgOSAtNiAxNyAtMjAgMTcgLTMyIDAgLTE4IDE4MSAtNzg1IDIwNCAtODY2IDEzIC00NSAyNDMgLTM4CjI1MyA4IDUgMTggNTIgMjEyIDEwNSA0MzEgNTQgMjE5IDk4IDQwOSA5OCA0MjMgMCAxNCA3IDMwIDE3IDM1IDEyIDggMTUgLTExNwoxMSAtNDU2IGwtNSAtNDY3IDExMyAwIDExMyAwIDQgNjAwIDMgNjAwIC0xODYgMCAtMTg2IDAgLTYyIC0yNDQgYy0zNCAtMTM0Ci03OSAtMzE2IC0xMDEgLTQwNSAtMjIgLTg4IC00NCAtMTYxIC01MCAtMTYxIC02IDAgLTMyIDg2IC01OCAxOTEgLTI2IDEwNQotNzIgMjg4IC0xMDMgNDA1IGwtNTUgMjE0IC0xODUgMCAtMTg1IDAgMCAtNTk5eiIvPgo8cGF0aCBkPSJNODEwMCAxMDAxIGMtNjEgLTE1OSAtMTY2IC00MjkgLTIzMyAtNjAwIC02OCAtMTcxIC0xMTkgLTMxMyAtMTE0Ci0zMTUgNSAtMiA2NSAtMiAxMzIgMSBsMTIzIDUgNDQgMTMwIDQzIDEzMSAyNDUgMCAyNDQgMCA0NiAtMTMxIDQ2IC0xMzAgMTIxCi01IGM2NiAtMyAxMjYgLTEgMTMyIDQgNyA1IC05NSAyNzcgLTIyNSA2MDQgbC0yMzYgNTk0IC0xMjkgMSAtMTI4IDAgLTExMQotMjg5eiBtMzE2IC0yMDIgYzM4IC0xMDUgNzUgLTIwMyA4MSAtMjE4IDEwIC0yNCAtMyAtMjYgLTE1NyAtMjYgLTE1NCAwIC0xNjgKMiAtMTYwIDI2IDQ0IDE0MCAxNTEgNDIzIDE1NyA0MTcgNCAtNCA0MCAtOTQgNzkgLTE5OXoiLz4KPHBhdGggZD0iTTg4ODIgMTIwNCBjLTIgLTQ1IDIgLTQ5IDQzIC00OSAzMyAwIDQyIDYgMzYgMjIgLTcgMTcgLTE2IDE5IC0zNyA4Ci0yMyAtMTMgLTI4IC04IC0zMyAyNiAtNiAzOSAtNyAzOCAtOSAtN3oiLz4KPHBhdGggZD0iTTg5OTAgMTAxMyBjMCAtNTggMyAtODAgNiAtNDkgMyAzMSAzIDc4IDAgMTA1IC0zIDI3IC02IDEgLTYgLTU2eiIvPgo8L2c+Cjwvc3ZnPgo="
-              : "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/Pgo8IURPQ1RZUEUgc3ZnIFBVQkxJQyAiLS8vVzNDLy9EVEQgU1ZHIDIwMDEwOTA0Ly9FTiIKICJodHRwOi8vd3d3LnczLm9yZy9UUi8yMDAxL1JFQy1TVkctMjAwMTA5MDQvRFREL3N2ZzEwLmR0ZCI+CjxzdmcgdmVyc2lvbj0iMS4wIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiB3aWR0aD0iNjAwLjAwMDAwMHB0IiBoZWlnaHQ9Ijk0LjAwMDAwMHB0IiB2aWV3Qm94PSIwIDAgNjAwLjAwMDAwMCA5NC4wMDAwMDAiCiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBtZWV0Ij4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMC4wMDAwMDAsOTQuMDAwMDAwKSBzY2FsZSgwLjA2NjY2NywtMC4wNjY2NjcpIgpmaWxsPSIjMDAwMDAwIiBzdHJva2U9Im5vbmUiPgo8cGF0aCBkPSJNODg4MiAxMzgwIGMwIC0yMSA0IC0yOSA4IC0xOSA0IDExIDQgMjcgMCAzOCAtNCAxMCAtOCAyIC04IC0xOXoiLz4KPHBhdGggZD0iTTEzNSAxMjc4IGMwIC04IDM4IC0xMTggODQgLTI0NSA0NyAtMTI3IDE0MCAtMzg5IDIwOSAtNTgzIGwxMjQKLTM1MiAxMzUgLTUgMTM1IC00IDM0IDEwMiBjMTggNTYgMTEzIDMyNCAyMTEgNTk1IDk4IDI3MiAxNzggNDk2IDE3OCA0OTkgMCA0Ci01OCA0IC0xMjkgMiBsLTEyOSAtNCAtODkgLTI3MCBjLTQ5IC0xNDkgLTExMSAtMzQ1IC0xMzkgLTQzNSAtMjggLTkxIC01NgotMTY0IC02MiAtMTYzIC03IDIgLTc3IDE5OCAtMTU3IDQzNSBsLTE0NSA0MzMgLTEzMCA0IGMtNzEgMiAtMTMwIC0yIC0xMzAgLTl6Ii8+CjxwYXRoIGQ9Ik0xMzY1IDEyODYgYy0xMSAtMTUzIDEgLTEyMDMgMTMgLTEyMDIgOSAxIDY0IDMgMTIyIDQgbDEwNSAyIDAgNjAwCjAgNjAwIC0xMjAgMCBjLTY2IDAgLTEyMCAtMiAtMTIwIC00eiIvPgo8cGF0aCBkPSJNMTgzMCA2OTIgbDAgLTYwMCAxMDcgLTUgYzEzNCAtNiAxMjMgLTUxIDExNSA0NzYgLTQgMjQzIC0yIDQ0MiA0CjQ0MiA5IDAgMTg5IC03MTYgMjE4IC04NjYgbDEwIC00OSAxMjIgMCAxMjIgMCAxMTEgNDY1IGM2MiAyNTUgMTE2IDQ2MCAxMjAKNDU2IDUgLTUgNiAtMjE0IDMgLTQ2NSBsLTUgLTQ1NiAxMTQgMCAxMTQgMCAwIDYwMCAwIDYwMSAtMTgzIC00IC0xODMgLTQKLTEwMCAtMzk4IGMtNTUgLTIxOSAtMTA2IC0zOTQgLTExMiAtMzkwIC03IDQgLTU3IDE4MyAtMTEyIDM5OCBsLTEwMCAzOTAKLTE4MiA0IC0xODMgNCAwIC01OTl6Ii8+CjxwYXRoIGQ9Ik0zNTU2IDEyNTYgYy0yMiAtNTggLTQzOCAtMTEyOCAtNDQ3IC0xMTQ4IC02IC0xNSAyMSAtMTggMTI0IC0xNQpsMTMyIDUgNDQgMTMxIDQ0IDEzMSAyNDMgMCAyNDMgMCAyMCAtNTYgYzExIC0zMSAzMyAtOTIgNDkgLTEzNSBsMjkgLTc5IDEzNQowIGMxMjggMCAxMzMgMSAxMTkgMjkgLTMzIDYxIC0zMCA2MSA0MzMgNjEgbDQ0OSAwIDEwIC00NiAxMCAtNDUgMTM1IDQgMTM1IDUKMjAzIDU2MiBjMTExIDMwOSAyMDYgNTc4IDIxMCA1OTYgNyAzMyA0IDM0IC0xMTkgMzQgbC0xMjYgMCAtMTMwIC00MDEgYy03MQotMjIxIC0xMzQgLTQyMCAtMTM5IC00NDMgLTE4IC03MiAtMjggLTQ5IC0xNzcgNDAyIGwtMTQ3IDQ0MiAtMTM2IDAgYy0xMjMgMAotMTM0IC0yIC0xMjQgLTI2IDM1IC04NSA2OSAtNzkgLTQ0NiAtNzkgbC00NzEgMCAtMTkgNTMgLTE5IDUyIC0xMjcgMCBjLTExOAowIC0xMjggLTIgLTE0MCAtMzR6IG0xNjUgLTMwNyBjOSAtMzEgNDUgLTEyOSA3OCAtMjE4IDMzIC04OSA1NiAtMTY2IDUyIC0xNzAKLTQgLTQgLTc4IC01IC0xNjQgLTMgbC0xNTcgNSA3MiAxOTUgYzM5IDEwNyA3NCAyMDYgNzggMjIxIDExIDM5IDIxIDMyIDQxCi0zMHogbTExOTIgLTQ1IGMxNiAtNDggMzEgLTk1IDM0IC0xMDUgNCAtMTUgLTk1IC0xOSAtNDU5IC0xOSBsLTQ2MyAwIC00MCA5NApjLTIyIDUxIC00MCA5OSAtNDAgMTA1IDAgNiAyMTEgMTEgNDcwIDExIGw0NzAgMCAyOCAtODZ6IG0xNDQgLTQwMSBjMTUgLTQyCjMyIC04NyAzNyAtMTAyIDggLTI1IC0xOCAtMjYgLTQ1MiAtMjIgbC00NTkgNCAtNDQgMTAxIC00MyAxMDEgNDY2IC00IDQ2NiAtMwoyOSAtNzV6Ii8+CjxwYXRoIGQ9Ik02MDAwIDY5MSBsMCAtNjAxIDExMyAwIGM2MSAwIDExNSAwIDEyMCAwIDQgMCA4IDI2OCA4IDU5NiBsMCA1OTcKLTEyMCA0IC0xMjEgNCAwIC02MDB6Ii8+CjxwYXRoIGQ9Ik02NDY1IDY5MSBsMCAtNTk5IDEwNSAtNSBjNTggLTIgMTExIC0zIDExNyAtMSA2IDIgOCAyMTQgNSA0NzEgLTQKMzQxIC0xIDQ2NCAxMSA0NTcgOSAtNiAxNyAtMjAgMTcgLTMyIDAgLTE4IDE4MSAtNzg1IDIwNCAtODY2IDEzIC00NSAyNDMgLTM4CjI1MyA4IDUgMTggNTIgMjEyIDEwNSA0MzEgNTQgMjE5IDk4IDQwOSA5OCA0MjMgMCAxNCA3IDMwIDE3IDM1IDEyIDggMTUgLTExNwoxMSAtNDU2IGwtNSAtNDY3IDExMyAwIDExMyAwIDQgNjAwIDMgNjAwIC0xODYgMCAtMTg2IDAgLTYyIC0yNDQgYy0zNCAtMTM0Ci03OSAtMzE2IC0xMDEgLTQwNSAtMjIgLTg4IC00NCAtMTYxIC01MCAtMTYxIC02IDAgLTMyIDg2IC01OCAxOTEgLTI2IDEwNQotNzIgMjg4IC0xMDMgNDA1IGwtNTUgMjE0IC0xODUgMCAtMTg1IDAgMCAtNTk5eiIvPgo8cGF0aCBkPSJNODEwMCAxMDAxIGMtNjEgLTE1OSAtMTY2IC00MjkgLTIzMyAtNjAwIC02OCAtMTcxIC0xMTkgLTMxMyAtMTE0Ci0zMTUgNSAtMiA2NSAtMiAxMzIgMSBsMTIzIDUgNDQgMTMwIDQzIDEzMSAyNDUgMCAyNDQgMCA0NiAtMTMxIDQ2IC0xMzAgMTIxCi01IGM2NiAtMyAxMjYgLTEgMTMyIDQgNyA1IC05NSAyNzcgLTIyNSA2MDQgbC0yMzYgNTk0IC0xMjkgMSAtMTI4IDAgLTExMQotMjg5eiBtMzE2IC0yMDIgYzM4IC0xMDUgNzUgLTIwMyA4MSAtMjE4IDEwIC0yNCAtMyAtMjYgLTE1NyAtMjYgLTE1NCAwIC0xNjgKMiAtMTYwIDI2IDQ0IDE0MCAxNTEgNDIzIDE1NyA0MTcgNCAtNCA0MCAtOTQgNzkgLTE5OXoiLz4KPHBhdGggZD0iTTg4ODIgMTIwNCBjLTIgLTQ1IDIgLTQ5IDQzIC00OSAzMyAwIDQyIDYgMzYgMjIgLTcgMTcgLTE2IDE5IC0zNyA4Ci0yMyAtMTMgLTI4IC04IC0zMyAyNiAtNiAzOSAtNyAzOCAtOSAtN3oiLz4KPHBhdGggZD0iTTg5OTAgMTAxMyBjMCAtNTggMyAtODAgNiAtNDkgMyAzMSAzIDc4IDAgMTA1IC0zIDI3IC02IDEgLTYgLTU2eiIvPgo8L2c+Cjwvc3ZnPgo="}
-            alt="VIMA VIMA"
-            style={{
-              height:60,
-              objectFit:"contain",
-            }}
-          />
+
+      {/* Nav */}
+      <nav style={{position:"sticky",top:0,zIndex:100,background:C.surface+"ee",
+        backdropFilter:"blur(12px)",borderBottom:`1px solid ${C.border}`,
+        padding:"14px 32px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <a href="/" style={{display:"flex",alignItems:"center",textDecoration:"none"}}>
+            <BrandLogo dark={true} height={30}/>
+          </a>
         </div>
-        {/* Nav buttons centered below logo */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:24,flexWrap:"wrap"}}>
-          <a href="/blog" style={{fontSize:14,color:C.muted,fontWeight:500,letterSpacing:"0.2px"}}>Guides</a>
-          <a href="/app" style={{fontSize:14,color:C.text,fontWeight:500,letterSpacing:"0.2px"}}>Sign In</a>
-          <button onClick={scrollToDemo} style={{
-            background:C.accent,border:"none",borderRadius:9,
-            padding:"9px 22px",color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",
-            fontFamily:"'DM Sans',sans-serif",
-            boxShadow:`0 0 24px ${C.accent}44`,
-            letterSpacing:"0.2px",
-          }}>Learn Better →</button>
+        <div style={{display:"flex",alignItems:"center",gap:18}}>
+          <a href="/blog" style={{fontSize:13,color:C.muted,fontWeight:500}}>Guides</a>
+          <a href="/app" style={{fontSize:13,color:C.text,fontWeight:500}}>Sign In</a>
+          <button onClick={scrollToDemo} style={{background:C.accent,border:"none",borderRadius:8,
+            padding:"7px 18px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",
+            fontFamily:"'DM Sans',sans-serif"}}>Learn Better →</button>
         </div>
-      </header>
- 
+      </nav>
+
       {/* Hero */}
       <section style={{maxWidth:760,margin:"0 auto",padding:"80px 24px 60px",textAlign:"center"}}>
         <div style={{display:"inline-flex",alignItems:"center",gap:8,background:C.accent+"1a",
@@ -371,9 +765,25 @@ export default function LandingPage() {
           </a>
         </div>
       </section>
- 
+
+      {/* Demo */}
+      <section ref={demoRef} style={{background:C.surface,padding:"52px 24px"}}>
+        <div style={{maxWidth:780,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:30}}>
+            <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:10}}>
+              Try the full review flow now
+            </h2>
+            <p style={{fontSize:14,color:C.muted,lineHeight:1.6,maxWidth:620,margin:"0 auto"}}>
+              This trial mirrors the real learning workflow: complete all 8 steps per question,
+              then watch your pattern analytics build in real time.
+            </p>
+          </div>
+          <InteractiveDemo/>
+        </div>
+      </section>
+
       <AdUnit/>
- 
+
       {/* Features */}
       <section style={{maxWidth:900,margin:"0 auto",padding:"60px 24px"}}>
         <h2 style={{fontSize:26,fontWeight:700,color:C.text,textAlign:"center",marginBottom:44}}>
@@ -396,7 +806,7 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
- 
+
       {/* How it works */}
       <section style={{background:C.surface,padding:"60px 24px"}}>
         <div style={{maxWidth:700,margin:"0 auto"}}>
@@ -430,7 +840,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
- 
+
       {/* Who it's for */}
       <section style={{maxWidth:700,margin:"0 auto",padding:"60px 24px"}}>
         <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:20}}>Who this is built for</h2>
@@ -462,25 +872,33 @@ export default function LandingPage() {
           modes. Vima Vima tracks them separately so your prep time goes where the actual gaps are.
         </p>
       </section>
- 
+
       <AdUnit/>
- 
-      {/* Demo */}
-      <section ref={demoRef} style={{background:C.surface,padding:"60px 24px"}}>
-        <div style={{maxWidth:680,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:36}}>
-            <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:10}}>
-              Try it live — no account needed
-            </h2>
-            <p style={{fontSize:14,color:C.muted,lineHeight:1.6}}>
-              Pick your exam, log a few practice questions, and watch your personal analytics
-              build in real time. This is the real tool — not a mockup.
-            </p>
-          </div>
-          <InteractiveDemo/>
+
+      {/* FAQ */}
+      <section style={{maxWidth:700,margin:"0 auto",padding:"60px 24px"}}>
+        <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:12}}>Frequently asked questions</h2>
+        <p style={{fontSize:14,color:C.muted,lineHeight:1.7,marginBottom:36}}>Everything you need to know before you start.</p>
+        <div style={{display:"flex",flexDirection:"column"}}>
+          {[
+            {q:"Is Vima Vima free?",a:"Yes. Core features — question logging, performance analytics, session tracking, and Anki card generation — are completely free. Create an account with an email address or Google sign-in and get immediate access. There's also an interactive demo on the homepage that requires no account at all."},
+            {q:"Which exams does Vima Vima support?",a:"Vima Vima supports three exam tracks: USMLE (Step 1 and Step 2 CK), MCAT, and LSAT. Each track has its own subject taxonomy and question-type categories that match the actual structure of those exams. USMLE subjects include Cardiology, Neurology, GI, Renal, Pulmonology, and 11 others. MCAT tracks C/P, CARS, B/B, and Psych/Soc. LSAT tracks Logical Reasoning, Analytical Reasoning, and Reading Comprehension separately."},
+            {q:"How is Vima Vima different from a spreadsheet or Notion?",a:"A spreadsheet requires you to design your own structure, build formulas, and manually create charts. Vima Vima provides structured data entry with consistent reflection fields for every question, pre-built analytics that surface patterns across hundreds of questions, and Anki export — no configuration needed. Because every question is logged in the same schema, the system can identify patterns like 'you get Cardiology Diagnosis questions right but miss Cardiology Management 60% of the time' — something a spreadsheet would never surface automatically."},
+            {q:"How does the Anki card generation work?",a:"When you log an incorrect answer, fill in an Anki front and back field — or let the AI draft them based on the concept you tagged. Vima Vima then compiles all flagged questions into a real .apkg file (Anki's native format) that you import directly into Anki desktop or AnkiDroid in one click. Cards come from your actual wrong answers, targeting your specific gaps rather than a generic pre-made deck."},
+            {q:"What is the MCAT CARS Passage Analysis mode?",a:"The CARS Passage Analysis mode provides a six-skill framework for analyzing each MCAT reading comprehension passage: Main Idea, Tone, Arguments, Author Perspective, Contrasting Theories, and Inference traps. After each passage you log your analysis across those six categories and note which questions you missed and why. Over time the system identifies which skill failures cost you the most points — for example, 'you consistently miss questions when contrasting theories appear in the passage.'"},
+            {q:"Can I use Vima Vima alongside UWorld, 7Sage, or AAMC materials?",a:"Yes — Vima Vima is question-bank agnostic. It's the tracking and analytics layer on top of your existing question bank. When logging a question, tag which bank it came from (UWorld, AMBOSS, NBME, 7Sage, LSAC Official, AAMC, Kaplan, etc.). This lets you compare your performance across resources and see whether your scores differ between third-party banks and official materials."},
+            {q:"Is my study data private?",a:"Yes. Your study data — wrong answers, session notes, Anki card drafts — is stored securely and is never sold to third parties. You can delete your account and all associated data at any time by emailing vimavimasupport@gmail.com. Vima Vima uses Supabase for authentication and storage, and Google AdSense to display ads on public pages — see the Privacy Policy for details on how ad cookies work."},
+            {q:"How long does it take to log a question?",a:"About 30–60 seconds per question once you're familiar with the form. The fields are: correct or incorrect, time taken, whether you changed your answer, why you got it wrong (if incorrect), and which concept was tested. Most students log during the review phase of a block rather than question by question, which keeps the habit sustainable over months of prep."},
+          ].map((item,i,arr) => (
+            <div key={i} style={{borderTop:`1px solid ${C.border}`,paddingTop:20,paddingBottom:20,
+              borderBottom:i===arr.length-1?`1px solid ${C.border}`:"none"}}>
+              <div style={{fontSize:15,fontWeight:600,color:C.text,marginBottom:10}}>{item.q}</div>
+              <p style={{fontSize:13,color:C.muted,lineHeight:1.8}}>{item.a}</p>
+            </div>
+          ))}
         </div>
       </section>
- 
+
       {/* Blog preview */}
       <section style={{maxWidth:900,margin:"0 auto",padding:"60px 24px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:10}}>
@@ -492,6 +910,8 @@ export default function LandingPage() {
             {slug:"mcat-cars-framework",label:"MCAT",title:"MCAT CARS: The 6-Skill Framework That Separates 128 from 132"},
             {slug:"usmle-step2-question-review",label:"USMLE",title:"USMLE Step 2 CK: How to Review a Practice Block for Maximum Retention"},
             {slug:"lsat-rc-tone-questions",label:"LSAT",title:"LSAT Reading Comprehension: Why You Keep Missing Tone Questions"},
+            {slug:"spaced-repetition-anki-premed",label:"Study Strategy",title:"Building Your Personal Anki Deck from Real Exam Mistakes"},
+            {slug:"data-driven-score-improvement",label:"Study Strategy",title:"From 60% to 75%: The Data-Driven Approach to Closing Your Score Gap"},
           ].map(a => (
             <a key={a.slug} href={`/blog/${a.slug}`}
               style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:12,padding:"18px",
@@ -504,17 +924,18 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
- 
+
       {/* Footer */}
       <footer style={{borderTop:`1px solid ${C.border}`,padding:"28px 24px",textAlign:"center"}}>
         <div style={{fontSize:13,color:C.muted,marginBottom:8,display:"flex",gap:20,justifyContent:"center",flexWrap:"wrap"}}>
           <a href="/" style={{color:C.muted}}>Home</a>
           <a href="/blog" style={{color:C.muted}}>Study Guides</a>
           <a href="/app" style={{color:C.muted}}>Sign In</a>
+          <a href="/terms" style={{color:C.muted}}>Terms of Service</a>
+          <a href="/privacy" style={{color:C.muted}}>Privacy Policy</a>
         </div>
         <div style={{fontSize:12,color:C.muted+"66"}}>© 2026 Vima Vima · Built for serious exam prep</div>
       </footer>
     </div>
   );
 }
- 

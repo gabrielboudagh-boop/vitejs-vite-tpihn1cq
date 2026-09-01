@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import logoSvg from "./2EkJA01.svg";
+import BrandLogo from "./BrandLogo.jsx";
 
 const C = {
   bg:"#07090f", surface:"#0e1121", raised:"#141829",
@@ -189,8 +189,8 @@ function Layout({ children }) {
         borderBottom:`1px solid ${C.border}`,padding:"14px 32px",
         display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <a href="/" style={{display:"flex",alignItems:"center",textDecoration:"none"}}>
-            <img src={logoSvg} alt="VIMA VIMA" style={{display:"block",height:28,width:"auto",maxWidth:180}} />
+          <a href="/" style={{display:"flex",alignItems:"center",gap:8,textDecoration:"none"}}>
+            <BrandLogo dark={true} height={28}/>
           </a>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:18}}>
@@ -204,6 +204,8 @@ function Layout({ children }) {
           <a href="/" style={{color:C.muted}}>Home</a>
           <a href="/blog" style={{color:C.muted}}>Study Guides</a>
           <a href="/app" style={{color:C.muted}}>Sign In</a>
+          <a href="/terms" style={{color:C.muted}}>Terms of Service</a>
+          <a href="/privacy" style={{color:C.muted}}>Privacy Policy</a>
         </div>
         <div style={{fontSize:12,color:C.muted+"66"}}>© 2026 Vima Vima · Built for serious exam prep</div>
       </footer>
