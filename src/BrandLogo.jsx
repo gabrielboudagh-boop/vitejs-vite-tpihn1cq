@@ -1,64 +1,67 @@
-import { useState } from "react";
-
-function resolveConfiguredLogoSrc() {
-  if (typeof window === "undefined") return "/logo.svg";
-  const raw = window.localStorage.getItem("vimavima_logo_src") || "/logo.svg";
-  const value = raw.trim();
-  if (value.startsWith("<svg")) {
-    return `data:image/svg+xml;utf8,${encodeURIComponent(value)}`;
-  }
-  return value;
-}
-
 export default function BrandLogo({
-  alt = "VIMA VIMA",
-  dark = false,
-  height = 28,
-  width,
-  fallbackSrc = "",
-  style = {},
-}) {
-  const [src, setSrc] = useState(() => resolveConfiguredLogoSrc());
-  const [showTextFallback, setShowTextFallback] = useState(false);
-
-  const onError = () => {
-    if (fallbackSrc && src !== fallbackSrc) {
-      setSrc(fallbackSrc);
-      return;
-    }
-    setShowTextFallback(true);
-  };
-
-  if (showTextFallback) {
+    alt = "VIMA VIMA",
+    dark = false,
+    height = 28,
+    width,
+    style = {},
+  }) {
+    const sizeStyle = width ? { width, height: "auto" } : { height };
+  
     return (
-      <span
-        style={{
-          fontSize: 16,
-          fontWeight: 700,
-          color: dark ? "#dce8ff" : "#0a0d1a",
-          letterSpacing: "-0.3px",
-          ...style,
-        }}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 600 94"
+        aria-label={alt}
+        role="img"
+        style={{ display: "block", ...sizeStyle, ...style }}
       >
-        VIMA VIMA
-      </span>
+        <g
+          transform="translate(0,94) scale(0.066667,-0.066667)"
+          fill={dark ? "#dce8ff" : "#000000"}
+          stroke="none"
+        >
+          <path d="M8882 1380 c0 -21 4 -29 8 -19 4 11 4 27 0 38 -4 10 -8 2 -8 -19z"/>
+          <path d="M135 1278 c0 -8 38 -118 84 -245 47 -127 140 -389 209 -583 l124
+  -352 135 -5 135 -4 34 102 c18 56 113 324 211 595 98 272 178 496 178 499 0 4
+  -58 4 -129 2 l-129 -4 -89 -270 c-49 -149 -111 -345 -139 -435 -28 -91 -56
+  -164 -62 -163 -7 2 -77 198 -157 435 l-145 433 -130 4 c-71 2 -130 -2 -130 -9z"/>
+          <path d="M1365 1286 c-11 -153 1 -1203 13 -1202 9 1 64 3 122 4 l105 2 0 600
+  0 600 -120 0 c-66 0 -120 -2 -120 -4z"/>
+          <path d="M1830 692 l0 -600 107 -5 c134 -6 123 -51 115 476 -4 243 -2 442 4
+  442 9 0 189 -716 218 -866 l10 -49 122 0 122 0 111 465 c62 255 116 460 120
+  456 5 -5 6 -214 3 -465 l-5 -456 114 0 114 0 0 600 0 601 -183 -4 -183 -4
+  -100 -398 c-55 -219 -106 -394 -112 -390 -7 4 -57 183 -112 398 l-100 390
+  -182 4 -183 4 0 -599z"/>
+          <path d="M3556 1256 c-22 -58 -438 -1128 -447 -1148 -6 -15 21 -18 124 -15
+  l132 5 44 131 44 131 243 0 243 0 20 -56 c11 -31 33 -92 49 -135 l29 -79 135
+  0 c128 0 133 1 119 29 -33 61 -30 61 433 61 l449 0 10 -46 10 -45 135 4 135 5
+  203 562 c111 309 206 578 210 596 7 33 4 34 -119 34 l-126 0 -130 -401 c-71
+  -221 -134 -420 -139 -443 -18 -72 -28 -49 -177 402 l-147 442 -136 0 c-123 0
+  -134 -2 -124 -26 35 -85 69 -79 -446 -79 l-471 0 -19 53 -19 52 -127 0 c-118
+  0 -128 -2 -140 -34z m165 -307 c9 -31 45 -129 78 -218 33 -89 56 -166 52 -170
+  -4 -4 -78 -5 -164 -3 l-157 5 72 195 c39 107 74 206 78 221 11 39 21 32 41
+  -30z m1192 -45 c16 -48 31 -95 34 -105 4 -15 -95 -19 -459 -19 l-463 0 -40 94
+  c-22 51 -40 99 -40 105 0 6 211 11 470 11 l470 0 28 -86z m144 -401 c15 -42
+  32 -87 37 -102 8 -25 -18 -26 -452 -22 l-459 4 -44 101 -43 101 466 -4 466 -3
+  29 -75z"/>
+          <path d="M6000 691 l0 -601 113 0 c61 0 115 0 120 0 4 0 8 268 8 596 l0 597
+  -120 4 -121 4 0 -600z"/>
+          <path d="M6465 691 l0 -599 105 -5 c58 -2 111 -3 117 -1 6 2 8 214 5 471 -4
+  341 -1 464 11 457 9 -6 17 -20 17 -32 0 -18 181 -785 204 -866 13 -45 243 -38
+  253 8 5 18 52 212 105 431 54 219 98 409 98 423 0 14 7 30 17 35 12 8 15 -117
+  11 -456 l-5 -467 113 0 113 0 4 600 3 600 -186 0 -186 0 -62 -244 c-34 -134
+  -79 -316 -101 -405 -22 -88 -44 -161 -50 -161 -6 0 -32 86 -58 191 -26 105
+  -72 288 -103 405 l-55 214 -185 0 -185 0 0 -599z"/>
+          <path d="M8100 1001 c-61 -159 -166 -429 -233 -600 -68 -171 -119 -313 -114
+  -315 5 -2 65 -2 132 1 l123 5 44 130 43 131 245 0 244 0 46 -131 46 -130 121
+  -5 c66 -3 126 -1 132 4 7 5 -95 277 -225 604 l-236 594 -129 1 -128 0 -111
+  -289z m316 -202 c38 -105 75 -203 81 -218 10 -24 -3 -26 -157 -26 -154 0 -168
+  2 -160 26 44 140 151 423 157 417 4 -4 40 -94 79 -199z"/>
+          <path d="M8882 1204 c-2 -45 2 -49 43 -49 33 0 42 6 36 22 -7 17 -16 19 -37 8
+  -23 -13 -28 -8 -33 26 -6 39 -7 38 -9 -7z"/>
+          <path d="M8990 1013 c0 -58 3 -80 6 -49 3 31 3 78 0 105 -3 27 -6 1 -6 -56z"/>
+        </g>
+      </svg>
     );
   }
-
-  const sizeStyle = width ? { width, height: "auto" } : { height };
-  const useLegacyFilter = dark && !!fallbackSrc && src === fallbackSrc;
-
-  return (
-    <img
-      src={src}
-      alt={alt}
-      onError={onError}
-      style={{
-        display: "block",
-        filter: useLegacyFilter ? "invert(1) brightness(1.1)" : "none",
-        ...sizeStyle,
-        ...style,
-      }}
-    />
-  );
-}
+  
