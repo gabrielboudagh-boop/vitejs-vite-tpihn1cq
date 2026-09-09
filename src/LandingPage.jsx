@@ -1106,84 +1106,77 @@ export default function LandingPage() {
           @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.8; } }
           @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         `}</style>
-        {/* Slide Container */}
-        <div style={{overflow:"visible",position:"relative",minHeight:360,background:isDark?"#000":"#f5f7fa",borderRadius:16}}>
-          {HERO_SLIDES.map((slide, i) => (
-            <div key={i} style={{
-              position:"absolute",inset:0,opacity:heroSlide===i?1:0,
-              transition:"opacity 0.6s ease-out",pointerEvents:heroSlide===i?"auto":"none",
-              background:themeGradients[`slide${i+1}`] || slide.gradient,
-              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-              overflow:"visible",minHeight:360
-            }}>
-              {/* Animated Background Elements */}
-              {slide.animationElements && slide.animationElements.map((elem, ei) => {
-                const sizeMap = {circle:"50%", square:"0%", triangle:"50%", hexagon:"50%"};
-                const radius = sizeMap[elem.type] || "50%";
-                const adaptiveColor = isDark ? elem.color : elem.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, (match, r, g, b, a) => {
-                  const darker = Math.round(parseInt(r) * 0.6);
-                  const darkerg = Math.round(parseInt(g) * 0.6);
-                  const darkerb = Math.round(parseInt(b) * 0.6);
-                  return `rgba(${darker},${darkerg},${darkerb},${a})`;
-                });
-                return (
-                  <div key={ei} style={{
-                    position:"absolute",
-                    width:elem.size,
-                    height:elem.size,
-                    background:elem.type==="triangle"?"transparent":adaptiveColor,
-                    top:elem.top,
-                    bottom:elem.bottom,
-                    left:elem.left,
-                    right:elem.right,
-                    borderRadius:radius,
-                    clipPath:elem.type==="triangle"?"polygon(50% 0%, 0% 100%, 100% 100%)":
-                              elem.type==="hexagon"?"polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)":"none",
-                    animation:`float 6s ease-in-out infinite`,
-                    animationDelay:elem.delay,
-                    opacity:0.5,
-                    zIndex:0
-                  }}/>
-                );
-              })}
+        {/* Slide Container with Gradient & SVG Background */}
+        <div style={{position:"relative",minHeight:360,background:themeGradients[`slide${heroSlide+1}`],borderRadius:16,overflow:"hidden"}}>
+          {/* Animated Background Elements */}
+          {HERO_SLIDES[heroSlide]?.animationElements && HERO_SLIDES[heroSlide].animationElements.map((elem, ei) => {
+            const sizeMap = {circle:"50%", square:"0%", triangle:"50%", hexagon:"50%"};
+            const radius = sizeMap[elem.type] || "50%";
+            const adaptiveColor = isDark ? elem.color : elem.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, (match, r, g, b, a) => {
+              const darker = Math.round(parseInt(r) * 0.6);
+              const darkerg = Math.round(parseInt(g) * 0.6);
+              const darkerb = Math.round(parseInt(b) * 0.6);
+              return `rgba(${darker},${darkerg},${darkerb},${a})`;
+            });
+            return (
+              <div key={ei} style={{
+                position:"absolute",
+                width:elem.size,
+                height:elem.size,
+                background:elem.type==="triangle"?"transparent":adaptiveColor,
+                top:elem.top,
+                bottom:elem.bottom,
+                left:elem.left,
+                right:elem.right,
+                borderRadius:radius,
+                clipPath:elem.type==="triangle"?"polygon(50% 0%, 0% 100%, 100% 100%)":
+                          elem.type==="hexagon"?"polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)":"none",
+                animation:`float 6s ease-in-out infinite`,
+                animationDelay:elem.delay,
+                opacity:0.5,
+                zIndex:0,
+                pointerEvents:"none"
+              }}/>
+            );
+          })}
 
-              {/* Content (above animated elements) */}
-              <div style={{position:"relative",zIndex:10}}>
-                <div style={{fontSize:48,marginBottom:16}}>{slide.emoji}</div>
-                {slide.label && <div style={{fontSize:11,background:isDark?C.accent+"30":"#0055d430",color:isDark?C.accent:"#0055d4",borderRadius:6,
-                  padding:"4px 12px",fontWeight:600,width:"fit-content",margin:"0 auto 12px"}}>
-                  {slide.label}
-                </div>}
-                <h1 style={{fontSize:"clamp(32px,5vw,48px)",fontWeight:800,color:isDark?C.text:"#0a0d1a",lineHeight:1.1,
-                  letterSpacing:"-1px",marginBottom:12}}>
-                  {slide.title}
-                </h1>
-                <p style={{fontSize:"clamp(14px,1.5vw,16px)",color:isDark?C.muted:"#4a5568",lineHeight:1.6,marginBottom:8}}>
-                  {slide.subtitle}
-                </p>
-                <p style={{fontSize:"clamp(14px,2vw,16px)",color:isDark?C.dim:"#5a6b7a",lineHeight:1.7,maxWidth:520,margin:"0 auto 28px"}}>
-                  {slide.body}
-                </p>
-                <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-                  {slide.isDemo ? (
-                    <button onClick={scrollToDemo} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:10,
-                      padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
-                      fontFamily:"'DM Sans',sans-serif",boxShadow:isDark?`0 0 32px ${C.accent}44`:"0 0 24px rgba(0,85,212,0.35)",
-                      position:"relative",zIndex:11}}>
-                      {slide.cta}
-                    </button>
-                  ) : (
-                    <a href={`/blog/${slide.blogSlug}`} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:10,
-                      padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
-                      fontFamily:"'DM Sans',sans-serif",boxShadow:isDark?`0 0 32px ${C.accent}44`:"0 0 24px rgba(0,85,212,0.35)",
-                      position:"relative",zIndex:11,display:"inline-block",textDecoration:"none"}}>
-                      {slide.cta}
-                    </a>
-                  )}
-                </div>
+          {/* Content (above animated elements) */}
+          <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:10}}>
+            <div>
+              <div style={{fontSize:48,marginBottom:16}}>{HERO_SLIDES[heroSlide]?.emoji}</div>
+              {HERO_SLIDES[heroSlide]?.label && <div style={{fontSize:11,background:isDark?C.accent+"30":"#0055d430",color:isDark?C.accent:"#0055d4",borderRadius:6,
+                padding:"4px 12px",fontWeight:600,width:"fit-content",margin:"0 auto 12px"}}>
+                {HERO_SLIDES[heroSlide].label}
+              </div>}
+              <h1 style={{fontSize:"clamp(32px,5vw,48px)",fontWeight:800,color:isDark?C.text:"#0a0d1a",lineHeight:1.1,
+                letterSpacing:"-1px",marginBottom:12}}>
+                {HERO_SLIDES[heroSlide]?.title}
+              </h1>
+              <p style={{fontSize:"clamp(14px,1.5vw,16px)",color:isDark?C.muted:"#4a5568",lineHeight:1.6,marginBottom:8}}>
+                {HERO_SLIDES[heroSlide]?.subtitle}
+              </p>
+              <p style={{fontSize:"clamp(14px,2vw,16px)",color:isDark?C.dim:"#5a6b7a",lineHeight:1.7,maxWidth:520,margin:"0 auto 28px"}}>
+                {HERO_SLIDES[heroSlide]?.body}
+              </p>
+              <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+                {HERO_SLIDES[heroSlide]?.isDemo ? (
+                  <button onClick={scrollToDemo} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:10,
+                    padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
+                    fontFamily:"'DM Sans',sans-serif",boxShadow:isDark?`0 0 32px ${C.accent}44`:"0 0 24px rgba(0,85,212,0.35)",
+                    position:"relative",zIndex:11}}>
+                    {HERO_SLIDES[heroSlide]?.cta}
+                  </button>
+                ) : (
+                  <a href={`/blog/${HERO_SLIDES[heroSlide]?.blogSlug}`} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:10,
+                    padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
+                    fontFamily:"'DM Sans',sans-serif",boxShadow:isDark?`0 0 32px ${C.accent}44`:"0 0 24px rgba(0,85,212,0.35)",
+                    position:"relative",zIndex:11,display:"inline-block",textDecoration:"none"}}>
+                    {HERO_SLIDES[heroSlide]?.cta}
+                  </a>
+                )}
               </div>
             </div>
-          ))}
+          </div>
         </div>
 
         {/* Dots */}
@@ -1218,16 +1211,19 @@ export default function LandingPage() {
       <AdUnit/>
 
       {/* Blog Preview */}
-      <section style={{maxWidth:900,margin:"0 auto",padding:"60px 24px"}}>
-        <div style={{textAlign:"center",marginBottom:44}}>
-          <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:12}}>
-            Study Guides & Frameworks
-          </h2>
-          <p style={{fontSize:15,color:C.muted,lineHeight:1.6}}>
-            Evidence-based strategies from MCAT, USMLE, and LSAT experts
-          </p>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:20}}>
+      <section style={{maxWidth:900,margin:"0 auto",padding:"60px 24px",position:"relative"}}>
+        {/* Gradient Background */}
+        <div style={{position:"absolute",inset:0,background:themeGradients.slide1,opacity:0.15,borderRadius:16,zIndex:0,pointerEvents:"none"}}/>
+        <div style={{position:"relative",zIndex:1}}>
+          <div style={{textAlign:"center",marginBottom:44}}>
+            <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:12}}>
+              Study Guides & Frameworks
+            </h2>
+            <p style={{fontSize:15,color:C.muted,lineHeight:1.6}}>
+              Evidence-based strategies from MCAT, USMLE, and LSAT experts
+            </p>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:20}}>
           {[
             {slug:"mcat-cars-framework",label:"MCAT",title:"MCAT CARS: The 6-Skill Framework",preview:"Master the exact framework that separates 128 from 132 scorers."},
             {slug:"learn-from-wrong-answers-usmle",label:"USMLE",title:"4 Types of Wrong Answers",preview:"Categorize your misses and fix them with the right study strategy."},
@@ -1253,22 +1249,26 @@ export default function LandingPage() {
               <div style={{fontSize:12,color:C.accent,marginTop:12}}>Read full guide →</div>
             </a>
           ))}
-        </div>
-        <div style={{textAlign:"center",marginTop:36}}>
-          <a href="/blog" style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,
-            padding:"12px 28px",color:C.dim,fontSize:14,fontWeight:600,textDecoration:"none",
-            display:"inline-block"}}>
-            View All Guides →
-          </a>
+          </div>
+          <div style={{textAlign:"center",marginTop:36}}>
+            <a href="/blog" style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,
+              padding:"12px 28px",color:C.dim,fontSize:14,fontWeight:600,textDecoration:"none",
+              display:"inline-block"}}>
+              View All Guides →
+            </a>
+          </div>
         </div>
       </section>
 
       <AdUnit/>
-      <section style={{maxWidth:900,margin:"0 auto",padding:"60px 24px"}}>
-        <h2 style={{fontSize:26,fontWeight:700,color:C.text,textAlign:"center",marginBottom:44}}>
-          Built for the way high-scorers actually study
-        </h2>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:18}}>
+      <section style={{maxWidth:900,margin:"0 auto",padding:"60px 24px",position:"relative"}}>
+        {/* Gradient Background */}
+        <div style={{position:"absolute",inset:0,background:themeGradients.slide2,opacity:0.15,borderRadius:16,zIndex:0,pointerEvents:"none"}}/>
+        <div style={{position:"relative",zIndex:1}}>
+          <h2 style={{fontSize:26,fontWeight:700,color:C.text,textAlign:"center",marginBottom:44}}>
+            Built for the way high-scorers actually study
+          </h2>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:18}}>
           {[
             {icon:"📋",title:"Log every question with reflection",
               body:"After each practice block, log each question: correct/incorrect, why you missed it, how long it took, whether you changed your answer, and the concept being tested. That 90-second habit is what separates plateauing students from improving ones — Vima Vima structures it for you."},
@@ -1283,11 +1283,12 @@ export default function LandingPage() {
               <p style={{fontSize:13,color:C.muted,lineHeight:1.7}}>{f.body}</p>
             </div>
           ))}
+          </div>
         </div>
       </section>
 
       {/* How it works */}
-      <section style={{background:C.surface,padding:"60px 24px"}}>
+      <section style={{background:isDark?C.surface:`linear-gradient(135deg, ${C.bg}, ${C.bg}), radial-gradient(circle at 20% 80%, rgba(59,110,255,0.08), transparent 50%), radial-gradient(circle at 80% 20%, rgba(139,92,246,0.08), transparent 50%)`,backgroundBlendMode:"overlay",padding:"60px 24px"}}>
         <div style={{maxWidth:700,margin:"0 auto"}}>
           <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:12}}>How Vima Vima works</h2>
           <p style={{fontSize:14,color:C.muted,lineHeight:1.75,marginBottom:36}}>
@@ -1355,10 +1356,13 @@ export default function LandingPage() {
       <AdUnit/>
 
       {/* FAQ */}
-      <section style={{maxWidth:700,margin:"0 auto",padding:"60px 24px"}}>
-        <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:12}}>Frequently asked questions</h2>
-        <p style={{fontSize:14,color:C.muted,lineHeight:1.7,marginBottom:36}}>Everything you need to know before you start.</p>
-        <div style={{display:"flex",flexDirection:"column"}}>
+      <section style={{maxWidth:700,margin:"0 auto",padding:"60px 24px",position:"relative"}}>
+        {/* Gradient Background */}
+        <div style={{position:"absolute",inset:0,background:themeGradients.slide3,opacity:0.15,borderRadius:16,zIndex:0,pointerEvents:"none"}}/>
+        <div style={{position:"relative",zIndex:1}}>
+          <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:12}}>Frequently asked questions</h2>
+          <p style={{fontSize:14,color:C.muted,lineHeight:1.7,marginBottom:36}}>Everything you need to know before you start.</p>
+          <div style={{display:"flex",flexDirection:"column"}}>
           {[
             {q:"Is Vima Vima free?",a:"Yes. Core features — question logging, performance analytics, session tracking, and Anki card generation — are completely free. Create an account with an email address or Google sign-in and get immediate access. There's also an interactive demo on the homepage that requires no account at all."},
             {q:"Which exams does Vima Vima support?",a:"Vima Vima supports three exam tracks: USMLE (Step 1 and Step 2 CK), MCAT, and LSAT. Each track has its own subject taxonomy and question-type categories that match the actual structure of those exams. USMLE subjects include Cardiology, Neurology, GI, Renal, Pulmonology, and 11 others. MCAT tracks C/P, CARS, B/B, and Psych/Soc. LSAT tracks Logical Reasoning, Analytical Reasoning, and Reading Comprehension separately."},
@@ -1375,6 +1379,7 @@ export default function LandingPage() {
               <p style={{fontSize:13,color:C.muted,lineHeight:1.8}}>{item.a}</p>
             </div>
           ))}
+          </div>
         </div>
       </section>
 
