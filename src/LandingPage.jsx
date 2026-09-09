@@ -918,10 +918,11 @@ function ShowcaseCarousel() {
 const HERO_SLIDES = [
   {
     title: "Try the Free Demo",
-    subtitle: "See how Vima Vima works in 2 minutes",
+    subtitle: "See how Vima Viva works in 2 minutes",
     body: "Log a few practice questions and get instant analytics. No account required.",
     cta: "Start Demo →",
     emoji: "🚀",
+    isDemo: true,
     gradient: "linear-gradient(135deg, rgba(59,110,255,0.15) 0%, rgba(16,185,129,0.1) 100%)",
     animationElements: [
       {type:"circle",size:80,top:"10%",left:"10%",delay:"0s",color:"rgba(59,110,255,0.2)"},
@@ -929,11 +930,13 @@ const HERO_SLIDES = [
     ]
   },
   {
-    title: "Track Every Question You Miss",
-    subtitle: "Build a personal data map of your gaps",
-    body: "Log your practice questions with 8 reflection fields. Vima Vima finds the patterns you can't see.",
-    cta: "Learn More →",
-    emoji: "📊",
+    title: "MCAT CARS: The 6-Skill Framework",
+    subtitle: "That Separates 128 from 132",
+    body: "Master the exact framework used by top scorers. Learn the 6 CAR skills that unlock consistent high performance on reading comprehension.",
+    cta: "Read Full Guide →",
+    emoji: "📚",
+    blogSlug: "mcat-cars-framework",
+    label: "MCAT",
     gradient: "linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(59,110,255,0.1) 100%)",
     animationElements: [
       {type:"circle",size:100,top:"15%",right:"8%",delay:"0.5s",color:"rgba(139,92,246,0.2)"},
@@ -941,11 +944,13 @@ const HERO_SLIDES = [
     ]
   },
   {
-    title: "Get AI Study Insights",
-    subtitle: "Understand your mistake patterns",
-    body: "Not generic advice. Personalized insights based on your actual wrong answers.",
-    cta: "See How →",
-    emoji: "🧠",
+    title: "USMLE Wrong Answers Framework",
+    subtitle: "4 Types & How to Fix Each",
+    body: "Not all wrong answers are equal. Learn the 4 types of mistakes and apply the right study strategy to each one.",
+    cta: "Learn the Framework →",
+    emoji: "🔍",
+    blogSlug: "learn-from-wrong-answers-usmle",
+    label: "USMLE",
     gradient: "linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(236,72,153,0.1) 100%)",
     animationElements: [
       {type:"circle",size:110,top:"8%",left:"15%",delay:"0.3s",color:"rgba(245,158,11,0.2)"},
@@ -953,11 +958,13 @@ const HERO_SLIDES = [
     ]
   },
   {
-    title: "Export to Anki Automatically",
-    subtitle: "Build decks from your real mistakes",
-    body: "Every question you flag creates an Anki card targeting your specific gaps.",
-    cta: "Explore →",
+    title: "Building Your Personal Anki Deck",
+    subtitle: "From Real Exam Mistakes",
+    body: "The most powerful Anki decks are the ones you build from your actual wrong answers. Here's exactly how to do it.",
+    cta: "See the Strategy →",
     emoji: "📝",
+    blogSlug: "spaced-repetition-anki-premed",
+    label: "Study Strategy",
     gradient: "linear-gradient(135deg, rgba(6,182,212,0.15) 0%, rgba(59,110,255,0.1) 100%)",
     animationElements: [
       {type:"square",size:95,top:"12%",right:"10%",delay:"0.8s",color:"rgba(6,182,212,0.2)"},
@@ -965,11 +972,13 @@ const HERO_SLIDES = [
     ]
   },
   {
-    title: "Free for MCAT, USMLE, and LSAT",
-    subtitle: "No credit card required",
-    body: "Start tracking your questions today. Premium features coming soon.",
-    cta: "Get Started →",
-    emoji: "✨",
+    title: "LSAT Logical Reasoning Mastery",
+    subtitle: "10 Question Types + 6-Week Plan",
+    body: "LR accounts for 50% of your LSAT score. Learn the 10 question types and the exact plan to master them in 6 weeks.",
+    cta: "Start the Plan →",
+    emoji: "⚖️",
+    blogSlug: "lsat-logical-reasoning",
+    label: "LSAT",
     gradient: "linear-gradient(135deg, rgba(59,110,255,0.15) 0%, rgba(139,92,246,0.1) 100%)",
     animationElements: [
       {type:"circle",size:120,top:"5%",left:"12%",delay:"0.5s",color:"rgba(59,110,255,0.2)"},
@@ -1096,6 +1105,10 @@ export default function LandingPage() {
               {/* Content (above animated elements) */}
               <div style={{position:"relative",zIndex:10}}>
                 <div style={{fontSize:48,marginBottom:16}}>{slide.emoji}</div>
+                {slide.label && <div style={{fontSize:11,background:C.accent+"30",color:C.accent,borderRadius:6,
+                  padding:"4px 12px",fontWeight:600,width:"fit-content",margin:"0 auto 12px"}}>
+                  {slide.label}
+                </div>}
                 <h1 style={{fontSize:"clamp(32px,5vw,48px)",fontWeight:800,color:C.text,lineHeight:1.1,
                   letterSpacing:"-1px",marginBottom:12}}>
                   {slide.title}
@@ -1107,12 +1120,21 @@ export default function LandingPage() {
                   {slide.body}
                 </p>
                 <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-                  <button onClick={scrollToDemo} style={{background:C.accent,border:"none",borderRadius:10,
-                    padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
-                    fontFamily:"'DM Sans',sans-serif",boxShadow:`0 0 32px ${C.accent}44`,
-                    position:"relative",zIndex:11}}>
-                    {slide.cta}
-                  </button>
+                  {slide.isDemo ? (
+                    <button onClick={scrollToDemo} style={{background:C.accent,border:"none",borderRadius:10,
+                      padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
+                      fontFamily:"'DM Sans',sans-serif",boxShadow:`0 0 32px ${C.accent}44`,
+                      position:"relative",zIndex:11}}>
+                      {slide.cta}
+                    </button>
+                  ) : (
+                    <a href={`/blog/${slide.blogSlug}`} style={{background:C.accent,border:"none",borderRadius:10,
+                      padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
+                      fontFamily:"'DM Sans',sans-serif",boxShadow:`0 0 32px ${C.accent}44`,
+                      position:"relative",zIndex:11,display:"inline-block",textDecoration:"none"}}>
+                      {slide.cta}
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
