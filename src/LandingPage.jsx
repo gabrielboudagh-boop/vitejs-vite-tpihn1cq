@@ -31,6 +31,41 @@ const DEMO_REASONS = {
 };
 const DEMO_LIMIT = 5;
 
+// ── Theme-aware gradient helper ───────────────────────────────────────────────
+function getHeroGradients(isDark) {
+  if (isDark) {
+    return {
+      slide1: "linear-gradient(135deg, rgba(59,110,255,0.15) 0%, rgba(16,185,129,0.1) 100%)",
+      slide2: "linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(59,110,255,0.1) 100%)",
+      slide3: "linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(236,72,153,0.1) 100%)",
+      slide4: "linear-gradient(135deg, rgba(6,182,212,0.15) 0%, rgba(59,110,255,0.1) 100%)",
+      slide5: "linear-gradient(135deg, rgba(59,110,255,0.15) 0%, rgba(139,92,246,0.1) 100%)",
+      colors: [
+        {primary:"rgba(59,110,255,0.3)", secondary:"rgba(16,185,129,0.25)"},
+        {primary:"rgba(139,92,246,0.3)", secondary:"rgba(59,110,255,0.25)"},
+        {primary:"rgba(245,158,11,0.3)", secondary:"rgba(236,72,153,0.25)"},
+        {primary:"rgba(6,182,212,0.3)", secondary:"rgba(59,110,255,0.25)"},
+        {primary:"rgba(59,110,255,0.3)", secondary:"rgba(139,92,246,0.25)"},
+      ]
+    };
+  } else {
+    return {
+      slide1: "linear-gradient(135deg, rgba(0,85,212,0.12) 0%, rgba(42,138,96,0.08) 100%)",
+      slide2: "linear-gradient(135deg, rgba(123,66,255,0.12) 0%, rgba(0,85,212,0.08) 100%)",
+      slide3: "linear-gradient(135deg, rgba(200,160,80,0.12) 0%, rgba(200,80,140,0.08) 100%)",
+      slide4: "linear-gradient(135deg, rgba(40,180,210,0.12) 0%, rgba(0,85,212,0.08) 100%)",
+      slide5: "linear-gradient(135deg, rgba(0,85,212,0.12) 0%, rgba(123,66,255,0.08) 100%)",
+      colors: [
+        {primary:"rgba(0,85,212,0.4)", secondary:"rgba(42,138,96,0.35)"},
+        {primary:"rgba(123,66,255,0.4)", secondary:"rgba(0,85,212,0.35)"},
+        {primary:"rgba(200,160,80,0.4)", secondary:"rgba(200,80,140,0.35)"},
+        {primary:"rgba(40,180,210,0.4)", secondary:"rgba(0,85,212,0.35)"},
+        {primary:"rgba(0,85,212,0.4)", secondary:"rgba(123,66,255,0.35)"},
+      ]
+    };
+  }
+}
+
 // ── AdSense (public pages only) ───────────────────────────────────────────────
 function injectAdSense() {
   if (document.querySelector('script[src*="adsbygoogle"]')) return;
@@ -251,7 +286,8 @@ function LegacyInteractiveDemo() {
   );
 }
 
-function InteractiveDemo() {
+function InteractiveDemo({ T }) {
+  const theme = T; // Use passed theme if provided
   const [exam, setExam]                 = useState("USMLE");
   const [questions, setQuestions]       = useState([]);
   const [result, setResult]             = useState("");
@@ -342,9 +378,9 @@ function InteractiveDemo() {
 
   const resultBtn = (active, danger) => ({
     flex:1,
-    background: active ? (danger ? C.danger+"22" : C.success+"22") : C.raised,
-    border: `1px solid ${active ? (danger ? C.danger : C.success) : C.border}`,
-    color: active ? (danger ? C.danger : C.success) : C.dim,
+    background: active ? (danger ? theme.danger+"22" : theme.success+"22") : theme.raised,
+    border: `1px solid ${active ? (danger ? theme.danger : theme.success) : theme.border}`,
+    color: active ? (danger ? theme.danger : theme.success) : theme.dim,
     borderRadius:8,
     padding:"10px",
     fontSize:13,
@@ -356,21 +392,21 @@ function InteractiveDemo() {
 
   const selectStyle = {
     width:"100%",
-    background:C.raised,
-    border:`1px solid ${C.border}`,
+    background:theme.raised,
+    border:`1px solid ${theme.border}`,
     borderRadius:8,
     padding:"9px 11px",
-    color:C.text,
+    color:theme.text,
     fontSize:12,
     fontFamily:"'DM Sans',sans-serif",
   };
 
   return (
-    <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,padding:"28px 24px",maxWidth:760,margin:"0 auto"}}>
+    <div style={{background:theme.surface,border:`1px solid ${theme.border}`,borderRadius:16,padding:"28px 24px",maxWidth:760,margin:"0 auto"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
         <div>
-          <div style={{fontSize:17,fontWeight:700,color:C.text}}>Live Demo — 8-step reflection flow</div>
-          <div style={{fontSize:12,color:C.muted,marginTop:3}}>Simulate real post-block review and see analytics update as your dataset grows.</div>
+          <div style={{fontSize:17,fontWeight:700,color:theme.text}}>Live Demo — 8-step reflection flow</div>
+          <div style={{fontSize:12,color:theme.muted,marginTop:3}}>Simulate real post-block review and see analytics update as your dataset grows.</div>
         </div>
         <div style={{display:"flex",gap:6}}>
           {["USMLE","MCAT","LSAT"].map(e => (
@@ -378,11 +414,11 @@ function InteractiveDemo() {
               key={e}
               onClick={() => { setExam(e); resetQuestionForm(); }}
               style={{
-                background:exam===e?C.accent:C.raised,
-                border:`1px solid ${exam===e?C.accent:C.border}`,
+                background:exam===e?theme.accent:theme.raised,
+                border:`1px solid ${exam===e?theme.accent:theme.border}`,
                 borderRadius:7,
                 padding:"5px 12px",
-                color:exam===e?"#fff":C.dim,
+                color:exam===e?"#fff":theme.dim,
                 fontSize:12,
                 fontWeight:exam===e?600:400,
                 cursor:"pointer",
@@ -518,9 +554,9 @@ function InteractiveDemo() {
           </button>
         </div>
       ) : (
-        <div style={{background:C.accent+"14",border:`1px solid ${C.accent}30`,borderRadius:10,padding:"14px",marginBottom:20,textAlign:"center"}}>
-          <div style={{fontSize:14,fontWeight:600,color:C.accent,marginBottom:4}}>Demo complete 🎯</div>
-          <div style={{fontSize:12,color:C.muted}}>You just ran the full 8-step review cycle. Create a free account to log unlimited sessions.</div>
+        <div style={{background:theme.accent+"14",border:`1px solid ${theme.accent}30`,borderRadius:10,padding:"14px",marginBottom:20,textAlign:"center"}}>
+          <div style={{fontSize:14,fontWeight:600,color:theme.accent,marginBottom:4}}>Demo complete 🎯</div>
+          <div style={{fontSize:12,color:theme.muted}}>You just ran the full 8-step review cycle. Create a free account to log unlimited sessions.</div>
         </div>
       )}
 
@@ -528,13 +564,13 @@ function InteractiveDemo() {
         <div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:16}}>
             {[
-              {l:"Questions",v:questions.length,c:C.text},
-              {l:"Score",v:`${score}%`,c:score>=75?C.success:score>=60?C.warn:C.danger},
-              {l:"Correct",v:correct,c:C.success},
-              {l:"Top Pattern",v:topPattern,c:C.accent},
+              {l:"Questions",v:questions.length,c:theme.text},
+              {l:"Score",v:`${score}%`,c:score>=75?theme.success:score>=60?theme.warn:theme.danger},
+              {l:"Correct",v:correct,c:theme.success},
+              {l:"Top Pattern",v:topPattern,c:theme.accent},
             ].map(s => (
-              <div key={s.l} style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"11px 12px"}}>
-                <div style={{fontSize:9,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:5}}>{s.l}</div>
+              <div key={s.l} style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:8,padding:"11px 12px"}}>
+                <div style={{fontSize:9,color:theme.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:5}}>{s.l}</div>
                 <div style={{fontSize:18,fontWeight:700,color:s.c,lineHeight:1.25}}>{s.v}</div>
               </div>
             ))}
@@ -549,7 +585,7 @@ function InteractiveDemo() {
                       {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]}/>)}
                     </Pie>
                     <Tooltip
-                      contentStyle={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,color:C.text}}
+                      contentStyle={{background:theme.surface,border:`1px solid ${theme.border}`,borderRadius:8,fontSize:11,color:theme.text}}
                       formatter={(v) => [`${v} Q`, ""]}
                     />
                   </PieChart>
@@ -567,19 +603,19 @@ function InteractiveDemo() {
             </>
           )}
 
-          <div style={{fontSize:11,color:C.muted,marginBottom:16,borderTop:`1px solid ${C.border}`,paddingTop:12}}>
+          <div style={{fontSize:11,color:theme.muted,marginBottom:16,borderTop:`1px solid ${theme.border}`,paddingTop:12}}>
             Last entries: {questions.slice(-3).map(q => `${q.subject} / ${q.qtype} / ${q.result}`).join(" • ")}
           </div>
 
           {questions.length >= 2 && (
-            <div style={{borderTop:`1px solid ${C.border}`,paddingTop:16}}>
+            <div style={{borderTop:`1px solid ${theme.border}`,paddingTop:16}}>
               {!showSave ? (
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-                  <span style={{fontSize:12,color:C.muted}}>Save this demo data and continue inside the full app</span>
+                  <span style={{fontSize:12,color:theme.muted}}>Save this demo data and continue inside the full app</span>
                   <button
                     onClick={() => setShowSave(true)}
                     style={{
-                      background:C.accent,
+                      background:theme.accent,
                       border:"none",
                       borderRadius:8,
                       padding:"8px 18px",
@@ -594,8 +630,8 @@ function InteractiveDemo() {
                   </button>
                 </div>
               ) : linkStatus === "done" ? (
-                <div style={{textAlign:"center",color:C.success,fontSize:13,fontWeight:600}}>
-                  ✓ Account created! Check your email, then <a href="/app" style={{color:C.accent}}>open the full app →</a>
+                <div style={{textAlign:"center",color:theme.success,fontSize:13,fontWeight:600}}>
+                  ✓ Account created! Check your email, then <a href="/app" style={{color:theme.accent}}>open the full app →</a>
                 </div>
               ) : (
                 <div>
@@ -610,11 +646,11 @@ function InteractiveDemo() {
                       style={{
                         width:"100%",
                         boxSizing:"border-box",
-                        background:C.raised,
-                        border:`1px solid ${C.border}`,
+                        background:theme.raised,
+                        border:`1px solid ${theme.border}`,
                         borderRadius:8,
                         padding:"9px 14px",
-                        color:C.text,
+                        color:theme.text,
                         fontSize:13,
                         fontFamily:"'DM Sans',sans-serif",
                         outline:"none",
@@ -622,7 +658,7 @@ function InteractiveDemo() {
                       }}
                     />
                   ))}
-                  {linkStatus==="error" && <div style={{color:C.danger,fontSize:12,marginBottom:8}}>Something went wrong — try again.</div>}
+                  {linkStatus==="error" && <div style={{color:theme.danger,fontSize:12,marginBottom:8}}>Something went wrong — try again.</div>}
                   <button
                     onClick={linkAccount}
                     disabled={!email || !pass || linkStatus === "working"}
@@ -681,7 +717,7 @@ function ExitModal({ onClose }) {
 }
 
 // ── Showcase Slides ─────────────────────────────────────────────────────────
-function QuestionLogSlide() {
+function QuestionLogSlide({ T }) {
   const fields = [
     ["Subject",        "Cardiology"],
     ["Question Type",  "Diagnosis"],
@@ -695,36 +731,36 @@ function QuestionLogSlide() {
     <div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
         <div>
-          <div style={{fontSize:11,color:C.muted,letterSpacing:"0.6px",textTransform:"uppercase",marginBottom:6}}>
+          <div style={{fontSize:11,color:T.muted,letterSpacing:"0.6px",textTransform:"uppercase",marginBottom:6}}>
             USMLE Step 1 · Block 4 · Question 12
           </div>
-          <span style={{background:C.danger+"22",border:`1px solid ${C.danger}40`,borderRadius:6,
-            padding:"3px 10px",fontSize:12,color:C.danger,fontWeight:600}}>✗  Incorrect</span>
+          <span style={{background:T.danger+"22",border:`1px solid ${T.danger}40`,borderRadius:6,
+            padding:"3px 10px",fontSize:12,color:T.danger,fontWeight:600}}>✗  Incorrect</span>
         </div>
-        <div style={{fontSize:11,color:C.muted+"80"}}>Sep 1, 2026</div>
+        <div style={{fontSize:11,color:T.muted+"80"}}>Sep 1, 2026</div>
       </div>
       <div>
         {fields.map(([label, value]) => (
           <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-            padding:"9px 0",borderBottom:`1px solid ${C.border}`}}>
-            <span style={{fontSize:11,color:C.muted,textTransform:"uppercase",letterSpacing:"0.5px"}}>{label}</span>
-            <span style={{fontSize:13,color:C.text,fontWeight:500}}>{value}</span>
+            padding:"9px 0",borderBottom:`1px solid ${T.border}`}}>
+            <span style={{fontSize:11,color:T.muted,textTransform:"uppercase",letterSpacing:"0.5px"}}>{label}</span>
+            <span style={{fontSize:13,color:T.text,fontWeight:500}}>{value}</span>
           </div>
         ))}
       </div>
-      <div style={{marginTop:16,display:"flex",alignItems:"center",gap:8,background:C.accent+"12",
-        border:`1px solid ${C.accent}25`,borderRadius:8,padding:"9px 14px"}}>
-        <span style={{fontSize:12,color:C.accent,fontWeight:500}}>⚡ Flagged for Anki export</span>
+      <div style={{marginTop:16,display:"flex",alignItems:"center",gap:8,background:T.accent+"12",
+        border:`1px solid ${T.accent}25`,borderRadius:8,padding:"9px 14px"}}>
+        <span style={{fontSize:12,color:T.accent,fontWeight:500}}>⚡ Flagged for Anki export</span>
       </div>
     </div>
   );
 }
 
-function AnalyticsSlide() {
+function AnalyticsSlide({ T }) {
   const subjects = [
-    { name:"Cardiology",   pct:67, c:C.warn },
-    { name:"Renal",        pct:40, c:C.danger },
-    { name:"Neurology",    pct:100,c:C.success },
+    { name:"Cardiology",   pct:67, c:T.warn },
+    { name:"Renal",        pct:40, c:T.danger },
+    { name:"Neurology",    pct:100,c:T.success },
     { name:"Pulmonology",  pct:75, c:C.success },
     { name:"Pharmacology", pct:58, c:C.warn },
   ];
@@ -760,7 +796,7 @@ function AnalyticsSlide() {
   );
 }
 
-function AnkiSlide() {
+function AnkiSlide({ T }) {
   const [flipped, setFlipped]             = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const flip = () => {
@@ -770,13 +806,13 @@ function AnkiSlide() {
   };
   return (
     <div>
-      <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:14}}>
+      <div style={{fontSize:10,color:T.muted,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:14}}>
         AI-generated from your missed question · Cardiology
       </div>
       <div onClick={flip} style={{
         cursor:"pointer",
-        background:flipped ? C.accent+"18" : C.raised,
-        border:`1px solid ${flipped ? C.accent+"50" : C.border}`,
+        background:flipped ? T.accent+"18" : T.raised,
+        border:`1px solid ${flipped ? T.accent+"50" : T.border}`,
         borderRadius:12, padding:"20px",
         opacity:transitioning ? 0 : 1,
         transform:transitioning ? "scale(0.97)" : "scale(1)",
@@ -785,18 +821,18 @@ function AnkiSlide() {
       }}>
         {!flipped ? (
           <div>
-            <div style={{fontSize:10,color:C.accent,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:12,fontWeight:600}}>Front</div>
-            <p style={{fontSize:13,color:C.text,lineHeight:1.7,marginBottom:14}}>
+            <div style={{fontSize:10,color:T.accent,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:12,fontWeight:600}}>Front</div>
+            <p style={{fontSize:13,color:T.text,lineHeight:1.7,marginBottom:14}}>
               A 52-year-old man presents with sudden, severe tearing chest pain radiating to the back.
               BP is 162/90 in the right arm and 134/78 in the left. CXR shows a widened mediastinum.
               <br/><br/>What is the most likely diagnosis?
             </p>
-            <div style={{textAlign:"right",fontSize:11,color:C.muted}}>tap to reveal →</div>
+            <div style={{textAlign:"right",fontSize:11,color:T.muted}}>tap to reveal →</div>
           </div>
         ) : (
           <div>
-            <div style={{fontSize:10,color:C.accent,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:10,fontWeight:600}}>Back</div>
-            <div style={{fontSize:15,fontWeight:700,color:C.text,marginBottom:12}}>Aortic Dissection (Type A)</div>
+            <div style={{fontSize:10,color:T.accent,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:10,fontWeight:600}}>Back</div>
+            <div style={{fontSize:15,fontWeight:700,color:T.text,marginBottom:12}}>Aortic Dissection (Type A)</div>
             <div style={{display:"flex",flexDirection:"column",gap:7}}>
               {[
                 "Tearing/ripping quality — not pressure-like (ACS)",
@@ -806,15 +842,15 @@ function AnkiSlide() {
                 "Troponin usually negative in early presentation",
               ].map(b => (
                 <div key={b} style={{display:"flex",gap:8}}>
-                  <span style={{color:C.accent,flexShrink:0}}>·</span>
-                  <span style={{fontSize:12,color:C.dim,lineHeight:1.5}}>{b}</span>
+                  <span style={{color:T.accent,flexShrink:0}}>·</span>
+                  <span style={{fontSize:12,color:T.dim,lineHeight:1.5}}>{b}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
-      <div style={{textAlign:"center",marginTop:10,fontSize:11,color:C.muted}}>
+      <div style={{textAlign:"center",marginTop:10,fontSize:11,color:T.muted}}>
         {flipped ? "← tap to flip back" : "Part of your .apkg Anki export"}
       </div>
     </div>
@@ -827,7 +863,8 @@ const SHOWCASE_META = [
   { tag:"Anki Flashcard",        icon:"⚡", label:"AI-generated · tap to flip" },
 ];
 
-function ShowcaseCarousel() {
+function ShowcaseCarousel({ T }) {
+  const theme = T;
   const [active, setActive] = useState(0);
   const [fade, setFade]     = useState(true);
   const pendingRef          = useRef(0);
@@ -854,57 +891,57 @@ function ShowcaseCarousel() {
   }, [active]);
 
   return (
-    <section style={{background:C.bg,padding:"64px 24px"}}>
+    <section style={{background:theme.bg,padding:"64px 24px"}}>
       <div style={{maxWidth:820,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:36}}>
-          <div style={{fontSize:11,color:C.accent,fontWeight:600,letterSpacing:"1.2px",textTransform:"uppercase",marginBottom:10}}>
+          <div style={{fontSize:11,color:theme.accent,fontWeight:600,letterSpacing:"1.2px",textTransform:"uppercase",marginBottom:10}}>
             See it in action
           </div>
-          <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:10}}>
+          <h2 style={{fontSize:26,fontWeight:700,color:theme.text,marginBottom:10}}>
             Your data, structured and actionable
           </h2>
-          <p style={{fontSize:14,color:C.muted,lineHeight:1.65,maxWidth:500,margin:"0 auto"}}>
+          <p style={{fontSize:14,color:theme.muted,lineHeight:1.65,maxWidth:500,margin:"0 auto"}}>
             Every question you log builds a precise diagnostic picture of exactly where your score is leaking.
           </p>
         </div>
         <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap"}}>
           {SHOWCASE_META.map((m, i) => (
             <button key={i} onClick={() => goTo(i)} style={{
-              background:i===active ? C.surface : "transparent",
-              border:`1px solid ${i===active ? C.accent+"50" : C.border}`,
+              background:i===active ? theme.surface : "transparent",
+              border:`1px solid ${i===active ? theme.accent+"50" : theme.border}`,
               borderRadius:999, padding:"8px 18px", cursor:"pointer",
               fontFamily:"'DM Sans',sans-serif", transition:"all 0.2s ease",
               display:"flex", alignItems:"center", gap:7,
             }}>
               <span style={{fontSize:14}}>{m.icon}</span>
-              <span style={{fontSize:13,fontWeight:i===active?600:400,color:i===active?C.text:C.muted}}>{m.tag}</span>
+              <span style={{fontSize:13,fontWeight:i===active?600:400,color:i===active?theme.text:theme.muted}}>{m.tag}</span>
             </button>
           ))}
         </div>
         <div style={{
-          background:C.surface, border:`1px solid ${C.border}`,
+          background:theme.surface, border:`1px solid ${theme.border}`,
           borderRadius:20, padding:"28px",
           minHeight:360,
           opacity:fade?1:0,
           transform:fade?"translateY(0px)":"translateY(7px)",
           transition:"opacity 0.22s ease, transform 0.22s ease",
-          boxShadow:`0 0 80px ${C.accent}07`,
+          boxShadow:`0 0 80px ${theme.accent}07`,
         }}>
-          <div style={{fontSize:11,color:C.muted,fontWeight:500,letterSpacing:"0.5px",marginBottom:18,
+          <div style={{fontSize:11,color:theme.muted,fontWeight:500,letterSpacing:"0.5px",marginBottom:18,
             display:"flex",alignItems:"center",gap:6}}>
-            <span style={{width:6,height:6,borderRadius:3,background:C.accent,display:"inline-block",flexShrink:0}}/>
+            <span style={{width:6,height:6,borderRadius:3,background:theme.accent,display:"inline-block",flexShrink:0}}/>
             {SHOWCASE_META[active].label}
           </div>
-          {active === 0 && <QuestionLogSlide />}
-          {active === 1 && <AnalyticsSlide />}
-          {active === 2 && <AnkiSlide />}
+          {active === 0 && <QuestionLogSlide T={theme} />}
+          {active === 1 && <AnalyticsSlide T={theme} />}
+          {active === 2 && <AnkiSlide T={theme} />}
         </div>
         <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:22}}>
           {[0,1,2].map(i => (
             <button key={i} onClick={() => goTo(i)} style={{
               width:i===active?22:6, height:6, borderRadius:3,
-              background:i===active?C.accent:C.raised,
-              border:`1px solid ${i===active?C.accent:C.border}`,
+              background:i===active?theme.accent:theme.raised,
+              border:`1px solid ${i===active?theme.accent:theme.border}`,
               padding:0, cursor:"pointer", transition:"all 0.3s ease",
             }}/>
           ))}
@@ -917,7 +954,7 @@ function ShowcaseCarousel() {
 // ── Landing Page ──────────────────────────────────────────────────────────────
 const HERO_SLIDES = [
   {
-    title: "Try the Free Demo",
+    title: "Try Demo",
     subtitle: "See how Vima Viva works in 2 minutes",
     body: "Log a few practice questions and get instant analytics. No account required.",
     cta: "Start Demo →",
@@ -990,6 +1027,7 @@ const HERO_SLIDES = [
 
 export default function LandingPage() {
   const { isDark, setIsDark, theme: C } = useTheme();
+  const themeGradients = getHeroGradients(isDark);
   const demoRef = useRef(null);
   const [showExitModal, setShowExitModal] = useState(false);
   const [heroSlide, setHeroSlide] = useState(0);
@@ -1073,7 +1111,7 @@ export default function LandingPage() {
             <div key={i} style={{
               position:"absolute",inset:0,opacity:heroSlide===i?1:0,
               transition:"opacity 0.6s ease-out",pointerEvents:heroSlide===i?"auto":"none",
-              background:slide.gradient,
+              background:themeGradients[`slide${i+1}`] || slide.gradient,
               display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
               overflow:"hidden"
             }}>
@@ -1081,12 +1119,18 @@ export default function LandingPage() {
               {slide.animationElements && slide.animationElements.map((elem, ei) => {
                 const sizeMap = {circle:"50%", square:"0%", triangle:"50%", hexagon:"50%"};
                 const radius = sizeMap[elem.type] || "50%";
+                const adaptiveColor = isDark ? elem.color : elem.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, (match, r, g, b, a) => {
+                  const darker = Math.round(parseInt(r) * 0.6);
+                  const darkerg = Math.round(parseInt(g) * 0.6);
+                  const darkerb = Math.round(parseInt(b) * 0.6);
+                  return `rgba(${darker},${darkerg},${darkerb},${a})`;
+                });
                 return (
                   <div key={ei} style={{
                     position:"absolute",
                     width:elem.size,
                     height:elem.size,
-                    background:elem.type==="triangle"?"transparent":elem.color,
+                    background:elem.type==="triangle"?"transparent":adaptiveColor,
                     top:elem.top,
                     bottom:elem.bottom,
                     left:elem.left,
@@ -1105,18 +1149,18 @@ export default function LandingPage() {
               {/* Content (above animated elements) */}
               <div style={{position:"relative",zIndex:10}}>
                 <div style={{fontSize:48,marginBottom:16}}>{slide.emoji}</div>
-                {slide.label && <div style={{fontSize:11,background:C.accent+"30",color:C.accent,borderRadius:6,
+                {slide.label && <div style={{fontSize:11,background:isDark?C.accent+"30":"#0055d430",color:isDark?C.accent:"#0055d4",borderRadius:6,
                   padding:"4px 12px",fontWeight:600,width:"fit-content",margin:"0 auto 12px"}}>
                   {slide.label}
                 </div>}
-                <h1 style={{fontSize:"clamp(32px,5vw,48px)",fontWeight:800,color:C.text,lineHeight:1.1,
+                <h1 style={{fontSize:"clamp(32px,5vw,48px)",fontWeight:800,color:isDark?C.text:"#0a0d1a",lineHeight:1.1,
                   letterSpacing:"-1px",marginBottom:12}}>
                   {slide.title}
                 </h1>
-                <p style={{fontSize:"clamp(14px,1.5vw,16px)",color:C.muted,lineHeight:1.6,marginBottom:8}}>
+                <p style={{fontSize:"clamp(14px,1.5vw,16px)",color:isDark?C.muted:"#4a5568",lineHeight:1.6,marginBottom:8}}>
                   {slide.subtitle}
                 </p>
-                <p style={{fontSize:"clamp(14px,2vw,16px)",color:C.dim,lineHeight:1.7,maxWidth:520,margin:"0 auto 28px"}}>
+                <p style={{fontSize:"clamp(14px,2vw,16px)",color:isDark?C.dim:"#5a6b7a",lineHeight:1.7,maxWidth:520,margin:"0 auto 28px"}}>
                   {slide.body}
                 </p>
                 <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
@@ -1164,11 +1208,11 @@ export default function LandingPage() {
               then watch your pattern analytics build in real time.
             </p>
           </div>
-          <InteractiveDemo/>
+          <InteractiveDemo T={C}/>
         </div>
       </section>
 
-      <ShowcaseCarousel />
+      <ShowcaseCarousel T={C} />
 
       <AdUnit/>
 
