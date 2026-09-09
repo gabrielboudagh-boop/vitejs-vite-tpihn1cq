@@ -49,18 +49,19 @@ function getHeroGradients(isDark) {
       ]
     };
   } else {
+    // Light mode: Much stronger gradients for better visibility on light backgrounds
     return {
-      slide1: "linear-gradient(135deg, rgba(0,85,212,0.12) 0%, rgba(42,138,96,0.08) 100%)",
-      slide2: "linear-gradient(135deg, rgba(123,66,255,0.12) 0%, rgba(0,85,212,0.08) 100%)",
-      slide3: "linear-gradient(135deg, rgba(200,160,80,0.12) 0%, rgba(200,80,140,0.08) 100%)",
-      slide4: "linear-gradient(135deg, rgba(40,180,210,0.12) 0%, rgba(0,85,212,0.08) 100%)",
-      slide5: "linear-gradient(135deg, rgba(0,85,212,0.12) 0%, rgba(123,66,255,0.08) 100%)",
+      slide1: "linear-gradient(135deg, rgba(0,85,212,0.28) 0%, rgba(34,197,94,0.22) 100%)",
+      slide2: "linear-gradient(135deg, rgba(147,51,234,0.28) 0%, rgba(0,85,212,0.22) 100%)",
+      slide3: "linear-gradient(135deg, rgba(217,119,6,0.28) 0%, rgba(190,24,93,0.22) 100%)",
+      slide4: "linear-gradient(135deg, rgba(6,182,212,0.28) 0%, rgba(0,85,212,0.22) 100%)",
+      slide5: "linear-gradient(135deg, rgba(0,85,212,0.28) 0%, rgba(147,51,234,0.22) 100%)",
       colors: [
-        {primary:"rgba(0,85,212,0.4)", secondary:"rgba(42,138,96,0.35)"},
-        {primary:"rgba(123,66,255,0.4)", secondary:"rgba(0,85,212,0.35)"},
-        {primary:"rgba(200,160,80,0.4)", secondary:"rgba(200,80,140,0.35)"},
-        {primary:"rgba(40,180,210,0.4)", secondary:"rgba(0,85,212,0.35)"},
-        {primary:"rgba(0,85,212,0.4)", secondary:"rgba(123,66,255,0.35)"},
+        {primary:"rgba(0,85,212,0.5)", secondary:"rgba(34,197,94,0.45)"},
+        {primary:"rgba(147,51,234,0.5)", secondary:"rgba(0,85,212,0.45)"},
+        {primary:"rgba(217,119,6,0.5)", secondary:"rgba(190,24,93,0.45)"},
+        {primary:"rgba(6,182,212,0.5)", secondary:"rgba(0,85,212,0.45)"},
+        {primary:"rgba(0,85,212,0.5)", secondary:"rgba(147,51,234,0.45)"},
       ]
     };
   }
@@ -538,11 +539,11 @@ function InteractiveDemo({ T }) {
             disabled={!canLog}
             style={{
               width:"100%",
-              background:canLog?C.accent:C.raised,
-              border:`1px solid ${canLog?C.accent:C.border}`,
+              background:canLog?theme.accent:theme.raised,
+              border:`1px solid ${canLog?theme.accent:theme.border}`,
               borderRadius:8,
               padding:"11px",
-              color:canLog?"#fff":C.muted,
+              color:canLog?"#fff":theme.muted,
               fontSize:14,
               fontWeight:600,
               cursor:canLog?"pointer":"not-allowed",
@@ -1106,14 +1107,14 @@ export default function LandingPage() {
           @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         `}</style>
         {/* Slide Container */}
-        <div style={{overflow:"hidden",position:"relative",height:340,background:"#000",borderRadius:16}}>
+        <div style={{overflow:"visible",position:"relative",minHeight:360,background:isDark?"#000":"#f5f7fa",borderRadius:16}}>
           {HERO_SLIDES.map((slide, i) => (
             <div key={i} style={{
               position:"absolute",inset:0,opacity:heroSlide===i?1:0,
               transition:"opacity 0.6s ease-out",pointerEvents:heroSlide===i?"auto":"none",
               background:themeGradients[`slide${i+1}`] || slide.gradient,
               display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-              overflow:"hidden"
+              overflow:"visible",minHeight:360
             }}>
               {/* Animated Background Elements */}
               {slide.animationElements && slide.animationElements.map((elem, ei) => {
@@ -1165,16 +1166,16 @@ export default function LandingPage() {
                 </p>
                 <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
                   {slide.isDemo ? (
-                    <button onClick={scrollToDemo} style={{background:C.accent,border:"none",borderRadius:10,
+                    <button onClick={scrollToDemo} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:10,
                       padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
-                      fontFamily:"'DM Sans',sans-serif",boxShadow:`0 0 32px ${C.accent}44`,
+                      fontFamily:"'DM Sans',sans-serif",boxShadow:isDark?`0 0 32px ${C.accent}44`:"0 0 24px rgba(0,85,212,0.35)",
                       position:"relative",zIndex:11}}>
                       {slide.cta}
                     </button>
                   ) : (
-                    <a href={`/blog/${slide.blogSlug}`} style={{background:C.accent,border:"none",borderRadius:10,
+                    <a href={`/blog/${slide.blogSlug}`} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:10,
                       padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
-                      fontFamily:"'DM Sans',sans-serif",boxShadow:`0 0 32px ${C.accent}44`,
+                      fontFamily:"'DM Sans',sans-serif",boxShadow:isDark?`0 0 32px ${C.accent}44`:"0 0 24px rgba(0,85,212,0.35)",
                       position:"relative",zIndex:11,display:"inline-block",textDecoration:"none"}}>
                       {slide.cta}
                     </a>
