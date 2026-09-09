@@ -1,8 +1,12 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
 import { supabase } from './supabase.js'
+import { ThemeProvider } from './ThemeContext.jsx';
 import LandingPage from './LandingPage.jsx';
 import BlogPage from './BlogPage.jsx';
+import AboutPage from './AboutPage.jsx';
+import FAQPage from './FAQPage.jsx';
+import ContactPage from './ContactPage.jsx';
 import TermsOfService from './TermsOfService.jsx';
 import PrivacyPolicy from './PrivacyPolicy.jsx';
 import BrandLogo from './BrandLogo.jsx';
@@ -2448,11 +2452,24 @@ return (
 // Anything else (/app, unknown) → authenticated VimaApp, no ads
 export default function App() {
   const path = window.location.pathname;
-  if (path === "/" || path === "/demo") return <LandingPage />;
-  if (path === "/blog" || path.startsWith("/blog/")) {
-    return <BlogPage slug={path.replace(/^\/blog\/?/, "") || ""} />;
+  
+  // Handle /guides redirect to /blog
+  if (path === "/guides") {
+    window.location.pathname = "/blog";
+    return null;
   }
-  if (path === "/terms") return <TermsOfService />;
-  if (path === "/privacy") return <PrivacyPolicy />;
-  return <VimaApp />;
+  
+  // Route to public pages (no theme needed, handled by component)
+  if (path === "/" || path === "/demo") return <ThemeProvider><LandingPage /></ThemeProvider>;
+  if (path === "/blog" || path.startsWith("/blog/")) {
+    return <ThemeProvider><BlogPage slug={path.replace(/^\/blog\/?/, "") || ""} /></ThemeProvider>;
+  }
+  if (path === "/about") return <ThemeProvider><AboutPage /></ThemeProvider>;
+  if (path === "/faq") return <ThemeProvider><FAQPage /></ThemeProvider>;
+  if (path === "/contact") return <ThemeProvider><ContactPage /></ThemeProvider>;
+  if (path === "/terms") return <ThemeProvider><TermsOfService /></ThemeProvider>;
+  if (path === "/privacy") return <ThemeProvider><PrivacyPolicy /></ThemeProvider>;
+  
+  // Default to authenticated app
+  return <ThemeProvider><VimaApp /></ThemeProvider>;
 }

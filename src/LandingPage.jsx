@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase.js";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { useTheme } from "./ThemeContext.jsx";
 import BrandLogo from "./BrandLogo.jsx";
 
 // ── Brand tokens (mirrors DARK theme) ────────────────────────────────────────
@@ -915,6 +916,7 @@ function ShowcaseCarousel() {
 
 // ── Landing Page ──────────────────────────────────────────────────────────────
 export default function LandingPage() {
+  const { isDark, setIsDark, theme: C } = useTheme();
   const demoRef = useRef(null);
   const [showExitModal, setShowExitModal] = useState(false);
 
@@ -957,11 +959,18 @@ export default function LandingPage() {
         padding:"14px 32px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <a href="/" style={{display:"flex",alignItems:"center",textDecoration:"none"}}>
-            <BrandLogo dark={true} height={30}/>
+            <BrandLogo dark={isDark} height={30}/>
           </a>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:18}}>
           <a href="/blog" style={{fontSize:13,color:C.muted,fontWeight:500}}>Guides</a>
+          <a href="/about" style={{fontSize:13,color:C.muted,fontWeight:500}}>About</a>
+          <a href="/faq" style={{fontSize:13,color:C.muted,fontWeight:500}}>FAQ</a>
+          <button onClick={() => setIsDark(!isDark)} style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,
+            padding:"7px 14px",color:C.text,fontSize:13,fontWeight:600,cursor:"pointer",
+            fontFamily:"'DM Sans',sans-serif"}}>
+            {isDark ? "☀️ Light" : "🌙 Dark"}
+          </button>
           <a href="/app" style={{fontSize:13,color:C.text,fontWeight:500}}>Sign In</a>
           <button onClick={scrollToDemo} style={{background:C.accent,border:"none",borderRadius:8,
             padding:"7px 18px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",
@@ -1139,11 +1148,13 @@ export default function LandingPage() {
       <footer style={{borderTop:`1px solid ${C.border}`,padding:"28px 24px",textAlign:"center"}}>
         <div style={{fontSize:13,color:C.muted,marginBottom:8,display:"flex",gap:20,justifyContent:"center",flexWrap:"wrap"}}>
           <a href="/" style={{color:C.muted}}>Home</a>
-          <a href="/blog" style={{color:C.muted}}>Study Guides</a>
+          <a href="/blog" style={{color:C.muted}}>Guides</a>
+          <a href="/about" style={{color:C.muted}}>About</a>
+          <a href="/faq" style={{color:C.muted}}>FAQ</a>
           <a href="/contact" style={{color:C.muted}}>Contact</a>
           <a href="/app" style={{color:C.muted}}>Sign In</a>
-          <a href="/terms" style={{color:C.muted}}>Terms of Service</a>
-          <a href="/privacy" style={{color:C.muted}}>Privacy Policy</a>
+          <a href="/terms" style={{color:C.muted}}>Terms</a>
+          <a href="/privacy" style={{color:C.muted}}>Privacy</a>
         </div>
         <div style={{fontSize:12,color:C.muted+"66"}}>© 2026 Vima Vima · Built for serious exam prep</div>
       </footer>

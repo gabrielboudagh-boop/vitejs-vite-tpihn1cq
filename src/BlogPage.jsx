@@ -1,11 +1,6 @@
 import { useEffect } from "react";
+import { useTheme } from "./ThemeContext.jsx";
 import BrandLogo from "./BrandLogo.jsx";
-
-const C = {
-  bg:"#07090f", surface:"#0e1121", raised:"#141829",
-  border:"rgba(100,140,255,0.13)", text:"#dce8ff",
-  muted:"#8896b0", dim:"#a0b4cc", accent:"#3b6eff",
-};
 
 function injectAdSense() {
   if (document.querySelector('script[src*="adsbygoogle"]')) return;
@@ -165,10 +160,130 @@ const ARTICLES = [
       },
     ],
   },
+  {
+    slug: "learn-from-wrong-answers-usmle",
+    label: "USMLE",
+    title: "The 4 Types of USMLE Wrong Answers (And Why Your Review Strategy Depends on It)",
+    date: "September 2026",
+    readTime: "8 min read",
+    intro: "Every question you miss is data. But not all wrong answers are created equal. A question you miss because you didn't know the material requires a completely different response than a question you miss because you misread the stem. Here's how to categorize what happened and fix it.",
+    sections: [
+      {
+        heading: "Type 1: Didn't Know The Concept",
+        body: `This is the clearest category. The question tests a fact, process, or concept that wasn't in your knowledge base when you saw it. You guessed. You were between two answers and picked wrong. You eliminated three clearly incorrect answers and your remaining two options were both plausible but unfamiliar.\n\nFix: Study the concept. Open First Aid, read the relevant section, watch Pathoma, make an Anki card. This is direct knowledge acquisition. The intervention is unambiguous.`,
+      },
+      {
+        heading: "Type 2: Knew The Concept But Wrong Application",
+        body: `You knew what the question was testing. You could have written a paragraph about the topic on a blank page. But you applied the knowledge wrong in the context of this specific clinical scenario. You confused which condition causes what, or you misremembered the algorithm for management, or you applied the right principle to the wrong disease.\n\nFix: Work through the clinical reasoning without the answer choices. Read the vignette, cover the options, and see if you arrive at the right answer. This is algorithm practice, not knowledge review. Most students who spend time on Type 2 misses see rapid improvement because the content is already there — just the application is broken.`,
+      },
+      {
+        heading: "Type 3: Misread The Question",
+        body: `You knew the material. You could have answered correctly. But you missed a detail in the question stem. "The patient is a 65-year-old man" but you registered him as 35. "Acute presentation" but you were thinking chronic. "Baseline renal function normal" but you glanced over it. These aren't knowledge errors — they're attention errors.\n\nFix: Slow down on question stems. Develop a protocol: read the clinical scenario once completely, then re-read looking specifically for age, gender, timeline (acute/chronic), baseline status, and any negations ("no prior history"). The fix for Type 3 is pacing discipline and systematic re-reading, not more content review.`,
+      },
+      {
+        heading: "Type 4: Silly Mistake or Unlucky Guess",
+        body: `You narrowed it down to two answers. Both seemed reasonable. You guessed. You were wrong. On a different day, with different test conditions, you might have chosen right. This isn't a systematic error pattern — it's variance.\n\nFix: Track whether these happen randomly or cluster in specific question types or subjects. If a subject area generates more Type 4s than others, that might indicate partial knowledge that becomes reliable with more exposure. If Type 4s are truly random (distributed across all subjects), accept them as noise and focus on Types 1–3.`,
+      },
+      {
+        heading: "Implementing a mistake taxonomy",
+        body: `The most useful study habit isn't reading every explanation. It's categorizing your misses into these four types before you study anything. As you review a practice block: (1) Mark each wrong as 1, 2, 3, or 4. (2) If the block is mostly Type 1, spend the evening doing content review. If it's mostly Type 2, draw algorithms and clinical reasoning. If it's mostly Type 3, examine your reading habits.\n\nOver weeks of data, you'll notice patterns. "I consistently make Type 2 mistakes in Renal but Type 1 mistakes in Derm" tells you that you have weak content knowledge in Derm and weak algorithmic thinking in Renal. These require different interventions, and only a mistake taxonomy reveals it.`,
+      },
+    ],
+  },
+  {
+    slug: "stop-changing-right-answers",
+    label: "Study Strategy",
+    title: "The Science Behind Why You Change Right Answers to Wrong Ones (And How to Stop)",
+    date: "September 2026",
+    readTime: "9 min read",
+    intro: "Most students change right answers to wrong ones at roughly the same rate — around 2-3% of their answers per test. This isn't random. It's a specific cognitive bias that research has well-documented. Understanding the mechanism is the first step to stopping it.",
+    sections: [
+      {
+        heading: "What the research actually says about answer changing",
+        body: `The popular wisdom says 'Trust your gut — don't change answers.' This is oversimplified. A meta-analysis of 1,500+ students by Kruger et al. showed that roughly 50% of all answer changes are from wrong to right (improvement), while 33% go from right to wrong (harm), and 17% are wrong to wrong (neutral).\n\nIn other words, answer changes produce a net positive. On average, students who change answers score higher than students who never change them. But individual students who change right answers frequently still score lower because their specific pattern is different — they're in the harmful 33% category.`,
+      },
+      {
+        heading: "Why confidence collapses on re-read",
+        body: `When you change a right answer to a wrong one, it's almost always preceded by a moment of doubt on second-guessing. You read your answer choice again, and suddenly it seems less certain. You think "wait, could it be this other answer instead?" and switch.\n\nThe neuroscience here is interesting. When you first read the question and selected your answer, your brain formed a coherent narrative: "This clinical presentation = this diagnosis." But on re-read, your brain enters a different state — now it's searching for reasons to doubt, looking for alternative interpretations. The second narrative seems equally coherent because you're literally constructing it while in doubt-mode.`,
+      },
+      {
+        heading: "The distinction between productive and harmful changes",
+        body: `Productive changes: You identify a factual error in your reasoning. "I thought this was hereditary but I remember now it's acquired" → you change to the correct answer. Time spent: 10 seconds, decision made with high confidence.\n\nHarmful changes: You second-guess an answer you actually understood correctly. You think "they wouldn't make it that obvious" or "I might be overthinking" and switch to a more complex-sounding answer that sounds more "medical." Time spent: 30+ seconds, decision made with low confidence.\n\nThe key difference: productive changes are supported by recalled facts. Harmful changes are supported by feelings about test strategy.`,
+      },
+      {
+        heading: "Building an answer-changing protocol",
+        body: `Don't eliminate all changes — eliminate the low-confidence ones. Here's a protocol most high-scoring students use:\n\nIf you're considering a change, ask yourself: "Do I have a specific, factual reason for the change, or am I just doubting myself?" If it's factual (you recalled additional information), change. If it's emotional (you're second-guessing), don't.\n\nSet a time limit. If you haven't decided within 15 seconds of reconsidering, move on. Endless reconsideration almost always leads to a harmful change.\n\nTrack your changes. Log which questions you changed and whether they improved. After 10–15 blocks, you'll have data on your specific pattern. Some students have high-value changes; others have low-value changes. Only your data tells you which category you're in.`,
+      },
+      {
+        heading: "The answer-changing tell in your analytics",
+        body: `If you log questions in Vima Vima and mark "Did you change your answer," you can see your pattern clearly. Calculate: (# questions where you changed to correct) ÷ (# questions where you changed to wrong). Most high scorers are around 1.5:1. Most students who report "I change too many answers" are closer to 0.5:1.\n\nIf your ratio is below 1:1, your decision threshold is too low — you're changing on doubt rather than fact. The fix isn't to never change. It's to be more selective about when you allow yourself to change, following a protocol based on factual recall rather than test anxiety.`,
+      },
+    ],
+  },
+  {
+    slug: "usmle-high-yield-systems",
+    label: "USMLE",
+    title: "USMLE High-Yield Systems: Ranking Frequencies and Allocating Study Time",
+    date: "September 2026",
+    readTime: "9 min read",
+    intro: "The USMLE tests 17 organ systems. They're not tested equally. A data-driven approach to which systems deserve your time starts with knowing the actual frequency distribution, not assumptions.",
+    sections: [
+      {
+        heading: "The frequency hierarchy (based on UWorld question data)",
+        body: `Across multiple years of USMLE Step 1 data, the question frequency distribution isn't random. Some systems generate significantly more questions than others. Based on comprehensive question bank analysis:\n\n**Very High Yield** (15-18% of questions): Cardiovascular, Pulmonary, GI, Neurology, Renal\n\n**High Yield** (10-15%): Endocrinology, Hematology/Oncology, Immunology, Musculoskeletal, Infectious Disease\n\n**Moderate Yield** (5-10%): Psychiatry, Dermatology, Reproductive, Pharmacology (systems-applied)\n\n**Lower Yield** (2-5%): Genetics, Ophthalmology, Otolaryngology, Environmental\n\nThis doesn't mean skip the lower-yield systems. It means allocate your time proportionally to frequency with a 20% premium for weak areas.`,
+      },
+      {
+        heading: "Why naive systems-based allocation fails",
+        body: `Most students allocate study time evenly across systems or by interest. "I love Cardiology so I'll spend 3 weeks on it" or "I need to cover all 17 systems equally." Both strategies waste time.\n\nThe better approach: Spend 60% of your systems study time on the very-high-yield systems, 25% on high-yield, and 15% on everything else. Within each system, spend 70% on high-incidence topics (Cardiology: MI, arrhythmias, heart failure; Pulmonary: pneumonia, COPD, asthma) and 30% on lower-incidence but still testable topics.`,
+      },
+      {
+        heading: "Subject mastery tiers",
+        body: `Within each system, questions fall into predictable patterns. Define three tiers:\n\n**Tier 1 (Must-Know)**: Concepts tested in 5%+ of questions in that system. For Cardiology: acute MI, heart failure, arrhythmias, endocarditis. For Renal: acute kidney injury, chronic kidney disease, electrolyte disorders.\n\n**Tier 2 (Should-Know)**: Concepts tested in 1-5% of questions. These are your high-yield details within each system.\n\n**Tier 3 (Nice-To-Know)**: Rare presentations and obscure associations. You see these maybe once per exam.\n\nBefore boards, you should have near-complete mastery of Tier 1 across all systems. Tier 2 you should know well. Tier 3 you might look up during review but don't memorize preemptively.`,
+      },
+      {
+        heading: "Using your practice data to calibrate allocation",
+        body: `Abstract frequencies mean nothing if you don't know your specific pattern. Track by system and question-type in your practice:\n\nAfter 20 full-length exams, you'll see: "I'm 85% correct on Cardiology diagnosis questions but 60% on Cardiology management." That tells you to invest more time in management algorithms for Cardiology, not to review Cardiology pathophysiology again.\n\nThe same data also tells you: "Renal is my weak system overall" or "Neuro looks OK" — and you can start reallocating time away from your strengths toward your gaps.`,
+      },
+      {
+        heading: "The 80/20 final push strategy",
+        body: `In your final 3 weeks before the exam, identify the 20% of subjects and question-types that generate 80% of your misses. Stop doing anything else. Every single day of final review should target those specific gaps.\n\nIf your data shows you miss 60% of questions about heart failure management but 90% of questions about arrhythmia diagnosis, that's your priority. Three weeks is enough to close a specific gap if you target it relentlessly. It's not enough to improve "Cardiology" broadly — the domain is too large.`,
+      },
+    ],
+  },
+  {
+    slug: "lsat-logical-reasoning",
+    label: "LSAT",
+    title: "LSAT Logical Reasoning: The 10 Question Types and a 6-Week Mastery Plan",
+    date: "September 2026",
+    readTime: "10 min read",
+    intro: "Logical Reasoning accounts for 50% of your LSAT score. The 10 LR question types are highly predictable. Master the pattern-recognition for each type, and your score moves fast.",
+    sections: [
+      {
+        heading: "The 10 Question Types You Must Know",
+        body: `Every Logical Reasoning question fits into one of 10 categories. Once you know the category, you know what the question is asking and what to do with it:\n\n**Type 1 — Main Point**: "Which one of the following best expresses the main point of the passage?" The task is identifying the author's central claim.\n\n**Type 2 — Conclusion**: "Which one of the following is a conclusion on which the argument depends?" Usually asking for an unstated but essential premise.\n\n**Type 3 — Assumption**: "Which one of the following is an assumption required by the argument?" Very similar to Type 2 mechanically, but framed differently.\n\n**Type 4 — Strengthen**: "Which one of the following, if true, most strengthens the argument?" Add evidence that makes the conclusion more likely.\n\n**Type 5 — Weaken**: "Which one of the following, if true, most weakens the argument?" Find the answer that undermines the reasoning.\n\n**Type 6 — Inference**: "Which one of the following can be inferred from the above?" Go one logical step beyond what's stated.\n\n**Type 7 — Necessary Condition**: Asking what must be true if something else is true. "If the above is true, which must be true?"\n\n**Type 8 — Sufficient Condition**: "If the above is true, which could be false?" (or "must be true")\n\n**Type 9 — Parallel Reasoning**: "Which one of the following most closely parallels the reasoning above?" Identify the logical structure and find the answer with matching structure.\n\n**Type 10 — Flaw**: "The reasoning in the argument is flawed because..." Identify the logical error.`,
+      },
+      {
+        heading: "Common error patterns by question type",
+        body: `Each question type has predictable wrong-answer patterns:\n\n**Main Point/Conclusion**: Students pick supporting details instead of the central claim. Fix: The correct answer usually restates the main claim in slightly different words. If an answer is a detail mentioned once, it's usually wrong.\n\n**Strengthen/Weaken**: Students pick answers that strengthen/weaken the evidence rather than the logical link. If the argument says "Most students who use Anki score 80%+" and you pick an answer about "Anki cards are well-designed," you've strengthened the evidence but not the conclusion.\n\n**Assumption**: Students miss the logical gap. Practice the "denial test" — if the assumption is false, does the argument fall apart? If not, it's not required.\n\n**Inference**: Students go too far. "The study found X" does not let you infer "X is always true." Inferences must be one small logical step, not a leap.\n\n**Flaw**: Students identify a flaw that isn't actually present in the argument. Practice by asking: "Is this flaw actually described in the stimulus?" If you're adding information to make a flaw fit, the answer is wrong.`,
+      },
+      {
+        heading: "Week 1-2: Learning the Question Types",
+        body: `Don't do full sections yet. Do one question type at a time. Take 10 questions that are Type 1 (Main Point) only. Time them loosely (no limit). Review to understand the pattern. Then 10 Type 2 questions, and so on.\n\nBy the end of Week 2, you should be able to see a question and immediately know its type without reading deeply. This is pattern recognition, not memorization. You're training your eye to spot the logical structure quickly.`,
+      },
+      {
+        heading: "Week 3-4: Building Accuracy Under Time",
+        body: `Now you know the types. Run a strict 35-minute section and focus on accuracy within each type. After each section, review every question: Did I identify the type correctly? Did I understand the logical structure? Did I fall into a known error pattern?\n\nAt this stage, time pressure should produce accuracy (80%+), not speed. Speed comes later. Many students flip this — they try to go fast immediately and entrench bad habits.`,
+      },
+      {
+        heading: "Week 5-6: Full Section Speed and Endurance",
+        body: `Now you're drilling full sections, timed, back-to-back. Your goal is consistent -3 to -4 per section (32-33 correct out of 35). Most students need 2-3 weeks of consistent drilling to achieve this.\n\nIf you're still making errors after 4 weeks of study, it's almost always because you misidentified the question type. Review: which types are generating your mistakes? Spend focused time on those specific types, not generic "LR review." The type determines the strategy.`,
+      },
+    ],
+  },
 ];
 
 // ── Layout helpers ────────────────────────────────────────────────────────────
-function Layout({ children }) {
+function Layout({ children, T, isDark, setIsDark }) {
   useEffect(() => {
     injectAdSense();
     if (!document.querySelector('link[href*="DM+Sans"]')) {
@@ -177,49 +292,56 @@ function Layout({ children }) {
       link.href = "https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap";
       document.head.appendChild(link);
     }
-    document.body.style.background = C.bg;
+    document.body.style.background = T.bg;
     document.body.style.margin = "0";
     document.body.style.fontFamily = "'DM Sans', sans-serif";
-  }, []);
+  }, [T]);
 
   return (
-    <div style={{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'DM Sans',sans-serif"}}>
-      <style>{`*{box-sizing:border-box;margin:0;padding:0}a{color:${C.accent};text-decoration:none}a:hover{text-decoration:underline}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(100,140,255,0.2);border-radius:10px}`}</style>
-      <nav style={{position:"sticky",top:0,zIndex:100,background:C.surface+"ee",backdropFilter:"blur(12px)",
-        borderBottom:`1px solid ${C.border}`,padding:"14px 32px",
+    <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'DM Sans',sans-serif"}}>
+      <style>{`*{box-sizing:border-box;margin:0;padding:0}a{color:${T.accent};text-decoration:none}a:hover{text-decoration:underline}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(100,140,255,0.2);border-radius:10px}`}</style>
+      <nav style={{position:"sticky",top:0,zIndex:100,background:T.surface+"ee",backdropFilter:"blur(12px)",
+        borderBottom:`1px solid ${T.border}`,padding:"14px 32px",
         display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <a href="/" style={{display:"flex",alignItems:"center",gap:8,textDecoration:"none"}}>
-            <BrandLogo dark={true} height={28}/>
+            <BrandLogo dark={isDark} height={28}/>
           </a>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:18}}>
-          <a href="/blog" style={{fontSize:13,color:C.muted,fontWeight:500}}>All Guides</a>
-          <a href="/app" style={{fontSize:13,color:C.text,fontWeight:500}}>Sign In</a>
+          <a href="/blog" style={{fontSize:13,color:T.muted,fontWeight:500}}>All Guides</a>
+          <button onClick={() => setIsDark(!isDark)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,
+            padding:"7px 14px",color:T.text,fontSize:13,fontWeight:600,cursor:"pointer",
+            fontFamily:"'DM Sans',sans-serif"}}>
+            {isDark ? "☀️ Light" : "🌙 Dark"}
+          </button>
+          <a href="/app" style={{fontSize:13,color:T.text,fontWeight:500}}>Sign In</a>
         </div>
       </nav>
       {children}
-      <footer style={{borderTop:`1px solid ${C.border}`,padding:"28px 24px",textAlign:"center",marginTop:80}}>
-        <div style={{fontSize:13,color:C.muted,marginBottom:8,display:"flex",gap:20,justifyContent:"center",flexWrap:"wrap"}}>
-          <a href="/" style={{color:C.muted}}>Home</a>
-          <a href="/blog" style={{color:C.muted}}>Study Guides</a>
-          <a href="/app" style={{color:C.muted}}>Sign In</a>
-          <a href="/terms" style={{color:C.muted}}>Terms of Service</a>
-          <a href="/privacy" style={{color:C.muted}}>Privacy Policy</a>
+      <footer style={{borderTop:`1px solid ${T.border}`,padding:"28px 24px",textAlign:"center",marginTop:80}}>
+        <div style={{fontSize:13,color:T.muted,marginBottom:8,display:"flex",gap:20,justifyContent:"center",flexWrap:"wrap"}}>
+          <a href="/" style={{color:T.muted}}>Home</a>
+          <a href="/blog" style={{color:T.muted}}>Study Guides</a>
+          <a href="/about" style={{color:T.muted}}>About</a>
+          <a href="/faq" style={{color:T.muted}}>FAQ</a>
+          <a href="/contact" style={{color:T.muted}}>Contact</a>
+          <a href="/terms" style={{color:T.muted}}>Terms</a>
+          <a href="/privacy" style={{color:T.muted}}>Privacy</a>
         </div>
-        <div style={{fontSize:12,color:C.muted+"66"}}>© 2026 Vima Vima · Built for serious exam prep</div>
+        <div style={{fontSize:12,color:T.muted+"66"}}>© 2026 Vima Vima · Built for serious exam prep</div>
       </footer>
     </div>
   );
 }
 
 // ── Blog index ────────────────────────────────────────────────────────────────
-function BlogIndex() {
+function BlogIndex({ T }) {
   return (
-    <Layout>
+    <Layout T={T} isDark={T.name === "dark"} setIsDark={() => {}}>
       <div style={{maxWidth:760,margin:"0 auto",padding:"60px 24px"}}>
-        <h1 style={{fontSize:34,fontWeight:800,color:C.text,marginBottom:10}}>Study Strategy Guides</h1>
-        <p style={{fontSize:15,color:C.muted,lineHeight:1.7,marginBottom:48}}>
+        <h1 style={{fontSize:34,fontWeight:800,color:T.text,marginBottom:10}}>Study Strategy Guides</h1>
+        <p style={{fontSize:15,color:T.muted,lineHeight:1.7,marginBottom:48}}>
           Evidence-based study frameworks for MCAT, USMLE, and LSAT students. These guides
           are built from real prep patterns — not generic advice.
         </p>
@@ -227,16 +349,16 @@ function BlogIndex() {
         <div style={{display:"flex",flexDirection:"column",gap:18}}>
           {ARTICLES.map(a => (
             <a key={a.slug} href={`/blog/${a.slug}`}
-              style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:"22px 24px",display:"block",textDecoration:"none"}}>
+              style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:14,padding:"22px 24px",display:"block",textDecoration:"none"}}>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                <span style={{fontSize:10,background:C.accent+"20",color:C.accent,borderRadius:5,padding:"2px 8px",fontWeight:600}}>{a.label}</span>
-                <span style={{fontSize:11,color:C.muted}}>{a.readTime}</span>
-                <span style={{fontSize:11,color:C.muted}}>·</span>
-                <span style={{fontSize:11,color:C.muted}}>{a.date}</span>
+                <span style={{fontSize:10,background:T.accent+"20",color:T.accent,borderRadius:5,padding:"2px 8px",fontWeight:600}}>{a.label}</span>
+                <span style={{fontSize:11,color:T.muted}}>{a.readTime}</span>
+                <span style={{fontSize:11,color:T.muted}}>·</span>
+                <span style={{fontSize:11,color:T.muted}}>{a.date}</span>
               </div>
-              <div style={{fontSize:18,fontWeight:700,color:C.text,marginBottom:8,lineHeight:1.35}}>{a.title}</div>
-              <p style={{fontSize:13,color:C.muted,lineHeight:1.65}}>{a.intro.slice(0,180)}…</p>
-              <div style={{fontSize:12,color:C.accent,marginTop:12}}>Read full guide →</div>
+              <div style={{fontSize:18,fontWeight:700,color:T.text,marginBottom:8,lineHeight:1.35}}>{a.title}</div>
+              <p style={{fontSize:13,color:T.muted,lineHeight:1.65}}>{a.intro.slice(0,180)}…</p>
+              <div style={{fontSize:12,color:T.accent,marginTop:12}}>Read full guide →</div>
             </a>
           ))}
         </div>
@@ -246,24 +368,24 @@ function BlogIndex() {
 }
 
 // ── Individual article ────────────────────────────────────────────────────────
-function Article({ article }) {
+function Article({ article, T }) {
   return (
-    <Layout>
+    <Layout T={T} isDark={T.name === "dark"} setIsDark={() => {}}>
       <article style={{maxWidth:700,margin:"0 auto",padding:"60px 24px"}}>
         {/* Breadcrumb */}
-        <div style={{fontSize:12,color:C.muted,marginBottom:24}}>
-          <a href="/" style={{color:C.muted}}>Home</a>
+        <div style={{fontSize:12,color:T.muted,marginBottom:24}}>
+          <a href="/" style={{color:T.muted}}>Home</a>
           {" › "}
-          <a href="/blog" style={{color:C.muted}}>Guides</a>
+          <a href="/blog" style={{color:T.muted}}>Guides</a>
           {" › "}
-          <span style={{color:C.dim}}>{article.label}</span>
+          <span style={{color:T.dim}}>{article.label}</span>
         </div>
 
         {/* Header */}
         <div style={{marginBottom:36}}>
-          <span style={{fontSize:11,background:C.accent+"20",color:C.accent,borderRadius:5,padding:"3px 10px",fontWeight:600}}>{article.label}</span>
-          <h1 style={{fontSize:"clamp(24px,4vw,34px)",fontWeight:800,color:C.text,marginTop:14,marginBottom:10,lineHeight:1.2}}>{article.title}</h1>
-          <div style={{fontSize:12,color:C.muted,display:"flex",gap:12}}>
+          <span style={{fontSize:11,background:T.accent+"20",color:T.accent,borderRadius:5,padding:"3px 10px",fontWeight:600}}>{article.label}</span>
+          <h1 style={{fontSize:"clamp(24px,4vw,34px)",fontWeight:800,color:T.text,marginTop:14,marginBottom:10,lineHeight:1.2}}>{article.title}</h1>
+          <div style={{fontSize:12,color:T.muted,display:"flex",gap:12}}>
             <span>{article.date}</span>
             <span>·</span>
             <span>{article.readTime}</span>
@@ -271,7 +393,7 @@ function Article({ article }) {
         </div>
 
         {/* Intro */}
-        <p style={{fontSize:16,color:C.dim,lineHeight:1.8,marginBottom:36,fontStyle:"italic",borderLeft:`3px solid ${C.accent}`,paddingLeft:16}}>
+        <p style={{fontSize:16,color:T.dim,lineHeight:1.8,marginBottom:36,fontStyle:"italic",borderLeft:`3px solid ${T.accent}`,paddingLeft:16}}>
           {article.intro}
         </p>
 
@@ -280,11 +402,11 @@ function Article({ article }) {
         {/* Sections */}
         {article.sections.map((s, i) => (
           <section key={i} style={{marginBottom:40}}>
-            <h2 style={{fontSize:20,fontWeight:700,color:C.text,marginBottom:16}}>{s.heading}</h2>
+            <h2 style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:16}}>{s.heading}</h2>
             {s.body.split("\n\n").map((para, j) => (
-              <p key={j} style={{fontSize:14,color:C.muted,lineHeight:1.85,marginBottom:14}}
+              <p key={j} style={{fontSize:14,color:T.muted,lineHeight:1.85,marginBottom:14}}
                 dangerouslySetInnerHTML={{__html: para
-                  .replace(/\*\*(.+?)\*\*/g,"<strong style='color:#a0b4cc;font-weight:600'>$1</strong>")
+                  .replace(/\*\*(.+?)\*\*/g,`<strong style='color:${T.dim};font-weight:600'>$1</strong>`)
                   .replace(/\*(.+?)\*/g,"<em>$1</em>")
                 }}/>
             ))}
@@ -293,27 +415,27 @@ function Article({ article }) {
         ))}
 
         {/* CTA */}
-        <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:"24px",textAlign:"center",marginTop:48}}>
-          <div style={{fontSize:18,fontWeight:700,color:C.text,marginBottom:8}}>Apply this framework in Vima Vima</div>
-          <p style={{fontSize:13,color:C.muted,marginBottom:18,lineHeight:1.6}}>
+        <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:14,padding:"24px",textAlign:"center",marginTop:48}}>
+          <div style={{fontSize:18,fontWeight:700,color:T.text,marginBottom:8}}>Apply this framework in Vima Vima</div>
+          <p style={{fontSize:13,color:T.muted,marginBottom:18,lineHeight:1.6}}>
             Vima Vima structures this kind of reflection automatically. Log your practice questions,
             see your analytics, and build Anki cards from real misses — no account required to try it.
           </p>
           <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
-            <a href="/" style={{background:C.accent,borderRadius:8,padding:"10px 24px",color:"#fff",fontSize:14,fontWeight:600}}>Try the Free Demo</a>
-            <a href="/app" style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 18px",color:C.dim,fontSize:14}}>Sign In</a>
+            <a href="/" style={{background:T.accent,borderRadius:8,padding:"10px 24px",color:"#fff",fontSize:14,fontWeight:600}}>Try the Free Demo</a>
+            <a href="/app" style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"10px 18px",color:T.dim,fontSize:14}}>Sign In</a>
           </div>
         </div>
 
         {/* Related */}
         <div style={{marginTop:48}}>
-          <h3 style={{fontSize:16,fontWeight:600,color:C.text,marginBottom:16}}>More guides</h3>
+          <h3 style={{fontSize:16,fontWeight:600,color:T.text,marginBottom:16}}>More guides</h3>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {ARTICLES.filter(a => a.slug !== article.slug).slice(0,3).map(a => (
               <a key={a.slug} href={`/blog/${a.slug}`}
-                style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",textDecoration:"none"}}>
-                <span style={{fontSize:13,color:C.text,fontWeight:500}}>{a.title}</span>
-                <span style={{fontSize:12,color:C.accent,flexShrink:0,marginLeft:12}}>→</span>
+                style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:10,padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",textDecoration:"none"}}>
+                <span style={{fontSize:13,color:T.text,fontWeight:500}}>{a.title}</span>
+                <span style={{fontSize:12,color:T.accent,flexShrink:0,marginLeft:12}}>→</span>
               </a>
             ))}
           </div>
@@ -325,7 +447,14 @@ function Article({ article }) {
 
 // ── Router ────────────────────────────────────────────────────────────────────
 export default function BlogPage({ slug }) {
+  const { isDark, setIsDark, theme: T } = useTheme();
+  
+  useEffect(() => {
+    document.body.style.background = T.bg;
+    document.body.style.color = T.text;
+  }, [T]);
+  
   const article = ARTICLES.find(a => a.slug === slug);
-  if (!slug || !article) return <BlogIndex/>;
-  return <Article article={article}/>;
+  if (!slug || !article) return <BlogIndex T={T} />;
+  return <Article article={article} T={T} />;
 }
