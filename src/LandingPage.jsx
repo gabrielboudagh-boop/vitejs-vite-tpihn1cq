@@ -1107,7 +1107,7 @@ export default function LandingPage() {
           @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         `}</style>
         {/* Slide Container with Gradient & SVG Background */}
-        <div style={{position:"relative",minHeight:360,background:themeGradients[`slide${heroSlide+1}`],borderRadius:16,overflow:"hidden"}}>
+        <div style={{position:"relative",minHeight:420,background:themeGradients[`slide${heroSlide+1}`],borderRadius:16,overflow:"hidden"}}>
           {/* Animated Background Elements */}
           {HERO_SLIDES[heroSlide]?.animationElements && HERO_SLIDES[heroSlide].animationElements.map((elem, ei) => {
             const sizeMap = {circle:"50%", square:"0%", triangle:"50%", hexagon:"50%"};
@@ -1141,34 +1141,34 @@ export default function LandingPage() {
           })}
 
           {/* Content (above animated elements) */}
-          <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:10}}>
-            <div>
-              <div style={{fontSize:48,marginBottom:16}}>{HERO_SLIDES[heroSlide]?.emoji}</div>
+          <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:10,padding:"24px"}}>
+            <div style={{maxWidth:480,width:"100%"}}>
+              <div style={{fontSize:48,marginBottom:12,lineHeight:1}}>{HERO_SLIDES[heroSlide]?.emoji}</div>
               {HERO_SLIDES[heroSlide]?.label && <div style={{fontSize:11,background:isDark?C.accent+"30":"#0055d430",color:isDark?C.accent:"#0055d4",borderRadius:6,
-                padding:"4px 12px",fontWeight:600,width:"fit-content",margin:"0 auto 12px"}}>
+                padding:"4px 12px",fontWeight:600,width:"fit-content",margin:"0 auto 10px"}}>
                 {HERO_SLIDES[heroSlide].label}
               </div>}
-              <h1 style={{fontSize:"clamp(32px,5vw,48px)",fontWeight:800,color:isDark?C.text:"#0a0d1a",lineHeight:1.1,
-                letterSpacing:"-1px",marginBottom:12}}>
+              <h1 style={{fontSize:"clamp(24px,4vw,36px)",fontWeight:800,color:isDark?C.text:"#0a0d1a",lineHeight:1.1,
+                letterSpacing:"-0.5px",marginBottom:8}}>
                 {HERO_SLIDES[heroSlide]?.title}
               </h1>
-              <p style={{fontSize:"clamp(14px,1.5vw,16px)",color:isDark?C.muted:"#4a5568",lineHeight:1.6,marginBottom:8}}>
+              <p style={{fontSize:"clamp(13px,1.2vw,15px)",color:isDark?C.muted:"#4a5568",lineHeight:1.5,marginBottom:6}}>
                 {HERO_SLIDES[heroSlide]?.subtitle}
               </p>
-              <p style={{fontSize:"clamp(14px,2vw,16px)",color:isDark?C.dim:"#5a6b7a",lineHeight:1.7,maxWidth:520,margin:"0 auto 28px"}}>
+              <p style={{fontSize:"clamp(13px,1.1vw,14px)",color:isDark?C.dim:"#5a6b7a",lineHeight:1.6,margin:"0 0 20px 0"}}>
                 {HERO_SLIDES[heroSlide]?.body}
               </p>
               <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
                 {HERO_SLIDES[heroSlide]?.isDemo ? (
                   <button onClick={scrollToDemo} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:10,
-                    padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
+                    padding:"11px 24px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",
                     fontFamily:"'DM Sans',sans-serif",boxShadow:isDark?`0 0 32px ${C.accent}44`:"0 0 24px rgba(0,85,212,0.35)",
                     position:"relative",zIndex:11}}>
                     {HERO_SLIDES[heroSlide]?.cta}
                   </button>
                 ) : (
                   <a href={`/blog/${HERO_SLIDES[heroSlide]?.blogSlug}`} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:10,
-                    padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
+                    padding:"11px 24px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",
                     fontFamily:"'DM Sans',sans-serif",boxShadow:isDark?`0 0 32px ${C.accent}44`:"0 0 24px rgba(0,85,212,0.35)",
                     position:"relative",zIndex:11,display:"inline-block",textDecoration:"none"}}>
                     {HERO_SLIDES[heroSlide]?.cta}
