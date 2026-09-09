@@ -915,10 +915,49 @@ function ShowcaseCarousel() {
 }
 
 // ── Landing Page ──────────────────────────────────────────────────────────────
+const HERO_SLIDES = [
+  {
+    title: "Try the Free Demo",
+    subtitle: "See how Vima Vima works in 2 minutes",
+    body: "Log a few practice questions and get instant analytics. No account required.",
+    cta: "Start Demo →",
+    emoji: "🚀"
+  },
+  {
+    title: "Track Every Question You Miss",
+    subtitle: "Build a personal data map of your gaps",
+    body: "Log your practice questions with 8 reflection fields. Vima Vima finds the patterns you can't see.",
+    cta: "Learn More →",
+    emoji: "📊"
+  },
+  {
+    title: "Get AI Study Insights",
+    subtitle: "Understand your mistake patterns",
+    body: "Not generic advice. Personalized insights based on your actual wrong answers.",
+    cta: "See How →",
+    emoji: "🧠"
+  },
+  {
+    title: "Export to Anki Automatically",
+    subtitle: "Build decks from your real mistakes",
+    body: "Every question you flag creates an Anki card targeting your specific gaps.",
+    cta: "Explore →",
+    emoji: "📝"
+  },
+  {
+    title: "Free for MCAT, USMLE, and LSAT",
+    subtitle: "No credit card required",
+    body: "Start tracking your questions today. Premium features coming soon.",
+    cta: "Get Started →",
+    emoji: "✨"
+  }
+];
+
 export default function LandingPage() {
   const { isDark, setIsDark, theme: C } = useTheme();
   const demoRef = useRef(null);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [heroSlide, setHeroSlide] = useState(0);
 
   useEffect(() => {
     injectAdSense();
@@ -931,6 +970,14 @@ export default function LandingPage() {
     document.body.style.background = C.bg;
     document.body.style.margin = "0";
     document.body.style.fontFamily = "'DM Sans', sans-serif";
+  }, [C]);
+
+  // Auto-rotate hero slides every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHeroSlide(prev => (prev + 1) % HERO_SLIDES.length);
+    }, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   // Exit-intent fires once per session when cursor leaves viewport top
@@ -978,34 +1025,45 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero */}
-      <section style={{maxWidth:760,margin:"0 auto",padding:"44px 24px 32px",textAlign:"center"}}>
-        <div style={{display:"inline-flex",alignItems:"center",gap:8,background:C.accent+"1a",
-          border:`1px solid ${C.accent}30`,borderRadius:20,padding:"5px 14px",
-          marginBottom:28,fontSize:12,color:C.accent,fontWeight:600}}>
-          📊 MCAT · USMLE · LSAT Performance Analytics
+      {/* Hero Carousel */}
+      <section style={{maxWidth:760,margin:"0 auto",padding:"60px 24px 40px",textAlign:"center",position:"relative",minHeight:420}}>
+        {/* Slide Container */}
+        <div style={{overflow:"hidden",position:"relative",height:340}}>
+          {HERO_SLIDES.map((slide, i) => (
+            <div key={i} style={{
+              position:"absolute",inset:0,opacity:heroSlide===i?1:0,
+              transition:"opacity 0.6s ease-out",pointerEvents:heroSlide===i?"auto":"none"
+            }}>
+              <div style={{fontSize:48,marginBottom:16}}>{slide.emoji}</div>
+              <h1 style={{fontSize:"clamp(32px,5vw,48px)",fontWeight:800,color:C.text,lineHeight:1.1,
+                letterSpacing:"-1px",marginBottom:12}}>
+                {slide.title}
+              </h1>
+              <p style={{fontSize:"clamp(14px,1.5vw,16px)",color:C.muted,lineHeight:1.6,marginBottom:8}}>
+                {slide.subtitle}
+              </p>
+              <p style={{fontSize:"clamp(14px,2vw,16px)",color:C.dim,lineHeight:1.7,maxWidth:520,margin:"0 auto 28px"}}>
+                {slide.body}
+              </p>
+              <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+                <button onClick={scrollToDemo} style={{background:C.accent,border:"none",borderRadius:10,
+                  padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
+                  fontFamily:"'DM Sans',sans-serif",boxShadow:`0 0 32px ${C.accent}44`}}>
+                  {slide.cta}
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
-        <h1 style={{fontSize:"clamp(36px,6vw,58px)",fontWeight:800,color:C.text,lineHeight:1.1,
-          letterSpacing:"-1px",marginBottom:20}}>
-          See Your Weak Spots<br/>Before Test Day
-        </h1>
-        <p style={{fontSize:"clamp(16px,2vw,19px)",color:C.dim,lineHeight:1.7,
-          maxWidth:580,margin:"0 auto 36px"}}>
-          Vima Vima tracks every practice question you log across MCAT, USMLE, and LSAT prep — then
-          surfaces precise analytics showing exactly where you're losing points, so you stop
-          re-reading textbooks and start fixing the right things.
-        </p>
-        <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-          <button onClick={scrollToDemo} style={{background:C.accent,border:"none",borderRadius:10,
-            padding:"13px 30px",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",
-            fontFamily:"'DM Sans',sans-serif",boxShadow:`0 0 32px ${C.accent}44`}}>
-            Try the Free Demo →
-          </button>
-          <a href="/app" style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,
-            padding:"13px 24px",color:C.dim,fontSize:14,fontWeight:500,
-            display:"inline-flex",alignItems:"center"}}>
-            Sign In to My Account
-          </a>
+
+        {/* Dots */}
+        <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:24,paddingBottom:12}}>
+          {HERO_SLIDES.map((_, i) => (
+            <button key={i} onClick={() => setHeroSlide(i)} style={{
+              width:heroSlide===i?28:10,height:8,background:heroSlide===i?C.accent:C.border,
+              border:"none",borderRadius:4,cursor:"pointer",transition:"all 0.3s"
+            }}/>
+          ))}
         </div>
       </section>
 
@@ -1029,7 +1087,53 @@ export default function LandingPage() {
 
       <AdUnit/>
 
-      {/* Features */}
+      {/* Blog Preview */}
+      <section style={{maxWidth:900,margin:"0 auto",padding:"60px 24px"}}>
+        <div style={{textAlign:"center",marginBottom:44}}>
+          <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:12}}>
+            Study Guides & Frameworks
+          </h2>
+          <p style={{fontSize:15,color:C.muted,lineHeight:1.6}}>
+            Evidence-based strategies from MCAT, USMLE, and LSAT experts
+          </p>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:20}}>
+          {[
+            {slug:"mcat-cars-framework",label:"MCAT",title:"MCAT CARS: The 6-Skill Framework",preview:"Master the exact framework that separates 128 from 132 scorers."},
+            {slug:"learn-from-wrong-answers-usmle",label:"USMLE",title:"4 Types of Wrong Answers",preview:"Categorize your misses and fix them with the right study strategy."},
+            {slug:"lsat-logical-reasoning",label:"LSAT",title:"Logical Reasoning: 10 Question Types",preview:"Master the patterns that account for 50% of your LSAT score."},
+            {slug:"spaced-repetition-anki-premed",label:"Study Strategy",title:"Building Your Anki Deck",preview:"Create flashcards from your actual wrong answers for lasting retention."},
+          ].map(item => (
+            <a key={item.slug} href={`/blog/${item.slug}`} style={{
+              background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:24,
+              display:"flex",flexDirection:"column",textDecoration:"none",transition:"all 0.2s",
+              cursor:"pointer"
+            }} onMouseEnter={e=>e.currentTarget.style.borderColor=C.accent}
+               onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+              <div style={{fontSize:11,background:C.accent+"20",color:C.accent,borderRadius:5,
+                padding:"4px 10px",fontWeight:600,width:"fit-content",marginBottom:12}}>
+                {item.label}
+              </div>
+              <h3 style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:10,lineHeight:1.4}}>
+                {item.title}
+              </h3>
+              <p style={{fontSize:13,color:C.muted,lineHeight:1.6,flex:1}}>
+                {item.preview}
+              </p>
+              <div style={{fontSize:12,color:C.accent,marginTop:12}}>Read full guide →</div>
+            </a>
+          ))}
+        </div>
+        <div style={{textAlign:"center",marginTop:36}}>
+          <a href="/blog" style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,
+            padding:"12px 28px",color:C.dim,fontSize:14,fontWeight:600,textDecoration:"none",
+            display:"inline-block"}}>
+            View All Guides →
+          </a>
+        </div>
+      </section>
+
+      <AdUnit/>
       <section style={{maxWidth:900,margin:"0 auto",padding:"60px 24px"}}>
         <h2 style={{fontSize:26,fontWeight:700,color:C.text,textAlign:"center",marginBottom:44}}>
           Built for the way high-scorers actually study
