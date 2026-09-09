@@ -921,35 +921,61 @@ const HERO_SLIDES = [
     subtitle: "See how Vima Vima works in 2 minutes",
     body: "Log a few practice questions and get instant analytics. No account required.",
     cta: "Start Demo →",
-    emoji: "🚀"
+    emoji: "🚀",
+    gradient: "linear-gradient(135deg, rgba(59,110,255,0.15) 0%, rgba(16,185,129,0.1) 100%)",
+    animationElements: [
+      {type:"circle",size:80,top:"10%",left:"10%",delay:"0s",color:"rgba(59,110,255,0.2)"},
+      {type:"square",size:120,top:"70%",right:"5%",delay:"1s",color:"rgba(16,185,129,0.15)"}
+    ]
   },
   {
     title: "Track Every Question You Miss",
     subtitle: "Build a personal data map of your gaps",
     body: "Log your practice questions with 8 reflection fields. Vima Vima finds the patterns you can't see.",
     cta: "Learn More →",
-    emoji: "📊"
+    emoji: "📊",
+    gradient: "linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(59,110,255,0.1) 100%)",
+    animationElements: [
+      {type:"circle",size:100,top:"15%",right:"8%",delay:"0.5s",color:"rgba(139,92,246,0.2)"},
+      {type:"triangle",size:90,bottom:"12%",left:"10%",delay:"1.5s",color:"rgba(59,110,255,0.15)"}
+    ]
   },
   {
     title: "Get AI Study Insights",
     subtitle: "Understand your mistake patterns",
     body: "Not generic advice. Personalized insights based on your actual wrong answers.",
     cta: "See How →",
-    emoji: "🧠"
+    emoji: "🧠",
+    gradient: "linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(236,72,153,0.1) 100%)",
+    animationElements: [
+      {type:"circle",size:110,top:"8%",left:"15%",delay:"0.3s",color:"rgba(245,158,11,0.2)"},
+      {type:"hexagon",size:85,bottom:"10%",right:"12%",delay:"1.2s",color:"rgba(236,72,153,0.15)"}
+    ]
   },
   {
     title: "Export to Anki Automatically",
     subtitle: "Build decks from your real mistakes",
     body: "Every question you flag creates an Anki card targeting your specific gaps.",
     cta: "Explore →",
-    emoji: "📝"
+    emoji: "📝",
+    gradient: "linear-gradient(135deg, rgba(6,182,212,0.15) 0%, rgba(59,110,255,0.1) 100%)",
+    animationElements: [
+      {type:"square",size:95,top:"12%",right:"10%",delay:"0.8s",color:"rgba(6,182,212,0.2)"},
+      {type:"circle",size:75,bottom:"15%",left:"8%",delay:"1.3s",color:"rgba(59,110,255,0.15)"}
+    ]
   },
   {
     title: "Free for MCAT, USMLE, and LSAT",
     subtitle: "No credit card required",
     body: "Start tracking your questions today. Premium features coming soon.",
     cta: "Get Started →",
-    emoji: "✨"
+    emoji: "✨",
+    gradient: "linear-gradient(135deg, rgba(59,110,255,0.15) 0%, rgba(139,92,246,0.1) 100%)",
+    animationElements: [
+      {type:"circle",size:120,top:"5%",left:"12%",delay:"0.5s",color:"rgba(59,110,255,0.2)"},
+      {type:"square",size:110,bottom:"8%",right:"10%",delay:"1.1s",color:"rgba(139,92,246,0.15)"},
+      {type:"circle",size:60,top:"50%",right:"5%",delay:"1.8s",color:"rgba(59,110,255,0.12)"}
+    ]
   }
 ];
 
@@ -1027,30 +1053,67 @@ export default function LandingPage() {
 
       {/* Hero Carousel */}
       <section style={{maxWidth:760,margin:"0 auto",padding:"60px 24px 40px",textAlign:"center",position:"relative",minHeight:420}}>
+        <style>{`
+          @keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-20px) rotate(10deg); } }
+          @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.8; } }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        `}</style>
         {/* Slide Container */}
-        <div style={{overflow:"hidden",position:"relative",height:340}}>
+        <div style={{overflow:"hidden",position:"relative",height:340,background:"#000",borderRadius:16}}>
           {HERO_SLIDES.map((slide, i) => (
             <div key={i} style={{
               position:"absolute",inset:0,opacity:heroSlide===i?1:0,
-              transition:"opacity 0.6s ease-out",pointerEvents:heroSlide===i?"auto":"none"
+              transition:"opacity 0.6s ease-out",pointerEvents:heroSlide===i?"auto":"none",
+              background:slide.gradient,
+              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+              overflow:"hidden"
             }}>
-              <div style={{fontSize:48,marginBottom:16}}>{slide.emoji}</div>
-              <h1 style={{fontSize:"clamp(32px,5vw,48px)",fontWeight:800,color:C.text,lineHeight:1.1,
-                letterSpacing:"-1px",marginBottom:12}}>
-                {slide.title}
-              </h1>
-              <p style={{fontSize:"clamp(14px,1.5vw,16px)",color:C.muted,lineHeight:1.6,marginBottom:8}}>
-                {slide.subtitle}
-              </p>
-              <p style={{fontSize:"clamp(14px,2vw,16px)",color:C.dim,lineHeight:1.7,maxWidth:520,margin:"0 auto 28px"}}>
-                {slide.body}
-              </p>
-              <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-                <button onClick={scrollToDemo} style={{background:C.accent,border:"none",borderRadius:10,
-                  padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
-                  fontFamily:"'DM Sans',sans-serif",boxShadow:`0 0 32px ${C.accent}44`}}>
-                  {slide.cta}
-                </button>
+              {/* Animated Background Elements */}
+              {slide.animationElements && slide.animationElements.map((elem, ei) => {
+                const sizeMap = {circle:"50%", square:"0%", triangle:"50%", hexagon:"50%"};
+                const radius = sizeMap[elem.type] || "50%";
+                return (
+                  <div key={ei} style={{
+                    position:"absolute",
+                    width:elem.size,
+                    height:elem.size,
+                    background:elem.type==="triangle"?"transparent":elem.color,
+                    top:elem.top,
+                    bottom:elem.bottom,
+                    left:elem.left,
+                    right:elem.right,
+                    borderRadius:radius,
+                    clipPath:elem.type==="triangle"?"polygon(50% 0%, 0% 100%, 100% 100%)":
+                              elem.type==="hexagon"?"polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)":"none",
+                    animation:`float 6s ease-in-out infinite`,
+                    animationDelay:elem.delay,
+                    opacity:0.5,
+                    zIndex:0
+                  }}/>
+                );
+              })}
+
+              {/* Content (above animated elements) */}
+              <div style={{position:"relative",zIndex:10}}>
+                <div style={{fontSize:48,marginBottom:16}}>{slide.emoji}</div>
+                <h1 style={{fontSize:"clamp(32px,5vw,48px)",fontWeight:800,color:C.text,lineHeight:1.1,
+                  letterSpacing:"-1px",marginBottom:12}}>
+                  {slide.title}
+                </h1>
+                <p style={{fontSize:"clamp(14px,1.5vw,16px)",color:C.muted,lineHeight:1.6,marginBottom:8}}>
+                  {slide.subtitle}
+                </p>
+                <p style={{fontSize:"clamp(14px,2vw,16px)",color:C.dim,lineHeight:1.7,maxWidth:520,margin:"0 auto 28px"}}>
+                  {slide.body}
+                </p>
+                <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+                  <button onClick={scrollToDemo} style={{background:C.accent,border:"none",borderRadius:10,
+                    padding:"12px 28px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
+                    fontFamily:"'DM Sans',sans-serif",boxShadow:`0 0 32px ${C.accent}44`,
+                    position:"relative",zIndex:11}}>
+                    {slide.cta}
+                  </button>
+                </div>
               </div>
             </div>
           ))}
