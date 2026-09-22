@@ -1,13 +1,7 @@
 import { useEffect } from "react";
 import { useTheme } from "./ThemeContext.jsx";
 import BrandLogo from "./BrandLogo.jsx";
-
-function SEO({ title, description }) {
-  useEffect(() => {
-    document.title = title;
-    document.querySelector('meta[name="description"]')?.setAttribute("content", description);
-  }, [title, description]);
-}
+import SEO from "./SEO.jsx";
 
 function Footer({ T }) {
   return (
@@ -61,7 +55,11 @@ export default function AboutPage() {
 
   return (
     <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'DM Sans',sans-serif"}}>
-      <SEO title="Why We Built Vima Vima | About" description="Learn the story behind Vima Vima — built by a med student, for pre-med and law students preparing for USMLE, MCAT, and LSAT." />
+      <SEO 
+        title="Why We Built Vima Vima | About" 
+        description="Learn the story behind Vima Vima — built by a med student, for pre-med and law students preparing for USMLE, MCAT, and LSAT." 
+        pathname={window.location.pathname}
+      />
       <style>{`*{box-sizing:border-box;margin:0;padding:0}a{color:${T.accent};text-decoration:none}a:hover{text-decoration:underline}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(100,140,255,0.2);border-radius:10px}`}</style>
 
       <Nav T={T} isDark={isDark} setIsDark={setIsDark} />

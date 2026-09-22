@@ -1,13 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "./ThemeContext.jsx";
 import BrandLogo from "./BrandLogo.jsx";
-
-function SEO({ title, description }) {
-  useEffect(() => {
-    document.title = title;
-    document.querySelector('meta[name="description"]')?.setAttribute("content", description);
-  }, [title, description]);
-}
+import SEO from "./SEO.jsx";
 
 function Footer({ T }) {
   return (
@@ -85,7 +79,11 @@ export default function ContactPage() {
 
   return (
     <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'DM Sans',sans-serif"}}>
-      <SEO title="Contact | Vima Vima" description="Get in touch with the Vima Vima team. Email support, feature requests, and feedback welcome." />
+      <SEO 
+        title="Contact | Vima Vima" 
+        description="Get in touch with the Vima Vima team. Email support, feature requests, and feedback welcome." 
+        pathname={window.location.pathname}
+      />
       <style>{`*{box-sizing:border-box;margin:0;padding:0}a{color:${T.accent};text-decoration:none}a:hover{text-decoration:underline}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(100,140,255,0.2);border-radius:10px}input,textarea{font-family:'DM Sans',sans-serif}`}</style>
 
       <Nav T={T} isDark={isDark} setIsDark={setIsDark} />

@@ -1,19 +1,22 @@
-import React from "react";
+import { useEffect } from "react";
+import { useTheme } from "./ThemeContext.jsx";
+import SEO from "./SEO.jsx";
 
 export default function TermsOfService() {
-  const hour = new Date().getHours();
-  const dark = !(hour >= 6 && hour < 20);
+  const { isDark, setIsDark, theme: C } = useTheme();
 
-  const C = dark ? {
-    bg: "#07090f", surface: "#0e1121", text: "#dce8ff",
-    muted: "#8896b0", border: "rgba(100,140,255,0.13)", accent: "#3b6eff",
-  } : {
-    bg: "#f5f7fa", surface: "#ffffff", text: "#0a0d1a",
-    muted: "#6b7280", border: "rgba(0,0,0,0.08)", accent: "#0055d4",
-  };
+  useEffect(() => {
+    document.body.style.background = C.bg;
+    document.body.style.color = C.text;
+  }, [C]);
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans', sans-serif" }}>
+      <SEO 
+        title="Terms of Service | Vima Vima" 
+        description="Terms of Service for Vima Vima — the AI-powered exam analytics platform for USMLE, MCAT, and LSAT students." 
+        pathname={window.location.pathname}
+      />
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "60px 24px" }}>
 
         <a href="/" style={{ color: C.accent, fontSize: 14, textDecoration: "none", display: "inline-block", marginBottom: 32 }}>

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useTheme } from "./ThemeContext.jsx";
 import BrandLogo from "./BrandLogo.jsx";
+import SEO from "./SEO.jsx";
 
 function injectAdSense() {
   if (document.querySelector('script[src*="adsbygoogle"]')) return;
@@ -339,6 +340,11 @@ function Layout({ children, T, isDark, setIsDark }) {
 function BlogIndex({ T }) {
   return (
     <Layout T={T} isDark={T.name === "dark"} setIsDark={() => {}}>
+      <SEO 
+        title="Study Strategy Guides | Vima Vima" 
+        description="Evidence-based study frameworks for MCAT, USMLE, and LSAT students. Real prep patterns and strategies, not generic advice." 
+        pathname={window.location.pathname}
+      />
       <div style={{maxWidth:760,margin:"0 auto",padding:"60px 24px"}}>
         <h1 style={{fontSize:34,fontWeight:800,color:T.text,marginBottom:10}}>Study Strategy Guides</h1>
         <p style={{fontSize:15,color:T.muted,lineHeight:1.7,marginBottom:48}}>
@@ -371,6 +377,11 @@ function BlogIndex({ T }) {
 function Article({ article, T }) {
   return (
     <Layout T={T} isDark={T.name === "dark"} setIsDark={() => {}}>
+      <SEO 
+        title={article.title + " | Vima Vima"} 
+        description={article.intro} 
+        pathname={window.location.pathname}
+      />
       <article style={{maxWidth:700,margin:"0 auto",padding:"60px 24px"}}>
         {/* Breadcrumb */}
         <div style={{fontSize:12,color:T.muted,marginBottom:24}}>

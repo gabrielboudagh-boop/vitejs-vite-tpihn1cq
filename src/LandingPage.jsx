@@ -3,11 +3,12 @@ import { supabase } from "./supabase.js";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { useTheme } from "./ThemeContext.jsx";
 import BrandLogo from "./BrandLogo.jsx";
+import SEO from "./SEO.jsx";
 
 // ── Brand tokens (mirrors DARK theme) ────────────────────────────────────────
 const C = {
-  bg:"#07090f", surface:"#0e1121", raised:"#141829",
-  border:"rgba(100,140,255,0.13)", text:"#dce8ff",
+  bg:"#050810", surface:"#0a0f1f", raised:"#101629",
+  border:"rgba(100,140,255,0.12)", text:"#e8ecf5",
   muted:"#8896b0", dim:"#a0b4cc", accent:"#3b6eff",
   success:"#3dab80", danger:"#c86060", warn:"#b8943a",
 };
@@ -955,74 +956,50 @@ function ShowcaseCarousel({ T }) {
 // ── Landing Page ──────────────────────────────────────────────────────────────
 const HERO_SLIDES = [
   {
-    title: "Try Demo",
-    subtitle: "See how Vima Viva works in 2 minutes",
-    body: "Log a few practice questions and get instant analytics. No account required.",
+    title: "Try the Review Flow",
+    subtitle: "Experience the core workflow",
+    body: "Log a few practice questions and watch instant analytics build. No account required.",
     cta: "Start Demo →",
-    emoji: "🚀",
+    ctaSecondary: null,
     isDemo: true,
-    gradient: "linear-gradient(135deg, rgba(59,110,255,0.15) 0%, rgba(16,185,129,0.1) 100%)",
-    animationElements: [
-      {type:"circle",size:80,top:"10%",left:"10%",delay:"0s",color:"rgba(59,110,255,0.2)"},
-      {type:"square",size:120,top:"70%",right:"5%",delay:"1s",color:"rgba(16,185,129,0.15)"}
-    ]
+    hasScreenshot: false
   },
   {
-    title: "MCAT CARS: The 6-Skill Framework",
-    subtitle: "That Separates 128 from 132",
-    body: "Master the exact framework used by top scorers. Learn the 6 CAR skills that unlock consistent high performance on reading comprehension.",
-    cta: "Read Full Guide →",
-    emoji: "📚",
+    title: "MCAT CARS",
+    subtitle: "The framework that separates 128 from 132.",
+    body: "A precise system used by top scorers to read, reason, and perform under pressure.",
+    cta: "Read the Guide",
+    ctaSecondary: "Try the review flow →",
     blogSlug: "mcat-cars-framework",
-    label: "MCAT",
-    gradient: "linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(59,110,255,0.1) 100%)",
-    animationElements: [
-      {type:"circle",size:100,top:"15%",right:"8%",delay:"0.5s",color:"rgba(139,92,246,0.2)"},
-      {type:"triangle",size:90,bottom:"12%",left:"10%",delay:"1.5s",color:"rgba(59,110,255,0.15)"}
-    ]
+    hasScreenshot: true,
+    screenshotLabel: "[Product screenshot: Question review interface]"
   },
   {
-    title: "USMLE Wrong Answers Framework",
+    title: "USMLE Wrong Answers",
     subtitle: "4 Types & How to Fix Each",
     body: "Not all wrong answers are equal. Learn the 4 types of mistakes and apply the right study strategy to each one.",
     cta: "Learn the Framework →",
-    emoji: "🔍",
     blogSlug: "learn-from-wrong-answers-usmle",
-    label: "USMLE",
-    gradient: "linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(236,72,153,0.1) 100%)",
-    animationElements: [
-      {type:"circle",size:110,top:"8%",left:"15%",delay:"0.3s",color:"rgba(245,158,11,0.2)"},
-      {type:"hexagon",size:85,bottom:"10%",right:"12%",delay:"1.2s",color:"rgba(236,72,153,0.15)"}
-    ]
+    hasScreenshot: true,
+    screenshotLabel: "[Product screenshot: Analysis dashboard]"
   },
   {
-    title: "Building Your Personal Anki Deck",
+    title: "Building Your Anki Deck",
     subtitle: "From Real Exam Mistakes",
-    body: "The most powerful Anki decks are the ones you build from your actual wrong answers. Here's exactly how to do it.",
+    body: "The most powerful Anki decks are built from your actual wrong answers. Generate cards automatically from logged questions.",
     cta: "See the Strategy →",
-    emoji: "📝",
     blogSlug: "spaced-repetition-anki-premed",
-    label: "Study Strategy",
-    gradient: "linear-gradient(135deg, rgba(6,182,212,0.15) 0%, rgba(59,110,255,0.1) 100%)",
-    animationElements: [
-      {type:"square",size:95,top:"12%",right:"10%",delay:"0.8s",color:"rgba(6,182,212,0.2)"},
-      {type:"circle",size:75,bottom:"15%",left:"8%",delay:"1.3s",color:"rgba(59,110,255,0.15)"}
-    ]
+    hasScreenshot: true,
+    screenshotLabel: "[Product screenshot: Anki export feature]"
   },
   {
-    title: "LSAT Logical Reasoning Mastery",
-    subtitle: "10 Question Types + 6-Week Plan",
-    body: "LR accounts for 50% of your LSAT score. Learn the 10 question types and the exact plan to master them in 6 weeks.",
+    title: "LSAT Logical Reasoning",
+    subtitle: "Master 10 Question Types",
+    body: "LR accounts for 50% of your score. Learn question types and the exact plan to master them efficiently.",
     cta: "Start the Plan →",
-    emoji: "⚖️",
     blogSlug: "lsat-logical-reasoning",
-    label: "LSAT",
-    gradient: "linear-gradient(135deg, rgba(59,110,255,0.15) 0%, rgba(139,92,246,0.1) 100%)",
-    animationElements: [
-      {type:"circle",size:120,top:"5%",left:"12%",delay:"0.5s",color:"rgba(59,110,255,0.2)"},
-      {type:"square",size:110,bottom:"8%",right:"10%",delay:"1.1s",color:"rgba(139,92,246,0.15)"},
-      {type:"circle",size:60,top:"50%",right:"5%",delay:"1.8s",color:"rgba(59,110,255,0.12)"}
-    ]
+    hasScreenshot: true,
+    screenshotLabel: "[Product screenshot: Practice tracker]"
   }
 ];
 
@@ -1070,6 +1047,11 @@ export default function LandingPage() {
 
   return (
     <div style={{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'DM Sans',sans-serif"}}>
+      <SEO 
+        title="Vima Vima — AI Question Analytics for USMLE, MCAT, and LSAT Prep" 
+        description="Track your practice questions, get AI-powered insights into mistakes, and auto-generate Anki flashcards. Free question logging and analytics for serious exam prep." 
+        pathname={window.location.pathname}
+      />
       <style>{`*{box-sizing:border-box;margin:0;padding:0}a{color:${C.accent};text-decoration:none}a:hover{text-decoration:underline}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(100,140,255,0.2);border-radius:10px}`}</style>
 
       {showExitModal && <ExitModal onClose={() => setShowExitModal(false)}/>}
@@ -1100,106 +1082,100 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Carousel */}
-      <section style={{maxWidth:760,margin:"0 auto",padding:"60px 24px 40px",textAlign:"center",position:"relative",minHeight:420}}>
+      <section style={{maxWidth:1200,margin:"0 auto",padding:"80px 24px 60px",position:"relative"}}>
         <style>{`
-          @keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-20px) rotate(10deg); } }
-          @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.8; } }
-          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+          .slide-content { animation: fadeIn 0.5s ease-out; }
         `}</style>
-        {/* Slide Container with Gradient & SVG Background */}
-        <div style={{position:"relative",minHeight:420,background:themeGradients[`slide${heroSlide+1}`],borderRadius:16,overflow:"hidden"}}>
-          {/* Animated Background Elements */}
-          {HERO_SLIDES[heroSlide]?.animationElements && HERO_SLIDES[heroSlide].animationElements.map((elem, ei) => {
-            const sizeMap = {circle:"50%", square:"0%", triangle:"50%", hexagon:"50%"};
-            const radius = sizeMap[elem.type] || "50%";
-            const adaptiveColor = isDark ? elem.color : elem.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, (match, r, g, b, a) => {
-              const darker = Math.round(parseInt(r) * 0.6);
-              const darkerg = Math.round(parseInt(g) * 0.6);
-              const darkerb = Math.round(parseInt(b) * 0.6);
-              return `rgba(${darker},${darkerg},${darkerb},${a})`;
-            });
-            return (
-              <div key={ei} style={{
-                position:"absolute",
-                width:elem.size,
-                height:elem.size,
-                background:elem.type==="triangle"?"transparent":adaptiveColor,
-                top:elem.top,
-                bottom:elem.bottom,
-                left:elem.left,
-                right:elem.right,
-                borderRadius:radius,
-                clipPath:elem.type==="triangle"?"polygon(50% 0%, 0% 100%, 100% 100%)":
-                          elem.type==="hexagon"?"polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)":"none",
-                animation:`float 6s ease-in-out infinite`,
-                animationDelay:elem.delay,
-                opacity:0.5,
-                zIndex:0,
-                pointerEvents:"none"
-              }}/>
-            );
-          })}
-
-          {/* Content (above animated elements) */}
-          <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:10,padding:"24px"}}>
-            <div style={{maxWidth:480,width:"100%"}}>
-              <div style={{fontSize:48,marginBottom:12,lineHeight:1}}>{HERO_SLIDES[heroSlide]?.emoji}</div>
-              {HERO_SLIDES[heroSlide]?.label && <div style={{fontSize:11,background:isDark?C.accent+"30":"#0055d430",color:isDark?C.accent:"#0055d4",borderRadius:6,
-                padding:"4px 12px",fontWeight:600,width:"fit-content",margin:"0 auto 10px"}}>
-                {HERO_SLIDES[heroSlide].label}
-              </div>}
-              <h1 style={{fontSize:"clamp(24px,4vw,36px)",fontWeight:800,color:isDark?C.text:"#0a0d1a",lineHeight:1.1,
-                letterSpacing:"-0.5px",marginBottom:8}}>
+        
+        {/* Slide Container - Premium 2-Column Layout */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:80,alignItems:"center",minHeight:500}}>
+          {/* Left Column: Content */}
+          <div className="slide-content" style={{paddingRight:40}}>
+            <div style={{marginBottom:32}}>
+              <h1 style={{fontSize:56,fontWeight:700,color:isDark?C.text:"#0a0d1a",lineHeight:1.15,
+                letterSpacing:"-1.5px",marginBottom:16}}>
                 {HERO_SLIDES[heroSlide]?.title}
               </h1>
-              <p style={{fontSize:"clamp(13px,1.2vw,15px)",color:isDark?C.muted:"#4a5568",lineHeight:1.5,marginBottom:6}}>
+              <p style={{fontSize:20,color:isDark?C.muted:"#4a5568",fontWeight:500,lineHeight:1.4,marginBottom:20}}>
                 {HERO_SLIDES[heroSlide]?.subtitle}
               </p>
-              <p style={{fontSize:"clamp(13px,1.1vw,14px)",color:isDark?C.dim:"#5a6b7a",lineHeight:1.6,margin:"0 0 20px 0"}}>
+              <p style={{fontSize:16,color:isDark?C.dim:"#5a6b7a",lineHeight:1.7,maxWidth:480}}>
                 {HERO_SLIDES[heroSlide]?.body}
               </p>
-              <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-                {HERO_SLIDES[heroSlide]?.isDemo ? (
-                  <button onClick={scrollToDemo} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:10,
-                    padding:"11px 24px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",
-                    fontFamily:"'DM Sans',sans-serif",boxShadow:isDark?`0 0 32px ${C.accent}44`:"0 0 24px rgba(0,85,212,0.35)",
-                    position:"relative",zIndex:11}}>
-                    {HERO_SLIDES[heroSlide]?.cta}
-                  </button>
-                ) : (
-                  <a href={`/blog/${HERO_SLIDES[heroSlide]?.blogSlug}`} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:10,
-                    padding:"11px 24px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",
-                    fontFamily:"'DM Sans',sans-serif",boxShadow:isDark?`0 0 32px ${C.accent}44`:"0 0 24px rgba(0,85,212,0.35)",
-                    position:"relative",zIndex:11,display:"inline-block",textDecoration:"none"}}>
+            </div>
+            
+            {/* CTA Buttons */}
+            <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+              {HERO_SLIDES[heroSlide]?.isDemo ? (
+                <button onClick={scrollToDemo} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:8,
+                  padding:"14px 32px",color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer",
+                  fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s",
+                  boxShadow:isDark?"0 4px 16px rgba(59,110,255,0.3)":"0 4px 12px rgba(0,85,212,0.25)"}}>
+                  {HERO_SLIDES[heroSlide]?.cta}
+                </button>
+              ) : (
+                <>
+                  <a href={`/blog/${HERO_SLIDES[heroSlide]?.blogSlug}`} style={{background:isDark?C.accent:"#0055d4",
+                    border:"none",borderRadius:8,padding:"14px 32px",color:"#fff",fontSize:15,fontWeight:600,
+                    cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s",display:"inline-block",
+                    textDecoration:"none",boxShadow:isDark?"0 4px 16px rgba(59,110,255,0.3)":"0 4px 12px rgba(0,85,212,0.25)"}}>
                     {HERO_SLIDES[heroSlide]?.cta}
                   </a>
-                )}
-              </div>
+                  {HERO_SLIDES[heroSlide]?.ctaSecondary && (
+                    <button onClick={scrollToDemo} style={{background:"transparent",border:`1.5px solid ${isDark?C.accent:"#0055d4"}`,
+                      borderRadius:8,padding:"12px 30px",color:isDark?C.accent:"#0055d4",fontSize:15,fontWeight:600,
+                      cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>
+                      {HERO_SLIDES[heroSlide]?.ctaSecondary}
+                    </button>
+                  )}
+                </>
+              )}
             </div>
+          </div>
+
+          {/* Right Column: Product Screenshot / Visual */}
+          <div style={{background:isDark?"#0e1121":"#f8f9fa",borderRadius:12,minHeight:400,
+            display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${isDark?"rgba(100,140,255,0.13)":"#e5e7eb"}`,
+            padding:32}}>
+            {HERO_SLIDES[heroSlide]?.hasScreenshot ? (
+              <div style={{textAlign:"center",color:isDark?C.dim:"#9ca3af",fontSize:14}}>
+                <div style={{marginBottom:12,fontSize:48}}>📱</div>
+                {HERO_SLIDES[heroSlide]?.screenshotLabel}
+                <br/>
+                <span style={{fontSize:12,marginTop:8,display:"block",color:isDark?C.muted:"#6b7280"}}>
+                  (Real product screenshot will be displayed here)
+                </span>
+              </div>
+            ) : (
+              <div style={{textAlign:"center",color:isDark?C.dim:"#9ca3af",fontSize:14}}>
+                <div style={{marginBottom:12,fontSize:48}}>✨</div>
+                Interactive demo preview
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Dots */}
-        <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:24,paddingBottom:12}}>
+        {/* Navigation Dots */}
+        <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:60}}>
           {HERO_SLIDES.map((_, i) => (
             <button key={i} onClick={() => setHeroSlide(i)} style={{
-              width:heroSlide===i?28:10,height:8,background:heroSlide===i?C.accent:C.border,
-              border:"none",borderRadius:4,cursor:"pointer",transition:"all 0.3s"
+              width:heroSlide===i?32:10,height:6,background:heroSlide===i?(isDark?C.accent:"#0055d4"):(isDark?C.border:"#d1d5db"),
+              border:"none",borderRadius:3,cursor:"pointer",transition:"all 0.3s"
             }}/>
           ))}
         </div>
       </section>
 
       {/* Demo */}
-      <section ref={demoRef} style={{background:C.surface,padding:"52px 24px"}}>
-        <div style={{maxWidth:780,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:30}}>
-            <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:10}}>
-              Try the full review flow now
+      <section ref={demoRef} style={{background:isDark?C.bg:"#f9f9f9",padding:"100px 24px",borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`}}>
+        <div style={{maxWidth:1000,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:60}}>
+            <h2 style={{fontSize:44,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:16,lineHeight:1.2}}>
+              Try the Full Review Flow
             </h2>
-            <p style={{fontSize:14,color:C.muted,lineHeight:1.6,maxWidth:620,margin:"0 auto"}}>
-              This trial mirrors the real learning workflow: complete all 8 steps per question,
-              then watch your pattern analytics build in real time.
+            <p style={{fontSize:18,color:isDark?C.muted:"#6b7280",lineHeight:1.6,maxWidth:600,margin:"0 auto"}}>
+              Experience the complete workflow: log a practice question, reflect on your performance, and watch analytics emerge in real time. No account required.
             </p>
           </div>
           <InteractiveDemo T={C}/>
@@ -1210,110 +1186,106 @@ export default function LandingPage() {
 
       <AdUnit/>
 
-      {/* Blog Preview */}
-      <section style={{maxWidth:900,margin:"0 auto",padding:"60px 24px",position:"relative"}}>
-        {/* Gradient Background */}
-        <div style={{position:"absolute",inset:0,background:themeGradients.slide1,opacity:0.15,borderRadius:16,zIndex:0,pointerEvents:"none"}}/>
-        <div style={{position:"relative",zIndex:1}}>
-          <div style={{textAlign:"center",marginBottom:44}}>
-            <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:12}}>
-              Study Guides & Frameworks
-            </h2>
-            <p style={{fontSize:15,color:C.muted,lineHeight:1.6}}>
-              Evidence-based strategies from MCAT, USMLE, and LSAT experts
+      {/* Study Guides Section */}
+      <section style={{maxWidth:1000,margin:"0 auto",padding:"100px 24px",borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`}}>
+        <div style={{textAlign:"center",marginBottom:60}}>
+          <h2 style={{fontSize:44,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:16}}>
+            Study Guides & Frameworks
+          </h2>
+          <p style={{fontSize:18,color:isDark?C.muted:"#6b7280",lineHeight:1.6,maxWidth:600,margin:"0 auto"}}>
+            Research-backed strategies from top scorers and exam experts
+          </p>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:24}}>
+        {[
+          {slug:"mcat-cars-framework",label:"MCAT",title:"MCAT CARS",preview:"The framework separating 128 from 132 scorers. A precise system for reading comprehension under pressure."},
+          {slug:"learn-from-wrong-answers-usmle",label:"USMLE",title:"4 Types of Wrong Answers",preview:"Learn why you miss questions and the exact study strategy to address each type of mistake."},
+          {slug:"lsat-logical-reasoning",label:"LSAT",title:"Logical Reasoning Mastery",preview:"Master the 10 question types that account for 50% of your LSAT score."},
+          {slug:"spaced-repetition-anki-premed",label:"Study Method",title:"Building Your Anki Deck",preview:"Generate flashcards from your actual wrong answers for lasting retention and intelligent spacing."},
+        ].map(item => (
+          <a key={item.slug} href={`/blog/${item.slug}`} style={{
+            background:isDark?C.surface:"#ffffff",border:`1px solid ${isDark?C.border:"#e5e7eb"}`,borderRadius:8,padding:32,
+            display:"flex",flexDirection:"column",textDecoration:"none",transition:"all 0.3s",
+            cursor:"pointer"
+          }} onMouseEnter={e=>{e.currentTarget.style.borderColor=isDark?C.accent:"#0055d4"; e.currentTarget.style.boxShadow=isDark?"0 12px 32px rgba(59,110,255,0.15)":"0 12px 32px rgba(0,85,212,0.08)"}}
+             onMouseLeave={e=>{e.currentTarget.style.borderColor=isDark?C.border:"#e5e7eb"; e.currentTarget.style.boxShadow="none"}}>
+            <div style={{fontSize:13,background:isDark?C.accent+"15":C.accent+"10",color:isDark?C.accent:"#0055d4",borderRadius:5,
+              padding:"6px 12px",fontWeight:600,width:"fit-content",marginBottom:16}}>
+              {item.label}
+            </div>
+            <h3 style={{fontSize:20,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:12,lineHeight:1.3}}>
+              {item.title}
+            </h3>
+            <p style={{fontSize:15,color:isDark?C.muted:"#6b7280",lineHeight:1.6,flex:1,marginBottom:16}}>
+              {item.preview}
             </p>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:20}}>
-          {[
-            {slug:"mcat-cars-framework",label:"MCAT",title:"MCAT CARS: The 6-Skill Framework",preview:"Master the exact framework that separates 128 from 132 scorers."},
-            {slug:"learn-from-wrong-answers-usmle",label:"USMLE",title:"4 Types of Wrong Answers",preview:"Categorize your misses and fix them with the right study strategy."},
-            {slug:"lsat-logical-reasoning",label:"LSAT",title:"Logical Reasoning: 10 Question Types",preview:"Master the patterns that account for 50% of your LSAT score."},
-            {slug:"spaced-repetition-anki-premed",label:"Study Strategy",title:"Building Your Anki Deck",preview:"Create flashcards from your actual wrong answers for lasting retention."},
-          ].map(item => (
-            <a key={item.slug} href={`/blog/${item.slug}`} style={{
-              background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:24,
-              display:"flex",flexDirection:"column",textDecoration:"none",transition:"all 0.2s",
-              cursor:"pointer"
-            }} onMouseEnter={e=>e.currentTarget.style.borderColor=C.accent}
-               onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
-              <div style={{fontSize:11,background:C.accent+"20",color:C.accent,borderRadius:5,
-                padding:"4px 10px",fontWeight:600,width:"fit-content",marginBottom:12}}>
-                {item.label}
-              </div>
-              <h3 style={{fontSize:16,fontWeight:700,color:C.text,marginBottom:10,lineHeight:1.4}}>
-                {item.title}
-              </h3>
-              <p style={{fontSize:13,color:C.muted,lineHeight:1.6,flex:1}}>
-                {item.preview}
-              </p>
-              <div style={{fontSize:12,color:C.accent,marginTop:12}}>Read full guide →</div>
-            </a>
-          ))}
-          </div>
-          <div style={{textAlign:"center",marginTop:36}}>
-            <a href="/blog" style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:10,
-              padding:"12px 28px",color:C.dim,fontSize:14,fontWeight:600,textDecoration:"none",
-              display:"inline-block"}}>
-              View All Guides →
-            </a>
-          </div>
+            <div style={{fontSize:14,color:isDark?C.accent:"#0055d4",fontWeight:500}}>Read full guide →</div>
+          </a>
+        ))}
+        </div>
+        <div style={{textAlign:"center",marginTop:48}}>
+          <a href="/blog" style={{background:isDark?C.raised:"#f3f4f6",border:`1px solid ${isDark?C.border:"#e5e7eb"}`,borderRadius:8,
+            padding:"14px 32px",color:isDark?C.muted:"#6b7280",fontSize:15,fontWeight:600,textDecoration:"none",
+            display:"inline-block",transition:"all 0.3s"}} 
+            onMouseEnter={e=>{e.currentTarget.style.background=isDark?C.surface:"#ffffff"; e.currentTarget.style.borderColor=isDark?C.accent+"60":"#d1d5db"}}
+            onMouseLeave={e=>{e.currentTarget.style.background=isDark?C.raised:"#f3f4f6"; e.currentTarget.style.borderColor=isDark?C.border:"#e5e7eb"}}>
+            View All Guides →
+          </a>
         </div>
       </section>
 
       <AdUnit/>
-      <section style={{maxWidth:900,margin:"0 auto",padding:"60px 24px",position:"relative"}}>
-        {/* Gradient Background */}
-        <div style={{position:"absolute",inset:0,background:themeGradients.slide2,opacity:0.15,borderRadius:16,zIndex:0,pointerEvents:"none"}}/>
-        <div style={{position:"relative",zIndex:1}}>
-          <h2 style={{fontSize:26,fontWeight:700,color:C.text,textAlign:"center",marginBottom:44}}>
-            Built for the way high-scorers actually study
+      <section style={{maxWidth:1000,margin:"0 auto",padding:"100px 24px",borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`}}>
+        <div style={{textAlign:"center",marginBottom:60}}>
+          <h2 style={{fontSize:44,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:16}}>
+            Built for High-Scorers
           </h2>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:18}}>
-          {[
-            {icon:"📋",title:"Log every question with reflection",
-              body:"After each practice block, log each question: correct/incorrect, why you missed it, how long it took, whether you changed your answer, and the concept being tested. That 90-second habit is what separates plateauing students from improving ones — Vima Vima structures it for you."},
-            {icon:"📊",title:"Analytics that pinpoint the real problem",
-              body:"A 67% practice score tells you almost nothing actionable. Vima Vima breaks performance down by subject, question type, and mistake category. You'll know whether your Renal struggle is a knowledge gap or a reasoning error, and that difference completely changes how you study."},
-            {icon:"⚡",title:"Anki cards built from your actual mistakes",
-              body:"Every wrong answer is a potential flashcard. Vima Vima generates AI-drafted Anki cards targeting the exact concept you missed — not generic pre-made cards — and lets you export a real .apkg deck for Anki in one click. Your weak spots become your card deck."},
-          ].map(f => (
-            <div key={f.title} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:"22px 20px"}}>
-              <div style={{fontSize:28,marginBottom:12}}>{f.icon}</div>
-              <div style={{fontSize:15,fontWeight:700,color:C.text,marginBottom:10}}>{f.title}</div>
-              <p style={{fontSize:13,color:C.muted,lineHeight:1.7}}>{f.body}</p>
-            </div>
-          ))}
+          <p style={{fontSize:18,color:isDark?C.muted:"#6b7280",lineHeight:1.6,maxWidth:700,margin:"0 auto"}}>
+            A system designed around how top scorers actually study: structured reflection after every question, analytics that matter, and instant Anki generation from your real mistakes.
+          </p>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:24}}>
+        {[
+          {icon:"📋",title:"Structured Question Logging",
+            body:"After each practice session, log the essentials: correct or wrong, time taken, whether you changed your answer, why you missed it, and the concept tested. This 90-second habit is what separates improvement from plateau."},
+          {icon:"📊",title:"Actionable Analytics",
+            body:"A 65% practice score is meaningless without context. Vima Viva breaks performance by subject, question type, and mistake category. You'll know exactly whether your gaps are knowledge, reasoning, or speed."},
+          {icon:"⚡",title:"Anki Cards from Mistakes",
+            body:"Generate AI-drafted flashcards from your actual wrong answers. Export them directly to Anki as a real .apkg deck. Your personal card deck builds automatically from questions you actually struggled with."},
+        ].map(f => (
+          <div key={f.title} style={{background:isDark?C.surface:"#ffffff",border:`1px solid ${isDark?C.border:"#e5e7eb"}`,borderRadius:8,padding:32}}>
+            <div style={{fontSize:32,marginBottom:16}}>{f.icon}</div>
+            <div style={{fontSize:18,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:12}}>{f.title}</div>
+            <p style={{fontSize:15,color:isDark?C.muted:"#6b7280",lineHeight:1.7}}>{f.body}</p>
           </div>
+        ))}
         </div>
       </section>
 
       {/* How it works */}
-      <section style={{background:isDark?C.surface:`linear-gradient(135deg, ${C.bg}, ${C.bg}), radial-gradient(circle at 20% 80%, rgba(59,110,255,0.08), transparent 50%), radial-gradient(circle at 80% 20%, rgba(139,92,246,0.08), transparent 50%)`,backgroundBlendMode:"overlay",padding:"60px 24px"}}>
-        <div style={{maxWidth:700,margin:"0 auto"}}>
-          <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:12}}>How Vima Vima works</h2>
-          <p style={{fontSize:14,color:C.muted,lineHeight:1.75,marginBottom:36}}>
-            The core loop is simple. After each practice block — a UWorld session, an NBME,
-            a Kaplan full-length, a set of LSAT PrepTest sections — you spend about 3 minutes
-            logging each question. The wizard walks you through a quick structured reflection:
-            right or wrong, time taken, did you change your answer, why you got it wrong, which
-            concept was tested. The data accumulates across sessions, and the analytics surface
-            the patterns you'd never catch manually.
+      <section style={{maxWidth:1000,margin:"0 auto",padding:"100px 24px",borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`}}>
+        <div style={{textAlign:"center",marginBottom:60}}>
+          <h2 style={{fontSize:44,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:16}}>How It Works</h2>
+          <p style={{fontSize:18,color:isDark?C.muted:"#6b7280",lineHeight:1.6,maxWidth:700,margin:"0 auto"}}>
+            A simple, consistent workflow that builds your learning data and powers your improvement
           </p>
-          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        </div>
+        <div style={{maxWidth:800,margin:"0 auto"}}>
+          <div style={{display:"flex",flexDirection:"column",gap:32}}>
             {[
-              {n:"01",t:"Choose your exam track",d:"USMLE Step 1 or Step 2 CK, MCAT, or LSAT — each with its own subject and question-type taxonomy so analytics categories match your actual prep material."},
-              {n:"02",t:"Create a session for each practice block",d:"A 'session' is one exam, one block, or one timed set. Name it whatever makes sense — NBME 14, UWorld Block 7, PrepTest 90 — and start logging questions."},
-              {n:"03",t:"Log each question with a 30-second reflection",d:"Correct or incorrect. Time taken. Answer change. Mistake type. Concept tested. Six quick inputs — but the habit of doing it consistently after every block is the whole game."},
-              {n:"04",t:"Review analytics after each session",d:"Your score, timing breakdown, most common mistake type, and missed concepts. Compare across sessions to see trends emerging over weeks of prep."},
-              {n:"05",t:"Export Anki cards from wrong answers",d:"Every missed question is a flashcard candidate. Generate AI-drafted cards from your actual misses, then export the full .apkg for Anki desktop — no manual card creation required."},
+              {n:"01",t:"Select Your Exam Track",d:"Start with your exam: USMLE (Step 1/Step 2 CK), MCAT, or LSAT. Each track has its own subject and question-type taxonomy matched to the real exam."},
+              {n:"02",t:"Create a Study Session",d:"Log a practice session: one exam, one block, or one timed set. Name it however you track it (UWorld Block 7, NBME 14, PrepTest 90) and begin logging questions."},
+              {n:"03",t:"Log Each Question",d:"After each question: mark it correct or wrong, note the time, whether you changed your answer, why you missed it (if wrong), and which concept it tested."},
+              {n:"04",t:"Review Your Analytics",d:"After each session, see your score breakdown, timing patterns, most common mistakes, and concept gaps. Track trends over time to see what's working and what needs change."},
+              {n:"05",t:"Generate Your Anki Deck",d:"Export all your missed questions as flashcards directly to Anki. Your personal deck builds from the questions you actually struggled with — not generic pre-made cards."},
             ].map(s => (
-              <div key={s.n} style={{display:"flex",gap:18,alignItems:"flex-start"}}>
-                <div style={{flexShrink:0,width:42,height:42,borderRadius:10,background:C.accent+"1a",
-                  border:`1px solid ${C.accent}30`,display:"flex",alignItems:"center",justifyContent:"center",
-                  fontSize:11,fontWeight:700,color:C.accent}}>{s.n}</div>
-                <div>
-                  <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:4}}>{s.t}</div>
-                  <p style={{fontSize:13,color:C.muted,lineHeight:1.65}}>{s.d}</p>
+              <div key={s.n} style={{display:"flex",gap:24,alignItems:"flex-start"}}>
+                <div style={{flexShrink:0,width:48,height:48,borderRadius:8,background:isDark?C.accent+"20":C.accent+"15",
+                  border:`1.5px solid ${isDark?C.accent+"50":C.accent+"40"}`,display:"flex",alignItems:"center",justifyContent:"center",
+                  fontSize:14,fontWeight:700,color:isDark?C.accent:"#0055d4"}}>{s.n}</div>
+                <div style={{paddingTop:6}}>
+                  <div style={{fontSize:16,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:8}}>{s.t}</div>
+                  <p style={{fontSize:15,color:isDark?C.muted:"#6b7280",lineHeight:1.7}}>{s.d}</p>
                 </div>
               </div>
             ))}
@@ -1322,80 +1294,71 @@ export default function LandingPage() {
       </section>
 
       {/* Who it's for */}
-      <section style={{maxWidth:700,margin:"0 auto",padding:"60px 24px"}}>
-        <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:20}}>Who this is built for</h2>
-        <p style={{fontSize:14,color:C.muted,lineHeight:1.8,marginBottom:18}}>
-          Vima Vima is for students in the final 3–6 months of serious exam prep — the phase
-          where you're doing hundreds of practice questions a week and the difference between
-          a good score and a great score comes down to how effectively you review what you
-          get wrong.
-        </p>
-        <p style={{fontSize:14,color:C.muted,lineHeight:1.8,marginBottom:18}}>
-          If you're studying for <strong style={{color:C.text}}>USMLE Step 1 or Step 2 CK</strong>,
-          you already know the UWorld grind. The problem most students face isn't access to
-          questions — it's that reviewing wrong answers feels random and hard to track over time.
-          Vima Vima gives you a structured log of every mistake, categorized by subject and mistake
-          type, so your review has a system instead of being a pile of annotations.
-        </p>
-        <p style={{fontSize:14,color:C.muted,lineHeight:1.8,marginBottom:18}}>
-          <strong style={{color:C.text}}>MCAT students</strong> have a unique challenge with
-          CARS: unlike science sections where knowing the material gets you the point, CARS is
-          entirely about reading strategy. The CARS Passage Analysis mode in Vima Vima uses a
-          six-skill matrix (Main Idea, Tone, Author Perspective, Arguments, Contrasting Theories,
-          Inference traps) to diagnose <em>why</em> you're missing reading comprehension
-          questions — because it's almost never a knowledge problem.
-        </p>
-        <p style={{fontSize:14,color:C.muted,lineHeight:1.8}}>
-          <strong style={{color:C.text}}>LSAT students</strong> preparing with 7Sage, PowerScore,
-          or self-directed PrepTest work benefit from the same analytical framework. Logical
-          Reasoning, Analytical Reasoning, and Reading Comprehension each have distinct failure
-          modes. Vima Vima tracks them separately so your prep time goes where the actual gaps are.
-        </p>
+      <section style={{maxWidth:1000,margin:"0 auto",padding:"100px 24px",borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`}}>
+        <h2 style={{fontSize:44,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:60,textAlign:"center"}}>Built for Serious Exam Prep</h2>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:40}}>
+          {[
+            {track:"USMLE",desc:"Step 1 & Step 2 CK Prep",detail:"Master the UWorld grind with structured question logs, mistake categorization by subject and type, and analytics that reveal whether gaps are knowledge or reasoning. Build a personal Anki deck from your actual wrong answers."},
+            {track:"MCAT",desc:"Full Prep + CARS Framework",detail:"Unique CARS Passage Analysis mode using a 6-skill matrix (Main Idea, Tone, Author Perspective, Arguments, Contrasting Theories, Inference traps). Diagnose why you're missing reading comprehension questions — because it's rarely about knowledge."},
+            {track:"LSAT",desc:"PrepTest & Practice Tracking",detail:"Track Logical Reasoning, Analytical Reasoning, and Reading Comprehension separately. Identify exactly which question types cost you the most, then focus your preparation on real weaknesses instead of guessing."},
+          ].map(g => (
+            <div key={g.track} style={{display:"flex",flexDirection:"column"}}>
+              <div style={{fontSize:13,fontWeight:700,color:isDark?C.accent:"#0055d4",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:12}}>
+                {g.track}
+              </div>
+              <h3 style={{fontSize:22,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:12,lineHeight:1.3}}>
+                {g.desc}
+              </h3>
+              <p style={{fontSize:15,color:isDark?C.muted:"#6b7280",lineHeight:1.7}}>
+                {g.detail}
+              </p>
+            </div>
+          ))}
+        </div>
       </section>
 
       <AdUnit/>
 
       {/* FAQ */}
-      <section style={{maxWidth:700,margin:"0 auto",padding:"60px 24px",position:"relative"}}>
-        {/* Gradient Background */}
-        <div style={{position:"absolute",inset:0,background:themeGradients.slide3,opacity:0.15,borderRadius:16,zIndex:0,pointerEvents:"none"}}/>
-        <div style={{position:"relative",zIndex:1}}>
-          <h2 style={{fontSize:26,fontWeight:700,color:C.text,marginBottom:12}}>Frequently asked questions</h2>
-          <p style={{fontSize:14,color:C.muted,lineHeight:1.7,marginBottom:36}}>Everything you need to know before you start.</p>
-          <div style={{display:"flex",flexDirection:"column"}}>
-          {[
-            {q:"Is Vima Vima free?",a:"Yes. Core features — question logging, performance analytics, session tracking, and Anki card generation — are completely free. Create an account with an email address or Google sign-in and get immediate access. There's also an interactive demo on the homepage that requires no account at all."},
-            {q:"Which exams does Vima Vima support?",a:"Vima Vima supports three exam tracks: USMLE (Step 1 and Step 2 CK), MCAT, and LSAT. Each track has its own subject taxonomy and question-type categories that match the actual structure of those exams. USMLE subjects include Cardiology, Neurology, GI, Renal, Pulmonology, and 11 others. MCAT tracks C/P, CARS, B/B, and Psych/Soc. LSAT tracks Logical Reasoning, Analytical Reasoning, and Reading Comprehension separately."},
-            {q:"How is Vima Vima different from a spreadsheet or Notion?",a:"A spreadsheet requires you to design your own structure, build formulas, and manually create charts. Vima Vima provides structured data entry with consistent reflection fields for every question, pre-built analytics that surface patterns across hundreds of questions, and Anki export — no configuration needed. Because every question is logged in the same schema, the system can identify patterns like 'you get Cardiology Diagnosis questions right but miss Cardiology Management 60% of the time' — something a spreadsheet would never surface automatically."},
-            {q:"How does the Anki card generation work?",a:"When you log an incorrect answer, fill in an Anki front and back field — or let the AI draft them based on the concept you tagged. Vima Vima then compiles all flagged questions into a real .apkg file (Anki's native format) that you import directly into Anki desktop or AnkiDroid in one click. Cards come from your actual wrong answers, targeting your specific gaps rather than a generic pre-made deck."},
-            {q:"What is the MCAT CARS Passage Analysis mode?",a:"The CARS Passage Analysis mode provides a six-skill framework for analyzing each MCAT reading comprehension passage: Main Idea, Tone, Arguments, Author Perspective, Contrasting Theories, and Inference traps. After each passage you log your analysis across those six categories and note which questions you missed and why. Over time the system identifies which skill failures cost you the most points — for example, 'you consistently miss questions when contrasting theories appear in the passage.'"},
-            {q:"Can I use Vima Vima alongside UWorld, 7Sage, or AAMC materials?",a:"Yes — Vima Vima is question-bank agnostic. It's the tracking and analytics layer on top of your existing question bank. When logging a question, tag which bank it came from (UWorld, AMBOSS, NBME, 7Sage, LSAC Official, AAMC, Kaplan, etc.). This lets you compare your performance across resources and see whether your scores differ between third-party banks and official materials."},
-            {q:"Is my study data private?",a:"Yes. Your study data — wrong answers, session notes, Anki card drafts — is stored securely and is never sold to third parties. You can delete your account and all associated data at any time by emailing vimavimasupport@gmail.com. Vima Vima uses Supabase for authentication and storage, and Google AdSense to display ads on public pages — see the Privacy Policy for details on how ad cookies work."},
-            {q:"How long does it take to log a question?",a:"About 30–60 seconds per question once you're familiar with the form. The fields are: correct or incorrect, time taken, whether you changed your answer, why you got it wrong (if incorrect), and which concept was tested. Most students log during the review phase of a block rather than question by question, which keeps the habit sustainable over months of prep."},
-          ].map((item,i,arr) => (
-            <div key={i} style={{borderTop:`1px solid ${C.border}`,paddingTop:20,paddingBottom:20,
-              borderBottom:i===arr.length-1?`1px solid ${C.border}`:"none"}}>
-              <div style={{fontSize:15,fontWeight:600,color:C.text,marginBottom:10}}>{item.q}</div>
-              <p style={{fontSize:13,color:C.muted,lineHeight:1.8}}>{item.a}</p>
-            </div>
-          ))}
+      <section style={{maxWidth:900,margin:"0 auto",padding:"100px 24px",borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`}}>
+        <div style={{textAlign:"center",marginBottom:60}}>
+          <h2 style={{fontSize:44,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:16}}>Frequently Asked Questions</h2>
+          <p style={{fontSize:18,color:isDark?C.muted:"#6b7280",lineHeight:1.6,maxWidth:600,margin:"0 auto"}}>
+            Everything you need to know before you start
+          </p>
+        </div>
+        <div style={{display:"flex",flexDirection:"column"}}>
+        {[
+          {q:"Is Vima Vima free?",a:"Yes. Core features — question logging, performance analytics, session tracking, and Anki card generation — are completely free. Create an account with an email address or Google sign-in and get immediate access."},
+          {q:"Which exams does Vima Vima support?",a:"USMLE (Step 1 and Step 2 CK), MCAT, and LSAT. Each track has its own subject taxonomy and question-type categories that match your actual exam."},
+          {q:"How is Vima Vima different from a spreadsheet?",a:"Spreadsheets require you to design structure and build formulas. Vima Vima provides structured logging, pre-built analytics that surface patterns across hundreds of questions, and one-click Anki export. You get actionable insights automatically."},
+          {q:"How do I export to Anki?",a:"Select your missed questions, generate AI-drafted cards or write your own, and export as a real .apkg file. Import directly into Anki desktop or AnkiDroid in one click. Your personal deck builds from your actual wrong answers."},
+          {q:"How long does it take to log a question?",a:"About 30–60 seconds once you're familiar with the form. Six simple fields: correct/incorrect, time, answer change, why you missed it, and concept tested. Most students log during the review phase of each block."},
+          {q:"What is the MCAT CARS mode?",a:"A six-skill framework (Main Idea, Tone, Author Perspective, Arguments, Contrasting Theories, Inference traps) for analyzing each passage. Diagnose why you miss CARS questions — it's almost never a knowledge problem."},
+          {q:"Is my data private?",a:"Yes. All study data is stored securely and never sold. Delete your account and all data at any time by emailing vimavimasupport@gmail.com."},
+          {q:"Can I use Vima Vima with my existing question banks?",a:"Yes. Vima Vima is question-bank agnostic. Tag each question's source (UWorld, NBME, 7Sage, AAMC, etc.) and compare performance across resources."},
+        ].map((item,i,arr) => (
+          <div key={i} style={{borderBottom:`1px solid ${isDark?C.border:"#e5e7eb"}`,paddingTop:24,paddingBottom:24}}>
+            <div style={{fontSize:16,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:12}}>{item.q}</div>
+            <p style={{fontSize:15,color:isDark?C.muted:"#6b7280",lineHeight:1.8}}>{item.a}</p>
           </div>
+        ))}
         </div>
       </section>
 
       {/* Footer */}
-      <footer style={{borderTop:`1px solid ${C.border}`,padding:"28px 24px",textAlign:"center"}}>
-        <div style={{fontSize:13,color:C.muted,marginBottom:8,display:"flex",gap:20,justifyContent:"center",flexWrap:"wrap"}}>
-          <a href="/" style={{color:C.muted}}>Home</a>
-          <a href="/blog" style={{color:C.muted}}>Guides</a>
-          <a href="/about" style={{color:C.muted}}>About</a>
-          <a href="/faq" style={{color:C.muted}}>FAQ</a>
-          <a href="/contact" style={{color:C.muted}}>Contact</a>
-          <a href="/app" style={{color:C.muted}}>Sign In</a>
-          <a href="/terms" style={{color:C.muted}}>Terms</a>
-          <a href="/privacy" style={{color:C.muted}}>Privacy</a>
+      <footer style={{borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`,padding:"48px 24px 32px",textAlign:"center",background:isDark?C.bg:"#f9f9f9"}}>
+        <div style={{maxWidth:1000,margin:"0 auto 32px",fontSize:14,color:isDark?C.muted:"#6b7280",display:"flex",gap:24,justifyContent:"center",flexWrap:"wrap"}}>
+          <a href="/" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>Home</a>
+          <a href="/blog" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>Guides</a>
+          <a href="/about" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>About</a>
+          <a href="/faq" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>FAQ</a>
+          <a href="/contact" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>Contact</a>
+          <a href="/app" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>Sign In</a>
+          <a href="/terms" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>Terms</a>
+          <a href="/privacy" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>Privacy</a>
         </div>
-        <div style={{fontSize:12,color:C.muted+"66"}}>© 2026 Vima Vima · Built for serious exam prep</div>
+        <div style={{fontSize:13,color:isDark?C.muted+"80":"#9ca3af"}}>© 2026 Vima Vima · Designed for serious exam prep</div>
       </footer>
     </div>
   );
