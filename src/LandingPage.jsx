@@ -300,6 +300,8 @@ function InteractiveDemo({ T }) {
   const [confidence, setConfidence]     = useState("");
   const [reason, setReason]             = useState("");
   const [concept, setConcept]           = useState("");
+  const [showMatrix, setShowMatrix]     = useState(false);
+  const [matrix, setMatrix]             = useState({mainIdea:"",tone:"",arguments:"",author:"",contrastingTheories:"",inference:""});
   const [showSave, setShowSave]         = useState(false);
   const [email, setEmail]               = useState("");
   const [pass, setPass]                 = useState("");
@@ -554,6 +556,43 @@ function InteractiveDemo({ T }) {
           >
             Log Question + Update Analytics →
           </button>
+          
+          {/* Passage/Matrix button for CARS/LSAT */}
+          {(exam==="MCAT"||exam==="LSAT")&&(
+            <button
+              onClick={()=>setShowMatrix(!showMatrix)}
+              style={{
+                width:"100%",
+                marginTop:10,
+                background:showMatrix?theme.accent:"transparent",
+                border:`1.5px solid ${theme.accent}`,
+                borderRadius:8,
+                padding:"9px",
+                color:showMatrix?"#fff":theme.accent,
+                fontSize:13,
+                fontWeight:600,
+                cursor:"pointer",
+                fontFamily:"'DM Sans',sans-serif",
+              }}
+            >
+              {showMatrix?"✓ Passage Analysis Added":`📄 Add ${exam==="MCAT"?"CARS":"Reading Comprehension"} Analysis`}
+            </button>
+          )}
+          
+          {/* Passage matrix form */}
+          {showMatrix&&(exam==="MCAT"||exam==="LSAT")&&(
+            <div style={{background:theme.raised,borderRadius:8,padding:"12px",marginTop:10,border:`1px solid ${theme.border}`}}>
+              <div style={{fontSize:11,color:theme.muted,fontWeight:600,marginBottom:8}}>AUTHOR'S BLUEPRINT</div>
+              {[
+                {k:"mainIdea",l:"Main Idea",ph:"Author's central point in one sentence"},
+                {k:"tone",l:"Tone",ph:"e.g. Skeptical, supportive, critical"},
+                {k:"arguments",l:"Arguments",ph:"What was the author trying to prove?"},
+                {k:"author",l:"Author",ph:"Author's opinions and beliefs"},
+              ].map(f=>(
+                <input key={f.k} type="text" placeholder={f.ph} value={matrix[f.k]} onChange={e=>setMatrix({...matrix,[f.k]:e.target.value})} style={{width:"100%",padding:"7px 8px",marginBottom:8,border:`1px solid ${theme.border}`,borderRadius:6,background:theme.bg,color:theme.text,fontSize:12,fontFamily:"'DM Sans',sans-serif",outline:"none"}}/>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <div style={{background:theme.accent+"14",border:`1px solid ${theme.accent}30`,borderRadius:10,padding:"14px",marginBottom:20,textAlign:"center"}}>

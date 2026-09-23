@@ -212,11 +212,13 @@ function SplashScreen({ dark, onDone }) {
       {phase === "glow" && (
         <div style={{
           position:"absolute",
-          width:320, height:320,
-          background:`radial-gradient(circle, ${glowColor} 0%, transparent 70%)`,
+          width:400, height:400,
+          background:`radial-gradient(circle, ${glowColor} 0%, ${glowColor.replace(/0\.\d+/, m => Math.min(0.9, parseFloat(m) * 2))} 30%, transparent 80%)`,
           borderRadius:"50%",
-          animation:"splashGlow 1s ease-in-out",
+          animation:"splashGlow 1.2s ease-in-out",
           pointerEvents:"none",
+          filter:"blur(20px)",
+          zIndex:0,
         }}/>
       )}
       <VimaLogo
@@ -738,7 +740,7 @@ function PassageWizard({onClose,onSave,mode,T}){
                 <span style={{fontSize:10,background:T.accent+"22",color:T.accent,borderRadius:5,padding:"1px 7px",fontWeight:600}}>{subject}</span>
               </div>
               <div style={{fontSize:12,color:T.muted,marginTop:2}}>
-                {step===0?"Passage setup":step===1?(mode==="MCAT"?"CAR Skills Matrix":"LSAT Matrix"):step===2?`Question ${currentQ+1} of ${numQuestions}`:"Passage Debrief"}
+                {step===0?"Passage setup":step===1?(mode==="MCAT"?"Author's Blueprint":"Author's Blueprint"):step===2?`Question ${currentQ+1} of ${numQuestions}`:"Passage Debrief"}
               </div>
             </div>
             <button onClick={onClose} style={{background:"none",border:"none",color:T.muted,fontSize:20,cursor:"pointer",lineHeight:1}}>×</button>
@@ -758,7 +760,7 @@ function PassageWizard({onClose,onSave,mode,T}){
             </div>
             <div style={{background:T.name==="dark"?"#0e1624":"#f0f4ff",border:`1px solid ${T.name==="dark"?"#3b4a6040":"#c7d2fe"}`,borderRadius:10,padding:"12px 14px",marginBottom:18}}>
               <div style={{fontSize:11,color:T.name==="dark"?"#a5b4fc":T.accent,fontWeight:600,marginBottom:4}}>📌 Passage Analysis Mode</div>
-              <div style={{fontSize:12,color:T.dim,lineHeight:1.6}}>Uses the <b style={{color:T.text}}>CAR Skills Matrix</b> to identify process errors. Output is a <b style={{color:T.text}}>process note</b>, not a flashcard — RC mistakes are reasoning failures, not knowledge gaps.</div>
+              <div style={{fontSize:12,color:T.dim,lineHeight:1.6}}>Uses the <b style={{color:T.text}}>Author's Blueprint</b> to identify process errors. Output is a <b style={{color:T.text}}>process note</b>, not a flashcard — RC mistakes are reasoning failures, not knowledge gaps.</div>
             </div>
             <div style={{display:"grid",gap:14}}>
               <div><Lbl T={T}>Passage Label (optional)</Lbl><Inp T={T} placeholder="e.g. Passage 3, Science & Society..." value={passageTitle} onChange={e=>setPassageTitle(e.target.value)}/></div>
@@ -776,7 +778,7 @@ function PassageWizard({onClose,onSave,mode,T}){
           {step===1&&(<>
             <div style={{textAlign:"center",marginBottom:18}}>
               <div style={{fontSize:34,marginBottom:8}}>🧠</div>
-              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>{mode==="MCAT"?"CAR Skills Matrix":"LSAT Matrix"}</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Author's Blueprint</div>
               <div style={{fontSize:13,color:T.muted}}>Analyze the passage structure before reviewing your answers</div>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -1122,7 +1124,7 @@ function SessionDetail({session,sessions,onBack,onAddQuestion,onAddPassage,onUpd
                 </div>
                 {expanded[q.id]&&(
                   <div style={{borderTop:`1px solid ${T.border}`,marginTop:12,paddingTop:12}}>
-                    {q.matrix&&Object.values(q.matrix).some(Boolean)&&(<div style={{marginBottom:12}}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:8}}>{q.subject==="CARS"?"CAR SKILLS MATRIX":"LSAT MATRIX"}</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{CAR_SKILLS.filter(s=>q.matrix[s.key]).map(skill=>(<div key={skill.key} style={{background:T.raised,borderRadius:6,padding:"7px 10px"}}><div style={{fontSize:9,color:T.accent,letterSpacing:"0.6px",fontWeight:600,marginBottom:3}}>{skill.label.toUpperCase()}</div><div style={{fontSize:11,color:T.dim}}>{q.matrix[skill.key]}</div></div>))}</div></div>)}
+                    {q.matrix&&Object.values(q.matrix).some(Boolean)&&(<div style={{marginBottom:12}}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:8}}>AUTHOR'S BLUEPRINT</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{CAR_SKILLS.filter(s=>q.matrix[s.key]).map(skill=>(<div key={skill.key} style={{background:T.raised,borderRadius:6,padding:"7px 10px"}}><div style={{fontSize:9,color:T.accent,letterSpacing:"0.6px",fontWeight:600,marginBottom:3}}>{skill.label.toUpperCase()}</div><div style={{fontSize:11,color:T.dim}}>{q.matrix[skill.key]}</div></div>))}</div></div>)}
                     {q.processNote&&<div style={{marginBottom:8}}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>PROCESS NOTE</div><div style={{fontSize:12,color:T.warn,background:T.warn+"12",borderRadius:6,padding:"8px 10px"}}>{q.processNote}</div></div>}
                     {q.aiCorrection&&<div><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>AI PROCESS CORRECTION</div><div style={{fontSize:12,color:T.dim,lineHeight:1.65}}>{q.aiCorrection}</div></div>}
                   </div>
