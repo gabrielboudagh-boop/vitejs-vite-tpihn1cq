@@ -1075,10 +1075,12 @@ export default function LandingPage() {
             fontFamily:"'DM Sans',sans-serif"}}>
             {isDark ? "☀️ Light" : "🌙 Dark"}
           </button>
-          <a href="/app" style={{fontSize:13,color:C.text,fontWeight:500}}>Sign In</a>
-          <button onClick={scrollToDemo} style={{background:C.accent,border:"none",borderRadius:8,
+          <button onClick={() => window.location.href = '/app'} style={{background:C.accent,border:"none",borderRadius:8,
             padding:"7px 18px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",
-            fontFamily:"'DM Sans',sans-serif"}}>Learn Better →</button>
+            fontFamily:"'DM Sans',sans-serif"}}>Sign In</button>
+          <button onClick={scrollToDemo} style={{background:"transparent",border:`1.5px solid ${C.accent}`,borderRadius:8,
+            padding:"7px 18px",color:C.accent,fontSize:13,fontWeight:600,cursor:"pointer",
+            fontFamily:"'DM Sans',sans-serif"}}>Try Demo →</button>
         </div>
       </nav>
 
