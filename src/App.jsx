@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { HelmetProvider } from "react-helmet-async";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
 import { supabase } from './supabase.js'
 import { ThemeProvider } from './ThemeContext.jsx';
@@ -90,6 +91,7 @@ styleEl.textContent = `
   .fade-in { animation: fadeIn 0.22s ease; }
   @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
   @keyframes splashLogoIn { from { opacity:0; transform:translateY(12px) scale(0.97); } to { opacity:1; transform:none; } }
+  @keyframes splashGlow { from { opacity:0; transform:scale(0.8); } to { opacity:1; transform:scale(1.2); } }
 `;
 document.head.appendChild(styleEl);
 
@@ -197,6 +199,7 @@ function SplashScreen({ dark, onDone }) {
   }, []);
  
   const bg = dark ? "#07090f" : "#f4f6fb";
+  const glowColor = dark ? "rgba(59,110,255,0.3)" : "rgba(0,85,212,0.2)";
  
   return (
     <div style={{
@@ -205,6 +208,17 @@ function SplashScreen({ dark, onDone }) {
       opacity: phase === "out" ? 0 : 1,
       transition: phase === "out" ? "opacity 0.7s ease" : "none",
     }}>
+      {/* Glow effect */}
+      {phase === "glow" && (
+        <div style={{
+          position:"absolute",
+          width:320, height:320,
+          background:`radial-gradient(circle, ${glowColor} 0%, transparent 70%)`,
+          borderRadius:"50%",
+          animation:"splashGlow 1s ease-in-out",
+          pointerEvents:"none",
+        }}/>
+      )}
       <VimaLogo
         dark={dark}
         width={400}
@@ -212,6 +226,8 @@ function SplashScreen({ dark, onDone }) {
           maxWidth: "72vw",
           opacity: phase === "in" ? 0 : 1,
           animation: phase === "in" ? "splashLogoIn 0.6s ease forwards" : "none",
+          position:"relative",
+          zIndex:1,
         }}
       />
     </div>
@@ -2460,15 +2476,15 @@ export default function App() {
   }
   
   // Route to public pages (no theme needed, handled by component)
-  if (path === "/" || path === "/demo") return <ThemeProvider><LandingPage /></ThemeProvider>;
+  if (path === "/" || path === "/demo") return <HelmetProvider><ThemeProvider><LandingPage /></ThemeProvider></HelmetProvider>;
   if (path === "/blog" || path.startsWith("/blog/")) {
-    return <ThemeProvider><BlogPage slug={path.replace(/^\/blog\/?/, "") || ""} /></ThemeProvider>;
+    return <HelmetProvider><ThemeProvider><BlogPage slug={path.replace(/^\/blog\/?/, "") || ""} /></ThemeProvider></HelmetProvider>;
   }
-  if (path === "/about") return <ThemeProvider><AboutPage /></ThemeProvider>;
-  if (path === "/faq") return <ThemeProvider><FAQPage /></ThemeProvider>;
-  if (path === "/contact") return <ThemeProvider><ContactPage /></ThemeProvider>;
-  if (path === "/terms") return <ThemeProvider><TermsOfService /></ThemeProvider>;
-  if (path === "/privacy") return <ThemeProvider><PrivacyPolicy /></ThemeProvider>;
+  if (path === "/about") return <HelmetProvider><ThemeProvider><AboutPage /></ThemeProvider></HelmetProvider>;
+  if (path === "/faq") return <HelmetProvider><ThemeProvider><FAQPage /></ThemeProvider></HelmetProvider>;
+  if (path === "/contact") return <HelmetProvider><ThemeProvider><ContactPage /></ThemeProvider></HelmetProvider>;
+  if (path === "/terms") return <HelmetProvider><ThemeProvider><TermsOfService /></ThemeProvider></HelmetProvider>;
+  if (path === "/privacy") return <HelmetProvider><ThemeProvider><PrivacyPolicy /></ThemeProvider></HelmetProvider>;
   
   // Default to authenticated app
   return <ThemeProvider><VimaApp /></ThemeProvider>;
