@@ -934,16 +934,20 @@ function EditQuestionModal({question,mode,T,onSave,onClose}){
 // ── SESSION DETAIL ─────────────────────────────────────────────────────────────
 function SessionDetail({session,sessions,onBack,onAddQuestion,onAddPassage,onUpdateQuestion,mode,T}){
   const [tab,setTab]=useState("questions");
+  const [viewMode,setViewMode]=useState("list"); // "list" or "card"
+  const [cardIndex,setCardIndex]=useState(0); // for card view navigation
   const [expanded,setExpanded]=useState({});
   const [analyticsSlide,setAnalyticsSlide]=useState(0);
   const [editingQ,setEditingQ]=useState(null);
   const qs=session.questions;
   const regularQs=qs.filter(q=>q.type!=="passage");
+  const cardQs=regularQs; // for card view
+  const currentCard=cardQs[cardIndex];
   const passages=qs.filter(q=>q.type==="passage");
   const correct=regularQs.filter(q=>q.result==="correct").length;
   const score=pct(correct,regularQs.length);
   const changedWrong=regularQs.filter(q=>q.answerChange==="Correct → Incorrect").length;
-  const ankiReady=regularQs.filter(q=>q.ankiFront&&q.ankiFront.trim()).length;
+  const ankiReady=regularQs.filter(q=>q.ankiFront&&q.ankiFront.trim()&&q.ankiBack&&q.ankiBack.trim()).length;
   const bySubject={},byType={},wrongReasons={};
   regularQs.forEach(q=>{
     if(!bySubject[q.subject])bySubject[q.subject]={c:0,t:0};bySubject[q.subject].t++;if(q.result==="correct")bySubject[q.subject].c++;
@@ -983,6 +987,11 @@ function SessionDetail({session,sessions,onBack,onAddQuestion,onAddPassage,onUpd
             <button key={id} onClick={()=>setTab(id)} style={{background:"none",border:"none",borderBottom:tab===id?`2px solid ${T.accent}`:"2px solid transparent",padding:"12px 20px",fontSize:13,fontWeight:tab===id?600:400,color:tab===id?T.text:T.muted,cursor:"pointer",whiteSpace:"nowrap",transition:"color 0.15s"}}>{label}</button>
           ))}
         </div>
+        {tab==="questions"&&<div style={{display:"flex",gap:6,alignItems:"center",padding:"0 12px"}}>
+          {[["list","📋 List"],["card","🗂️ Card"]].map(([mode,label])=>(
+            <button key={mode} onClick={()=>{setViewMode(mode);setCardIndex(0);}} style={{background:viewMode===mode?T.accent:T.raised,border:viewMode===mode?"none":`1px solid ${T.border}`,borderRadius:6,padding:"5px 11px",color:viewMode===mode?"#fff":T.muted,fontSize:11,fontWeight:600,cursor:"pointer",transition:"all 0.15s"}}>{label}</button>
+          ))}
+        </div>}
         <div style={{display:"flex",gap:8,alignItems:"center",padding:"6px 0"}}>
           <button onClick={()=>exportExcel(session)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"6px 12px",color:T.dim,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>📊 Export Excel</button>
           {ankiReady>0&&<button onClick={()=>downloadApkg(session, mode, ANKI_SERVER_URL)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"6px 12px",color:T.accent,fontSize:12,cursor:"pointer"}}>⚡ Anki ({ankiReady})</button>}
@@ -991,7 +1000,106 @@ function SessionDetail({session,sessions,onBack,onAddQuestion,onAddPassage,onUpd
         </div>
       </div>
       <div style={{padding:"18px 32px"}}>
-        {tab==="questions"&&(<>
+        {tab==="questions"&&viewMode==="card"&&currentCard&&(<>
+          {/* Card View: Metadata on left, notes on right */}
+          <div style={{display:"grid",gridTemplateColumns:"340px 1fr",gap:24,minHeight:"500px"}}>
+            {/* Left: Question metadata */}
+            <div style={{background:T.raised,borderRadius:12,padding:24,border:`1px solid ${T.border}`}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:18}}>
+                <div>
+                  <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>RESULT</div>
+                  <div><ResultBadge result={currentCard.result} T={T}/></div>
+                </div>
+                <div>
+                  <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>Q#</div>
+                  <div style={{fontSize:14,fontWeight:600,color:T.text}}>{currentCard.qnum||"—"}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>DATE</div>
+                  <div style={{fontSize:12,color:T.text}}>{currentCard.date}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>TIME</div>
+                  <div style={{fontSize:12,color:T.text}}>{currentCard.time||"—"}</div>
+                </div>
+              </div>
+              
+              {currentCard.subject&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>SUBJECT</div>
+                <div style={{fontSize:12,background:subjColors[currentCard.subject]+"20",color:subjColors[currentCard.subject],borderRadius:6,padding:"4px 8px",fontWeight:600}}>{currentCard.subject}</div>
+              </div>}
+              
+              {currentCard.concept&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>CONCEPT</div>
+                <div style={{fontSize:12,color:T.text}}>{currentCard.concept}</div>
+              </div>}
+              
+              {currentCard.qtype&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>TYPE</div>
+                <div style={{fontSize:12,color:T.text}}>{currentCard.qtype}</div>
+              </div>}
+              
+              {currentCard.qbank&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>QBANK</div>
+                <div style={{fontSize:12,color:T.text}}>{currentCard.qbank}</div>
+              </div>}
+              
+              {currentCard.result==="incorrect"&&currentCard.wrongReason&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>WHY WRONG</div>
+                <div style={{fontSize:11,color:T.danger,background:T.danger+"18",borderRadius:6,padding:"6px 8px"}}>{currentCard.wrongReason}</div>
+              </div>}
+              
+              {currentCard.result==="correct"&&currentCard.correctReason&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>WHY CORRECT</div>
+                <div style={{fontSize:11,color:T.success,background:T.success+"18",borderRadius:6,padding:"6px 8px"}}>{currentCard.correctReason}</div>
+              </div>}
+              
+              {currentCard.answerChange&&currentCard.answerChange!=="No change"&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>ANSWER CHANGE</div>
+                <div style={{fontSize:11,color:currentCard.answerChange==="Incorrect → Correct"?T.success:T.danger,background:currentCard.answerChange==="Incorrect → Correct"?T.success+"18":T.danger+"18",borderRadius:6,padding:"4px 8px",fontWeight:600}}>🔄 {currentCard.answerChange}</div>
+              </div>}
+            </div>
+            
+            {/* Right: Notes and Anki */}
+            <div style={{display:"flex",flexDirection:"column",gap:16}}>
+              {currentCard.summary&&<div style={{background:T.raised,borderRadius:12,padding:18,border:`1px solid ${T.border}`}}>
+                <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:8,fontWeight:600}}>SUMMARY</div>
+                <div style={{fontSize:13,color:T.text,lineHeight:1.6}}>{currentCard.summary}</div>
+              </div>}
+              
+              {currentCard.notes&&<div style={{background:T.raised,borderRadius:12,padding:18,border:`1px solid ${T.border}`}}>
+                <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:8,fontWeight:600}}>NOTES</div>
+                <div style={{fontSize:13,color:T.dim,lineHeight:1.6}}>{currentCard.notes}</div>
+              </div>}
+              
+              {currentCard.resource&&<div style={{background:T.raised,borderRadius:12,padding:18,border:`1px solid ${T.border}`}}>
+                <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:8,fontWeight:600}}>RESOURCE</div>
+                <div style={{fontSize:13,color:T.accent}}>{currentCard.resource}</div>
+              </div>}
+              
+              {(currentCard.ankiFront||currentCard.ankiBack)&&<div style={{background:currentCard.ankiBack?T.success+"15":T.accent+"15",borderRadius:12,padding:18,border:`1px solid ${currentCard.ankiBack?T.success+"40":T.accent+"40"}`}}>
+                <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:8,fontWeight:600}}>⚡ ANKI CARD</div>
+                {currentCard.ankiFront&&<div style={{marginBottom:12}}>
+                  <div style={{fontSize:9,color:T.muted,marginBottom:4}}>FRONT</div>
+                  <div style={{fontSize:12,color:T.text,background:T.bg,borderRadius:6,padding:"8px 10px",fontStyle:"italic"}}>"{currentCard.ankiFront}"</div>
+                </div>}
+                {currentCard.ankiBack&&<div>
+                  <div style={{fontSize:9,color:T.muted,marginBottom:4}}>BACK</div>
+                  <div style={{fontSize:12,color:currentCard.ankiBack?T.success:T.muted,background:T.bg,borderRadius:6,padding:"8px 10px",fontStyle:"italic"}}>"{currentCard.ankiBack}"</div>
+                </div>}
+                {!currentCard.ankiBack&&<div style={{fontSize:11,color:T.warn}}>❌ No answer added yet</div>}
+              </div>}
+            </div>
+          </div>
+          
+          {/* Navigation */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:24,paddingTop:16,borderTop:`1px solid ${T.border}`}}>
+            <button onClick={()=>setCardIndex(Math.max(0,cardIndex-1))} disabled={cardIndex===0} style={{background:cardIndex>0?T.accent:T.raised,border:"none",borderRadius:8,padding:"8px 16px",color:cardIndex>0?"#fff":T.muted,fontWeight:600,cursor:cardIndex>0?"pointer":"default",opacity:cardIndex>0?1:0.4,transition:"all 0.15s"}}>← Previous</button>
+            <div style={{color:T.muted,fontSize:13,fontWeight:600}}>{cardIndex+1} / {cardQs.length}</div>
+            <button onClick={()=>setCardIndex(Math.min(cardQs.length-1,cardIndex+1))} disabled={cardIndex===cardQs.length-1} style={{background:cardIndex<cardQs.length-1?T.accent:T.raised,border:"none",borderRadius:8,padding:"8px 16px",color:cardIndex<cardQs.length-1?"#fff":T.muted,fontWeight:600,cursor:cardIndex<cardQs.length-1?"pointer":"default",opacity:cardIndex<cardQs.length-1?1:0.4,transition:"all 0.15s"}}>Next →</button>
+          </div>
+        </>)}
+        {tab==="questions"&&viewMode==="list"&&(<>
           <div style={{display:"grid",gridTemplateColumns:"110px 56px 78px 1fr 180px",gap:10,padding:"6px 14px",marginBottom:6}}>
             {["RESULT","Q#","DATE","SUBJECT / CONCEPT","ACTIONS"].map(h=><div key={h} style={{fontSize:9,color:T.muted,letterSpacing:"0.9px"}}>{h}</div>)}
           </div>
@@ -1293,8 +1401,8 @@ async function downloadApkg(session, mode, serverUrl) {
     alert("To download .apkg files, deploy the anki_server.py backend and update ANKI_SERVER_URL in the app.\n\nSee the README for setup instructions.");
     return;
   }
-  const cards = session.questions.filter(q => q.ankiFront && q.ankiFront.trim());
-  if (!cards.length) { alert("No flashcards in this session yet. Log questions with a 1-liner to create cards."); return; }
+  const cards = session.questions.filter(q => q.ankiFront && q.ankiFront.trim() && q.ankiBack && q.ankiBack.trim());
+  if (!cards.length) { alert("No complete flashcards in this session yet. Make sure each card has both a front AND back before exporting."); return; }
   try {
     const res = await fetch(`${serverUrl}/export/apkg`, {
       method: "POST",
@@ -1756,13 +1864,13 @@ function AuthScreen({ onAuth, T }) {
   // ✅ SUPABASE LOGIN FUNCTION
   const signInWithProvider = async (provider) => {
     try {
-      // window.location.origin automatically gets your current StackBlitz preview URL or production URL
-      const currentUrl = window.location.origin;
+      // Redirect to /app after successful OAuth login
+      const redirectUrl = window.location.origin + '/app';
   
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: currentUrl,
+          redirectTo: redirectUrl,
         }
       });
       if (error) setError(error.message);
@@ -1991,7 +2099,13 @@ function VimaApp(){
 
   // AdSense removed from authenticated app — ads are public-only (see LandingPage.jsx / BlogPage.jsx)
   // 
-  const [darkMode,setDarkMode]=useState(true);
+  // Auto-detect system theme preference, fallback to dark mode
+  const [darkMode,setDarkMode]=useState(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return true; // fallback to dark
+  });
   const T=darkMode?DARK:LIGHT;
 
   // Keep body bg in sync with theme to eliminate white flash
