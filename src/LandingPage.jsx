@@ -999,7 +999,8 @@ const HERO_SLIDES = [
     cta: "Start the Plan →",
     blogSlug: "lsat-logical-reasoning",
     hasScreenshot: true,
-    screenshotLabel: "[Product screenshot: Practice tracker]"
+    screenshotLabel: "[Product screenshot: Practice tracker]",
+    imageSrc: "/lsat-hero.jpeg"
   }
 ];
 
@@ -1137,8 +1138,11 @@ export default function LandingPage() {
           {/* Right Column: Product Screenshot / Visual */}
           <div style={{background:isDark?"#0e1121":"#f8f9fa",borderRadius:12,minHeight:400,
             display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${isDark?"rgba(100,140,255,0.13)":"#e5e7eb"}`,
-            padding:32}}>
-            {HERO_SLIDES[heroSlide]?.hasScreenshot ? (
+            padding:32,overflow:"hidden"}}>
+            {HERO_SLIDES[heroSlide]?.imageSrc ? (
+              <img src={HERO_SLIDES[heroSlide].imageSrc} alt={HERO_SLIDES[heroSlide].title}
+                style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}}/>
+            ) : HERO_SLIDES[heroSlide]?.hasScreenshot ? (
               <div style={{textAlign:"center",color:isDark?C.dim:"#9ca3af",fontSize:14}}>
                 <div style={{marginBottom:12,fontSize:48}}>📱</div>
                 {HERO_SLIDES[heroSlide]?.screenshotLabel}
