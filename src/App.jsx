@@ -199,7 +199,7 @@ function SplashScreen({ dark, onDone }) {
   }, []);
  
   const bg = dark ? "#07090f" : "#f4f6fb";
-  const glowColor = dark ? "rgba(59,110,255,0.3)" : "rgba(0,85,212,0.2)";
+  const glowColor = dark ? "rgba(255,196,40,0.35)" : "rgba(212,160,10,0.28)";
  
   return (
     <div style={{
@@ -208,16 +208,16 @@ function SplashScreen({ dark, onDone }) {
       opacity: phase === "out" ? 0 : 1,
       transition: phase === "out" ? "opacity 0.7s ease" : "none",
     }}>
-      {/* Glow effect */}
+      {/* Glow effect — sized to sit within the ladder mark between VIMA and VIMA */}
       {phase === "glow" && (
         <div style={{
           position:"absolute",
-          width:400, height:400,
+          width:70, height:70,
           background:`radial-gradient(circle, ${glowColor} 0%, ${glowColor.replace(/0\.\d+/, m => Math.min(0.9, parseFloat(m) * 2))} 30%, transparent 80%)`,
           borderRadius:"50%",
           animation:"splashGlow 1.2s ease-in-out",
           pointerEvents:"none",
-          filter:"blur(20px)",
+          filter:"blur(8px)",
           zIndex:0,
         }}/>
       )}
