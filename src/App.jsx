@@ -199,7 +199,7 @@ function SplashScreen({ dark, onDone }) {
   }, []);
  
   const bg = dark ? "#07090f" : "#f4f6fb";
-  const glowColor = dark ? "rgba(255,196,40,0.35)" : "rgba(212,160,10,0.28)";
+  const glowColor = dark ? "rgba(255,210,60,0.55)" : "rgba(230,175,20,0.45)";
  
   return (
     <div style={{
@@ -212,12 +212,12 @@ function SplashScreen({ dark, onDone }) {
       {phase === "glow" && (
         <div style={{
           position:"absolute",
-          width:70, height:70,
-          background:`radial-gradient(circle, ${glowColor} 0%, ${glowColor.replace(/0\.\d+/, m => Math.min(0.9, parseFloat(m) * 2))} 30%, transparent 80%)`,
+          width:30, height:30,
+          background:`radial-gradient(circle, #fff8dc 0%, ${glowColor.replace(/0\.\d+/, m => Math.min(1, parseFloat(m) * 2))} 25%, ${glowColor} 55%, transparent 80%)`,
           borderRadius:"50%",
           animation:"splashGlow 1.2s ease-in-out",
           pointerEvents:"none",
-          filter:"blur(8px)",
+          filter:"blur(3px)",
           zIndex:0,
         }}/>
       )}
@@ -1007,6 +1007,9 @@ function SessionDetail({session,sessions,onBack,onAddQuestion,onAddPassage,onUpd
           <div style={{display:"grid",gridTemplateColumns:"340px 1fr",gap:24,minHeight:"500px"}}>
             {/* Left: Question metadata */}
             <div style={{background:T.raised,borderRadius:12,padding:24,border:`1px solid ${T.border}`}}>
+              <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
+                <button onClick={()=>setEditingQ(currentCard)} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:7,padding:"5px 12px",color:"#fb923c",cursor:"pointer",fontSize:12,fontWeight:600}}>✏ Edit</button>
+              </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:18}}>
                 <div>
                   <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>RESULT</div>
