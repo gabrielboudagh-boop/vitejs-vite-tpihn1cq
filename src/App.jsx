@@ -212,7 +212,7 @@ function SplashScreen({ dark, onDone }) {
       {phase === "glow" && (
         <div style={{
           position:"absolute",
-          width:30, height:30,
+          width:50, height:50,
           background:`radial-gradient(circle, #fff8dc 0%, ${glowColor.replace(/0\.\d+/, m => Math.min(1, parseFloat(m) * 2))} 25%, ${glowColor} 55%, transparent 80%)`,
           borderRadius:"50%",
           animation:"splashGlow 1.2s ease-in-out",
