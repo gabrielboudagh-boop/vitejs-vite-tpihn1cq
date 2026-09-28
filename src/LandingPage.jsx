@@ -13,24 +13,29 @@ const C = {
   success:"#3dab80", danger:"#c86060", warn:"#b8943a",
 };
 const PIE_COLORS = ["#3b82f6","#10b981","#8b5cf6","#f59e0b","#ec4899","#06b6d4","#f97316"];
+// Taxonomy below mirrors MODES / QBANKS_MAP in App.jsx exactly so the demo matches the real app.
 const DEMO_SUBJECTS = {
-  USMLE:["Cardiology","Neurology","GI","Renal","Pulmonology","Derm","MSK"],
+  USMLE:["Cardiology","Pulmonology","Neurology","OB/GYN","GI","Renal","MSK","Derm","Heme/Onc","ID","Endo","Peds","Psych","Surgery","Biostats/Ethics","Other"],
   MCAT: ["C/P","CARS","B/B","Psych/Soc"],
   LSAT: ["Logical Reasoning","Analytical Reasoning","Reading Comprehension"],
 };
 const DEMO_QTYPES = {
-  USMLE:["Diagnosis","Management","Pathophysiology","Pharmacology","Biostats/Ethics"],
-  MCAT:["Passage-based","Discrete","Data analysis","Research interpretation","Critical analysis"],
-  LSAT:["Inference","Main Point","Strengthen","Weaken","Method"],
+  USMLE:["Diagnosis","Management","Biostats/Ethics","Pathophysiology","Pharmacology"],
+  MCAT:["Passage-based","Discrete","Research interpretation","Data analysis","Critical analysis"],
+  LSAT:["Strengthen","Weaken","Assumption","Inference","Flaw","Parallel","Method","Main Point","Must Be True","Cannot Be True"],
+};
+const DEMO_QBANKS = {
+  USMLE:["UWorld","Amboss","NBME","Free 120","UWise","Kaplan","Other"],
+  MCAT: ["UWorld MCAT","Kaplan","Princeton Review","Blueprint","AAMC Official","Khan Academy","Other"],
+  LSAT: ["7Sage","PowerScore","Princeton Review","Manhattan Prep","LSAC Official","Khan Academy","Other"],
 };
 const DEMO_TIMING = ["Under the limit","At the limit","Over the limit"];
 const DEMO_ANSWER_CHANGES = ["No change","Incorrect → Correct","Correct → Incorrect","Incorrect → Incorrect"];
-const DEMO_CONFIDENCE = ["High confidence","Medium confidence","Low confidence"];
-const DEMO_REASONS = {
-  correct:["Right reasoning","Narrowed choices well","Educated guess"],
-  incorrect:["Didn't know the material","Wrong algorithm","Misread stem","Ran out of time"],
-};
+const WRONG_REASONS   = ["Didn't know the material","Knew material, wrong algorithm","Ran out of time","Silly mistake / misread"];
+const CORRECT_REASONS = ["Right reasoning","Guessed","Flawed reasoning"];
 const DEMO_LIMIT = 5;
+const FULL_STEPS = ["result","time","change","why","category","summary","anki","notes"];
+const FULL_STEP_LABELS = ["Correct or incorrect?","Time taken","Answer changed?","Why?","What was this about?","Question summary","Flashcard","Reflection & notes"];
 
 // ── Theme-aware gradient helper ───────────────────────────────────────────────
 function getHeroGradients(isDark) {
@@ -288,24 +293,45 @@ function LegacyInteractiveDemo() {
   );
 }
 
+function DemoLbl({children,T}){
+  return <div style={{fontSize:10,color:T.muted,letterSpacing:"0.9px",textTransform:"uppercase",marginBottom:6}}>{children}</div>;
+}
+function DemoInp({T,style={},textarea=false,...props}){
+  const s={width:"100%",boxSizing:"border-box",background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"10px 14px",color:T.text,fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",...style};
+  return textarea?<textarea style={{...s,resize:"vertical"}} {...props}/>:<input style={s} {...props}/>;
+}
+function DemoSel({T,style={},children,...props}){
+  return <select style={{width:"100%",background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"10px 14px",color:T.text,fontSize:13,fontFamily:"'DM Sans',sans-serif",...style}} {...props}>{children}</select>;
+}
+function DemoChoice({T,selected,onSelect,icon,title,sub,selBg}){
+  return (
+    <button onClick={onSelect} style={{width:"100%",background:selected?(selBg||T.accent+"18"):T.raised,border:`1px solid ${selected?T.accent+"60":T.border}`,borderRadius:12,padding:"14px 18px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",marginBottom:9,textAlign:"left",transition:"all 0.15s",fontFamily:"'DM Sans',sans-serif"}}>
+      <span style={{fontSize:20,width:26,textAlign:"center"}}>{icon}</span>
+      <div><div style={{fontSize:14,fontWeight:600,color:T.text}}>{title}</div>{sub&&<div style={{fontSize:11,color:T.muted,marginTop:2}}>{sub}</div>}</div>
+    </button>
+  );
+}
+
+// This is the exact 8-step review flow from the real app (App.jsx Wizard), reused here so the
+// public demo matches the authenticated product 1:1. Anki/Excel exports are gated to sign-in.
 function InteractiveDemo({ T }) {
-  const theme = T; // Use passed theme if provided
-  const [exam, setExam]                 = useState("USMLE");
-  const [questions, setQuestions]       = useState([]);
-  const [result, setResult]             = useState("");
-  const [subject, setSubject]           = useState("");
-  const [qtype, setQtype]               = useState("");
-  const [timing, setTiming]             = useState("");
-  const [answerChange, setAnswerChange] = useState("");
-  const [confidence, setConfidence]     = useState("");
-  const [reason, setReason]             = useState("");
-  const [concept, setConcept]           = useState("");
-  const [showMatrix, setShowMatrix]     = useState(false);
-  const [matrix, setMatrix]             = useState({mainIdea:"",tone:"",arguments:"",author:"",contrastingTheories:"",inference:""});
-  const [showSave, setShowSave]         = useState(false);
-  const [email, setEmail]               = useState("");
-  const [pass, setPass]                 = useState("");
-  const [linkStatus, setLinkStatus]     = useState("idle");
+  const theme = T;
+  const [exam, setExam]             = useState("USMLE");
+  const [questions, setQuestions]   = useState([]);
+  const [step, setStep]             = useState(0);
+  const [justLogged, setJustLogged] = useState(false);
+  const [data, setData] = useState({result:"",time:"",answerChange:"",wrongReason:"",correctReason:"",subject:"",qtype:"",concept:"",qnum:"",qbank:"",ankiFront:"",ankiBack:"",summary:"",wrongAction:"",nextApproach:"",resource:"",notes:""});
+  const [showMatrix, setShowMatrix] = useState(false);
+  const [matrix, setMatrix]         = useState({mainIdea:"",tone:"",arguments:"",author:""});
+  const [aiText,setAiText]=useState(""); const [aiLoading,setAiLoading]=useState(false);
+  const [aiAnki,setAiAnki]=useState(""); const [ankiLoading,setAnkiLoading]=useState(false);
+  const [aiAnkiBack,setAiAnkiBack]=useState(""); const [ankiBackLoading,setAnkiBackLoading]=useState(false);
+  const [showSave, setShowSave]     = useState(false);
+  const [email, setEmail]           = useState("");
+  const [pass, setPass]             = useState("");
+  const [linkStatus, setLinkStatus] = useState("idle");
+  const [exportGate, setExportGate] = useState(null); // null | "anki" | "excel"
+  const analyticsRef = useRef(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -313,48 +339,53 @@ function InteractiveDemo({ T }) {
     });
   }, []);
 
-  const resetQuestionForm = () => {
-    setResult("");
-    setSubject("");
-    setQtype("");
-    setTiming("");
-    setAnswerChange("");
-    setConfidence("");
-    setReason("");
-    setConcept("");
+  const set = (k,v) => setData(d => ({...d,[k]:v}));
+  const next = () => setStep(s => Math.min(s+1, FULL_STEPS.length-1));
+  const back = () => setStep(s => Math.max(s-1, 0));
+  const autoNext = (k,v) => { set(k,v); setTimeout(next,160); };
+
+  const resetWizard = () => {
+    setData({result:"",time:"",answerChange:"",wrongReason:"",correctReason:"",subject:"",qtype:"",concept:"",qnum:"",qbank:"",ankiFront:"",ankiBack:"",summary:"",wrongAction:"",nextApproach:"",resource:"",notes:""});
+    setMatrix({mainIdea:"",tone:"",arguments:"",author:""});
+    setShowMatrix(false);
+    setStep(0);
+    setJustLogged(false);
+    setAiText(""); setAiAnki(""); setAiAnkiBack("");
   };
 
-  const stepItems = [
-    { label:"1. Result", done: !!result },
-    { label:"2. Subject", done: !!subject },
-    { label:"3. Question Type", done: !!qtype },
-    { label:"4. Timing", done: !!timing },
-    { label:"5. Answer Change", done: !!answerChange },
-    { label:"6. Confidence", done: !!confidence },
-    { label:`7. ${result === "incorrect" ? "Mistake Reason" : "Why Correct"}`, done: !!reason },
-    { label:"8. Concept Tag", done: concept.trim().length >= 3 },
-  ];
+  useEffect(() => {
+    const s = FULL_STEPS[step];
+    if (s === "anki" && data.concept) {
+      const wrongCtx = data.wrongAction ? ` Student noted: "${data.wrongAction}".` : data.wrongReason ? ` Got it wrong because: ${data.wrongReason}.` : "";
+      const approachCtx = data.nextApproach ? ` Next time approach: "${data.nextApproach}".` : "";
+      if (!data.ankiFront) {
+        setAnkiLoading(true); setAiAnki("");
+        fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,messages:[{role:"user",content:`Create one concise Anki flashcard FRONT for a ${exam} question about "${data.concept}" (${data.qtype||""}, ${data.subject||""}).${wrongCtx}${approachCtx} Make it a conceptual cue testing the core mechanism, exam-vignette style. Max 20 words. Return ONLY the front text.`}]})})
+        .then(r=>r.json()).then(j=>{setAiAnki(j.content?.find(b=>b.type==="text")?.text?.trim()||"");setAnkiLoading(false);}).catch(()=>setAnkiLoading(false));
+      }
+      if (!data.ankiBack) {
+        setAnkiBackLoading(true); setAiAnkiBack("");
+        fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,messages:[{role:"user",content:`Create one concise Anki flashcard BACK (answer) for a ${exam} question about "${data.concept}" (${data.qtype||""}, ${data.subject||""}). Give the key fact, mechanism, diagnosis, or next step in 1-2 lines. Max 25 words. Return ONLY the answer text.`}]})})
+        .then(r=>r.json()).then(j=>{setAiAnkiBack(j.content?.find(b=>b.type==="text")?.text?.trim()||"");setAnkiBackLoading(false);}).catch(()=>setAnkiBackLoading(false));
+      }
+    }
+    if (s === "notes") {
+      setAiLoading(true); setAiText("");
+      fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:700,messages:[{role:"user",content:`A ${exam} student just ${data.result==="correct"?`answered correctly (${data.correctReason})`:`got wrong (${data.wrongReason})`} a question on "${data.concept||data.subject}" (${data.qtype}, ${data.subject}). Give a 2-sentence clinical/exam insight. List 2 relevant references as "REF: [source] — [tip]". End with one short motivational line.`}]})})
+      .then(r=>r.json()).then(j=>{setAiText(j.content?.find(b=>b.type==="text")?.text||"");setAiLoading(false);}).catch(()=>setAiLoading(false));
+    }
+  }, [step]);
 
-  const completedSteps = stepItems.filter(s => s.done).length;
-  const canLog = completedSteps === stepItems.length;
   const isDone = questions.length >= DEMO_LIMIT;
 
-  const addQuestion = () => {
-    if (!canLog) return;
+  const finish = () => {
     setQuestions(prev => [...prev, {
+      ...data, exam,
+      matrix: showMatrix ? matrix : null,
       id: Date.now(),
-      exam,
-      result,
-      subject,
-      qtype,
-      timing,
-      answerChange,
-      confidence,
-      reason,
-      concept: concept.trim(),
-      date: new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" }),
+      date: new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"}),
     }]);
-    resetQuestionForm();
+    setJustLogged(true);
   };
 
   const linkAccount = async () => {
@@ -369,306 +400,268 @@ function InteractiveDemo({ T }) {
     }
   };
 
+  const goToSignIn = () => { window.location.href = "/app"; };
+
   const correct = questions.filter(q => q.result === "correct").length;
   const score = questions.length ? Math.round((correct / questions.length) * 100) : 0;
   const bySubj = {};
-  const byReason = {};
+  const wrongReasonsTally = {};
   questions.forEach(q => {
-    bySubj[q.subject] = (bySubj[q.subject] || 0) + 1;
-    byReason[q.reason] = (byReason[q.reason] || 0) + 1;
+    if (q.subject) bySubj[q.subject] = (bySubj[q.subject] || 0) + 1;
+    if (q.result === "incorrect" && q.wrongReason) wrongReasonsTally[q.wrongReason] = (wrongReasonsTally[q.wrongReason] || 0) + 1;
   });
   const pieData = Object.entries(bySubj).map(([name, value]) => ({ name, value }));
-  const topPattern = Object.entries(byReason).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
+  const reasonData = Object.entries(wrongReasonsTally).map(([name, value]) => ({ name, value }));
+  const ankiReadyCount = questions.filter(q => q.ankiFront && q.ankiFront.trim() && q.ankiBack && q.ankiBack.trim()).length;
 
-  const resultBtn = (active, danger) => ({
-    flex:1,
-    background: active ? (danger ? theme.danger+"22" : theme.success+"22") : theme.raised,
-    border: `1px solid ${active ? (danger ? theme.danger : theme.success) : theme.border}`,
-    color: active ? (danger ? theme.danger : theme.success) : theme.dim,
-    borderRadius:8,
-    padding:"10px",
-    fontSize:13,
-    cursor:"pointer",
-    fontFamily:"'DM Sans',sans-serif",
-    fontWeight: active ? 600 : 400,
-    transition:"all 0.15s",
-  });
-
-  const selectStyle = {
-    width:"100%",
-    background:theme.raised,
-    border:`1px solid ${theme.border}`,
-    borderRadius:8,
-    padding:"9px 11px",
-    color:theme.text,
-    fontSize:12,
-    fontFamily:"'DM Sans',sans-serif",
-  };
+  const s = FULL_STEPS[step];
 
   return (
     <div style={{background:theme.surface,border:`1px solid ${theme.border}`,borderRadius:16,padding:"28px 24px",maxWidth:760,margin:"0 auto"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
         <div>
-          <div style={{fontSize:17,fontWeight:700,color:theme.text}}>Live Demo — 8-step reflection flow</div>
-          <div style={{fontSize:12,color:theme.muted,marginTop:3}}>Simulate real post-block review and see analytics update as your dataset grows.</div>
+          <div style={{fontSize:17,fontWeight:700,color:theme.text}}>Live Demo — the real 8-step review flow</div>
+          <div style={{fontSize:12,color:theme.muted,marginTop:3}}>This is the exact question-logging wizard used inside the app. No account required to try it.</div>
         </div>
         <div style={{display:"flex",gap:6}}>
           {["USMLE","MCAT","LSAT"].map(e => (
-            <button
-              key={e}
-              onClick={() => { setExam(e); resetQuestionForm(); }}
-              style={{
-                background:exam===e?theme.accent:theme.raised,
-                border:`1px solid ${exam===e?theme.accent:theme.border}`,
-                borderRadius:7,
-                padding:"5px 12px",
-                color:exam===e?"#fff":theme.dim,
-                fontSize:12,
-                fontWeight:exam===e?600:400,
-                cursor:"pointer",
-                fontFamily:"'DM Sans',sans-serif"
-              }}
-            >
+            <button key={e} onClick={() => { setExam(e); resetWizard(); }}
+              style={{background:exam===e?theme.accent:theme.raised,border:`1px solid ${exam===e?theme.accent:theme.border}`,borderRadius:7,padding:"5px 12px",color:exam===e?"#fff":theme.dim,fontSize:12,fontWeight:exam===e?600:400,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
               {e}
             </button>
           ))}
         </div>
       </div>
 
-      {!isDone ? (
-        <div style={{marginBottom:22}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,alignItems:"center",gap:10}}>
-            <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase"}}>
-              Question {questions.length + 1} of {DEMO_LIMIT} · {completedSteps}/8 steps complete
-            </div>
-            <div style={{fontSize:11,color:C.accent,fontWeight:600}}>{Math.round((completedSteps / 8) * 100)}%</div>
-          </div>
-          <div style={{height:7,background:C.raised,borderRadius:999,overflow:"hidden",marginBottom:14}}>
-            <div style={{height:"100%",width:`${(completedSteps / 8) * 100}%`,background:C.accent,transition:"width 0.15s ease"}}/>
-          </div>
-
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
-            {stepItems.map(s => (
-              <div key={s.label} style={{
-                fontSize:10,
-                borderRadius:999,
-                padding:"4px 9px",
-                border:`1px solid ${s.done ? C.accent+"66" : C.border}`,
-                background:s.done ? C.accent+"1f" : C.raised,
-                color:s.done ? C.accent : C.muted,
-                fontWeight:500,
-              }}>
-                {s.done ? "✓ " : "• "}{s.label}
-              </div>
-            ))}
-          </div>
-
-          <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:8}}>Step 1 · Result</div>
-          <div style={{display:"flex",gap:10,marginBottom:14}}>
-            <button onClick={() => { setResult("correct"); setReason(""); }} style={resultBtn(result==="correct",false)}>✓ Correct</button>
-            <button onClick={() => { setResult("incorrect"); setReason(""); }} style={resultBtn(result==="incorrect",true)}>✗ Incorrect</button>
-          </div>
-
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:10,marginBottom:10}}>
-            <div>
-              <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Step 2 · Subject</div>
-              <select value={subject} onChange={e => setSubject(e.target.value)} style={selectStyle}>
-                <option value="">Select subject</option>
-                {DEMO_SUBJECTS[exam].map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div>
-              <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Step 3 · Question type</div>
-              <select value={qtype} onChange={e => setQtype(e.target.value)} style={selectStyle}>
-                <option value="">Select type</option>
-                {DEMO_QTYPES[exam].map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div>
-              <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Step 4 · Timing</div>
-              <select value={timing} onChange={e => setTiming(e.target.value)} style={selectStyle}>
-                <option value="">Select timing</option>
-                {DEMO_TIMING.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div>
-              <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Step 5 · Answer change</div>
-              <select value={answerChange} onChange={e => setAnswerChange(e.target.value)} style={selectStyle}>
-                <option value="">Select answer-change behavior</option>
-                {DEMO_ANSWER_CHANGES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Step 6 · Confidence</div>
-              <select value={confidence} onChange={e => setConfidence(e.target.value)} style={selectStyle}>
-                <option value="">Select confidence</option>
-                {DEMO_CONFIDENCE.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>
-                {result === "incorrect" ? "Step 7 · Mistake reason" : "Step 7 · Why correct"}
-              </div>
-              <select value={reason} onChange={e => setReason(e.target.value)} style={selectStyle}>
-                <option value="">Select reason</option>
-                {(result === "incorrect" ? DEMO_REASONS.incorrect : DEMO_REASONS.correct).map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div style={{marginBottom:14}}>
-            <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Step 8 · Concept tag</div>
-            <input
-              value={concept}
-              onChange={e => setConcept(e.target.value)}
-              placeholder="e.g., nephritic vs nephrotic syndrome, author's tone drift, assumption family"
-              style={{
-                width:"100%",
-                boxSizing:"border-box",
-                background:C.raised,
-                border:`1px solid ${C.border}`,
-                borderRadius:8,
-                padding:"10px 12px",
-                color:C.text,
-                fontSize:12,
-                fontFamily:"'DM Sans',sans-serif",
-                outline:"none",
-              }}
-            />
-          </div>
-
-          <button
-            onClick={addQuestion}
-            disabled={!canLog}
-            style={{
-              width:"100%",
-              background:canLog?theme.accent:theme.raised,
-              border:`1px solid ${canLog?theme.accent:theme.border}`,
-              borderRadius:8,
-              padding:"11px",
-              color:canLog?"#fff":theme.muted,
-              fontSize:14,
-              fontWeight:600,
-              cursor:canLog?"pointer":"not-allowed",
-              opacity:canLog?1:0.55,
-              fontFamily:"'DM Sans',sans-serif",
-            }}
-          >
-            Log Question + Update Analytics →
-          </button>
-          
-          {/* Passage/Matrix button for CARS/LSAT */}
-          {(exam==="MCAT"||exam==="LSAT")&&(
-            <button
-              onClick={()=>setShowMatrix(!showMatrix)}
-              style={{
-                width:"100%",
-                marginTop:10,
-                background:showMatrix?theme.accent:"transparent",
-                border:`1.5px solid ${theme.accent}`,
-                borderRadius:8,
-                padding:"9px",
-                color:showMatrix?"#fff":theme.accent,
-                fontSize:13,
-                fontWeight:600,
-                cursor:"pointer",
-                fontFamily:"'DM Sans',sans-serif",
-              }}
-            >
-              {showMatrix?"✓ Passage Analysis Added":`📄 Add ${exam==="MCAT"?"CARS":"Reading Comprehension"} Analysis`}
-            </button>
-          )}
-          
-          {/* Passage matrix form */}
-          {showMatrix&&(exam==="MCAT"||exam==="LSAT")&&(
-            <div style={{background:theme.raised,borderRadius:8,padding:"12px",marginTop:10,border:`1px solid ${theme.border}`}}>
-              <div style={{fontSize:11,color:theme.muted,fontWeight:600,marginBottom:8}}>AUTHOR'S BLUEPRINT</div>
-              {[
-                {k:"mainIdea",l:"Main Idea",ph:"Author's central point in one sentence"},
-                {k:"tone",l:"Tone",ph:"e.g. Skeptical, supportive, critical"},
-                {k:"arguments",l:"Arguments",ph:"What was the author trying to prove?"},
-                {k:"author",l:"Author",ph:"Author's opinions and beliefs"},
-              ].map(f=>(
-                <input key={f.k} type="text" placeholder={f.ph} value={matrix[f.k]} onChange={e=>setMatrix({...matrix,[f.k]:e.target.value})} style={{width:"100%",padding:"7px 8px",marginBottom:8,border:`1px solid ${theme.border}`,borderRadius:6,background:theme.bg,color:theme.text,fontSize:12,fontFamily:"'DM Sans',sans-serif",outline:"none"}}/>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
+      {isDone ? (
         <div style={{background:theme.accent+"14",border:`1px solid ${theme.accent}30`,borderRadius:10,padding:"14px",marginBottom:20,textAlign:"center"}}>
           <div style={{fontSize:14,fontWeight:600,color:theme.accent,marginBottom:4}}>Demo complete 🎯</div>
-          <div style={{fontSize:12,color:theme.muted}}>You just ran the full 8-step review cycle. Create a free account to log unlimited sessions.</div>
+          <div style={{fontSize:12,color:theme.muted}}>You just ran the full review cycle {DEMO_LIMIT} times. Create a free account to log unlimited sessions and unlock real exports.</div>
+        </div>
+      ) : justLogged ? (
+        <div style={{background:theme.success+"14",border:`1px solid ${theme.success}30`,borderRadius:10,padding:"18px",marginBottom:20,textAlign:"center"}}>
+          <div style={{fontSize:28,marginBottom:8}}>✅</div>
+          <div style={{fontSize:15,fontWeight:700,color:theme.text,marginBottom:6}}>Question logged!</div>
+          <div style={{fontSize:12,color:theme.muted,marginBottom:14}}>Your analytics below just updated.</div>
+          <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+            <button onClick={resetWizard} style={{background:theme.accent,border:"none",borderRadius:8,padding:"9px 18px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Log Next Question →</button>
+            <button onClick={()=>{resetWizard();analyticsRef.current?.scrollIntoView({behavior:"smooth"});}} style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:8,padding:"9px 18px",color:theme.dim,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>View Analytics ↓</button>
+          </div>
+        </div>
+      ) : (
+        <div style={{marginBottom:22}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,alignItems:"center",gap:10}}>
+            <div style={{fontSize:10,color:theme.muted,letterSpacing:"0.8px",textTransform:"uppercase"}}>
+              Question {questions.length+1} of {DEMO_LIMIT} · Step {step+1} of {FULL_STEPS.length}
+            </div>
+            <div style={{fontSize:11,color:theme.accent,fontWeight:600}}>{FULL_STEP_LABELS[step]}</div>
+          </div>
+          <div style={{display:"flex",gap:4,marginBottom:16}}>
+            {FULL_STEPS.map((_,i) => <div key={i} style={{flex:1,height:5,borderRadius:2,background:i<=step?theme.accent:theme.raised,transition:"background 0.2s"}}/>)}
+          </div>
+
+          {s === "result" && (<>
+            <div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:30,marginBottom:6}}>❓</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Did you get it right?</div></div>
+            <DemoChoice T={theme} selected={data.result==="correct"} onSelect={()=>autoNext("result","correct")} icon="✅" title="Correct" sub="I picked the right answer" selBg={theme.success+"18"}/>
+            <DemoChoice T={theme} selected={data.result==="incorrect"} onSelect={()=>autoNext("result","incorrect")} icon="❌" title="Incorrect" sub="I got it wrong" selBg={theme.danger+"18"}/>
+          </>)}
+
+          {s === "time" && (<>
+            <div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:30,marginBottom:6}}>🕐</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>How long did it take?</div></div>
+            <DemoChoice T={theme} selected={data.time==="Under the limit"} onSelect={()=>autoNext("time","Under the limit")} icon="⚡" title="Under the limit"/>
+            <DemoChoice T={theme} selected={data.time==="At the limit"} onSelect={()=>autoNext("time","At the limit")} icon="🕐" title="At the limit"/>
+            <DemoChoice T={theme} selected={data.time==="Over the limit"} onSelect={()=>autoNext("time","Over the limit")} icon="🚨" title="Over the limit" selBg={theme.danger+"18"}/>
+          </>)}
+
+          {s === "change" && (<>
+            <div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:30,marginBottom:6}}>🔄</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Did you change your answer?</div></div>
+            {DEMO_ANSWER_CHANGES.map(c => (
+              <DemoChoice key={c} T={theme} selected={data.answerChange===c} onSelect={()=>autoNext("answerChange",c)}
+                icon={c==="No change"?"➡️":c==="Incorrect → Correct"?"✅":c==="Correct → Incorrect"?"❌":"🔁"} title={c}
+                selBg={c==="Incorrect → Correct"?theme.success+"18":c==="Correct → Incorrect"?theme.danger+"18":theme.warn+"18"}/>
+            ))}
+          </>)}
+
+          {s === "why" && data.result === "correct" && (<>
+            <div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:30,marginBottom:6}}>✅</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Why were you correct?</div></div>
+            {CORRECT_REASONS.map(r => <DemoChoice key={r} T={theme} selected={data.correctReason===r} onSelect={()=>autoNext("correctReason",r)} icon={r==="Right reasoning"?"🎯":r==="Guessed"?"🎲":"⚠️"} title={r}/>)}
+          </>)}
+          {s === "why" && data.result !== "correct" && (<>
+            <div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:30,marginBottom:6}}>❌</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Why did you get it wrong?</div></div>
+            {WRONG_REASONS.map(r => <DemoChoice key={r} T={theme} selected={data.wrongReason===r} onSelect={()=>autoNext("wrongReason",r)} icon={r==="Didn't know the material"?"📚":r==="Knew material, wrong algorithm"?"🧠":r==="Ran out of time"?"⏰":"😅"} title={r}/>)}
+          </>)}
+
+          {s === "category" && (<>
+            <div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:30,marginBottom:6}}>⚡</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>What was this about?</div></div>
+            <div style={{display:"grid",gap:12}}>
+              <div><DemoLbl T={theme}>Subject</DemoLbl><DemoSel T={theme} value={data.subject} onChange={e=>set("subject",e.target.value)}><option value="">Select subject...</option>{DEMO_SUBJECTS[exam].map(s=><option key={s}>{s}</option>)}</DemoSel></div>
+              <div><DemoLbl T={theme}>Question Type</DemoLbl><DemoSel T={theme} value={data.qtype} onChange={e=>set("qtype",e.target.value)}><option value="">Select type...</option>{DEMO_QTYPES[exam].map(t=><option key={t}>{t}</option>)}</DemoSel></div>
+              <div><DemoLbl T={theme}>Concept Tested</DemoLbl><DemoInp T={theme} placeholder="e.g. Giant cell arteritis..." value={data.concept} onChange={e=>set("concept",e.target.value)}/></div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                <div><DemoLbl T={theme}>Question #</DemoLbl><DemoInp T={theme} placeholder="Optional" value={data.qnum} onChange={e=>set("qnum",e.target.value)}/></div>
+                <div><DemoLbl T={theme}>QBank</DemoLbl><DemoSel T={theme} value={data.qbank} onChange={e=>set("qbank",e.target.value)}><option value="">Select...</option>{DEMO_QBANKS[exam].map(q=><option key={q}>{q}</option>)}</DemoSel></div>
+              </div>
+            </div>
+            {(data.subject==="CARS"||data.subject==="Reading Comprehension") && (
+              <div style={{marginTop:14,background:theme.accent+"10",border:`1px solid ${theme.accent}35`,borderRadius:10,padding:"12px 14px"}}>
+                <div style={{fontSize:11,fontWeight:600,color:theme.accent,marginBottom:4}}>📖 Author's Blueprint available</div>
+                <div style={{fontSize:11,color:theme.dim,marginBottom:8,lineHeight:1.5}}>The real app uses a 6-skill passage matrix for CARS/RC. Add a quick version here:</div>
+                <button onClick={()=>setShowMatrix(!showMatrix)} style={{background:showMatrix?theme.accent:"transparent",border:`1.5px solid ${theme.accent}`,borderRadius:6,padding:"6px 14px",color:showMatrix?"#fff":theme.accent,fontSize:11,fontWeight:600,cursor:"pointer"}}>{showMatrix?"✓ Added":"+ Add Passage Analysis"}</button>
+                {showMatrix && (
+                  <div style={{marginTop:10,display:"grid",gap:8}}>
+                    {[{k:"mainIdea",ph:"Main idea in one sentence"},{k:"tone",ph:"Author's tone"},{k:"arguments",ph:"Key arguments"},{k:"author",ph:"Author's perspective"}].map(f=>(
+                      <DemoInp key={f.k} T={theme} placeholder={f.ph} value={matrix[f.k]} onChange={e=>setMatrix(m=>({...m,[f.k]:e.target.value}))}/>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>)}
+
+          {s === "summary" && (<>
+            <div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:30,marginBottom:6}}>📄</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Question Summary</div></div>
+            <DemoLbl T={theme}>What was this question about?</DemoLbl>
+            <DemoInp T={theme} textarea placeholder="Describe the stem, answer choices, and core concept..." value={data.summary} onChange={e=>set("summary",e.target.value)} style={{height:80,marginBottom:12}}/>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div><DemoLbl T={theme}>{data.result==="incorrect"?"What did I do wrong?":"Key insight"}</DemoLbl><DemoInp T={theme} textarea placeholder="..." value={data.wrongAction} onChange={e=>set("wrongAction",e.target.value)} style={{height:70}}/></div>
+              <div><DemoLbl T={theme}>Next time approach</DemoLbl><DemoInp T={theme} textarea placeholder="Next time I will..." value={data.nextApproach} onChange={e=>set("nextApproach",e.target.value)} style={{height:70}}/></div>
+            </div>
+          </>)}
+
+          {s === "anki" && (<>
+            <div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:30,marginBottom:6}}>⚡</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Flashcard</div><div style={{fontSize:12,color:theme.muted}}>AI-generated card based on your reflection</div></div>
+            <DemoLbl T={theme}>Front — Question / Cue</DemoLbl>
+            <DemoInp T={theme} placeholder="e.g. 55M jaw claudication + vision loss → next step?" value={data.ankiFront} onChange={e=>set("ankiFront",e.target.value)} style={{marginBottom:8}}/>
+            <div style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:10,padding:"10px 14px",marginBottom:12}}>
+              <div style={{fontSize:10,color:theme.muted,letterSpacing:"0.8px",marginBottom:6}}>✨ AI SUGGESTED FRONT</div>
+              {ankiLoading?<div style={{color:theme.muted,fontSize:12,fontStyle:"italic"}}>Generating suggestion...</div>
+              :aiAnki?<><div style={{fontSize:13,color:theme.text,lineHeight:1.5,marginBottom:8}}>{aiAnki}</div><button onClick={()=>set("ankiFront",aiAnki)} style={{background:theme.accent,border:"none",borderRadius:6,padding:"5px 12px",color:"#fff",fontSize:11,cursor:"pointer"}}>Use this →</button></>
+              :<div style={{fontSize:12,color:theme.muted}}>Fill in the concept from the previous step for a suggestion.</div>}
+            </div>
+            <DemoLbl T={theme}>Back — Answer</DemoLbl>
+            <DemoInp T={theme} placeholder="e.g. Giant cell arteritis → temporal artery biopsy" value={data.ankiBack} onChange={e=>set("ankiBack",e.target.value)} style={{marginBottom:8}}/>
+            <div style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:10,padding:"10px 14px",marginBottom:14}}>
+              <div style={{fontSize:10,color:theme.muted,letterSpacing:"0.8px",marginBottom:6}}>✨ AI SUGGESTED BACK</div>
+              {ankiBackLoading?<div style={{color:theme.muted,fontSize:12,fontStyle:"italic"}}>Generating answer...</div>
+              :aiAnkiBack?<><div style={{fontSize:13,color:theme.text,lineHeight:1.5,marginBottom:8}}>{aiAnkiBack}</div><button onClick={()=>set("ankiBack",aiAnkiBack)} style={{background:theme.success,border:"none",borderRadius:6,padding:"5px 12px",color:"#fff",fontSize:11,cursor:"pointer"}}>Use this →</button></>
+              :<div style={{fontSize:12,color:theme.muted}}>Fill in the concept for an AI answer suggestion.</div>}
+            </div>
+          </>)}
+
+          {s === "notes" && (<>
+            <div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:30,marginBottom:6}}>💡</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Reflection & Notes</div></div>
+            <div style={{background:theme.name==="dark"?"#0e0e2a":"#eff2ff",border:`1px solid ${theme.name==="dark"?"#3730a360":"#c7d2fe"}`,borderRadius:12,padding:"14px 16px",marginBottom:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span>✨</span><span style={{fontSize:10,fontWeight:700,color:theme.name==="dark"?"#a5b4fc":theme.accent,letterSpacing:"0.8px"}}>AI STUDY INSIGHT</span></div>
+              {aiLoading?<div style={{color:theme.muted,fontSize:12,fontStyle:"italic"}}>Generating...</div>:aiText?<div style={{color:theme.name==="dark"?"#c7d2fe":theme.dim,fontSize:12,lineHeight:1.75,whiteSpace:"pre-wrap"}}>{aiText}</div>:<div style={{fontSize:12,color:theme.muted}}>Fill in subject/concept above.</div>}
+            </div>
+            <div style={{marginBottom:12}}><DemoLbl T={theme}>Resource to Review</DemoLbl><DemoInp T={theme} placeholder="e.g. FA p.342, Pathoma Ch.3..." value={data.resource} onChange={e=>set("resource",e.target.value)}/></div>
+            <div><DemoLbl T={theme}>Personal Notes</DemoLbl><DemoInp T={theme} textarea placeholder="Your own notes..." value={data.notes} onChange={e=>set("notes",e.target.value)} style={{height:70}}/></div>
+          </>)}
+
+          {step > 0 && (
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:18,paddingTop:14,borderTop:`1px solid ${theme.border}`}}>
+              <button onClick={back} style={{background:"none",border:"none",color:theme.muted,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>← Back</button>
+              {step===FULL_STEPS.length-1
+                ? <button onClick={finish} style={{background:theme.accent,border:"none",borderRadius:8,padding:"9px 22px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Submit ✓</button>
+                : ["category","summary","anki"].includes(s)
+                  ? <button onClick={next} style={{background:theme.accent,border:"none",borderRadius:8,padding:"9px 20px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Next →</button>
+                  : <div/>
+              }
+            </div>
+          )}
         </div>
       )}
 
       {questions.length > 0 && (
-        <div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:16}}>
+        <div ref={analyticsRef}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:16,borderTop:`1px solid ${theme.border}`,paddingTop:20}}>
             {[
               {l:"Questions",v:questions.length,c:theme.text},
               {l:"Score",v:`${score}%`,c:score>=75?theme.success:score>=60?theme.warn:theme.danger},
               {l:"Correct",v:correct,c:theme.success},
-              {l:"Top Pattern",v:topPattern,c:theme.accent},
-            ].map(s => (
-              <div key={s.l} style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:8,padding:"11px 12px"}}>
-                <div style={{fontSize:9,color:theme.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:5}}>{s.l}</div>
-                <div style={{fontSize:18,fontWeight:700,color:s.c,lineHeight:1.25}}>{s.v}</div>
+              {l:"Anki-ready",v:ankiReadyCount,c:theme.accent},
+            ].map(st => (
+              <div key={st.l} style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:8,padding:"11px 12px"}}>
+                <div style={{fontSize:9,color:theme.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:5}}>{st.l}</div>
+                <div style={{fontSize:18,fontWeight:700,color:st.c,lineHeight:1.25}}>{st.v}</div>
               </div>
             ))}
           </div>
 
           {pieData.length > 0 && (
-            <>
-              <div style={{height:160,marginBottom:10}}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" outerRadius={68} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
-                      {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]}/>)}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{background:theme.surface,border:`1px solid ${theme.border}`,borderRadius:8,fontSize:11,color:theme.text}}
-                      formatter={(v) => [`${v} Q`, ""]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,color:theme.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:10}}>Score by Subject</div>
+              <div style={{display:"flex",alignItems:"center",gap:18}}>
+                <div style={{width:130,height:130,flexShrink:0}}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pieData} cx="50%" cy="50%" outerRadius={58} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
+                        {pieData.map((_,i) => <Cell key={i} fill={PIE_COLORS[i%PIE_COLORS.length]}/>)}
+                      </Pie>
+                      <Tooltip contentStyle={{background:theme.surface,border:`1px solid ${theme.border}`,borderRadius:8,fontSize:11,color:theme.text}} formatter={(v)=>[`${v} Q`,""]}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div style={{flex:1,display:"flex",flexDirection:"column",gap:4}}>
+                  {pieData.map((d,i) => (
+                    <div key={d.name} style={{display:"flex",alignItems:"center",gap:8}}>
+                      <div style={{width:8,height:8,borderRadius:2,background:PIE_COLORS[i%PIE_COLORS.length],flexShrink:0}}/>
+                      <span style={{fontSize:12,color:theme.dim,flex:1}}>{d.name}</span>
+                      <span style={{fontSize:12,fontWeight:700,color:PIE_COLORS[i%PIE_COLORS.length]}}>{d.value} Q</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:14}}>
-                {pieData.map((d, i) => (
-                  <div key={d.name} style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{width:8,height:8,borderRadius:2,background:PIE_COLORS[i%PIE_COLORS.length],flexShrink:0}}/>
-                    <span style={{fontSize:12,color:C.dim,flex:1}}>{d.name}</span>
-                    <span style={{fontSize:12,fontWeight:700,color:PIE_COLORS[i%PIE_COLORS.length]}}>{d.value} Q</span>
+            </div>
+          )}
+
+          {reasonData.length > 0 && (
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,color:theme.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:10}}>Why You Got It Wrong</div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {reasonData.map((d) => (
+                  <div key={d.name} style={{display:"flex",alignItems:"center",gap:8,background:theme.raised,borderRadius:6,padding:"7px 10px"}}>
+                    <span style={{fontSize:12,color:theme.dim,flex:1}}>{d.name}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:theme.danger}}>{d.value}</span>
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           )}
 
-          <div style={{fontSize:11,color:theme.muted,marginBottom:16,borderTop:`1px solid ${theme.border}`,paddingTop:12}}>
-            Last entries: {questions.slice(-3).map(q => `${q.subject} / ${q.qtype} / ${q.result}`).join(" • ")}
+          <div style={{borderTop:`1px solid ${theme.border}`,paddingTop:16,marginBottom:16}}>
+            <div style={{fontSize:11,color:theme.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:10}}>Export Your Data</div>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              <button onClick={()=>setExportGate("anki")} style={{background:theme.raised,border:`1px solid ${theme.accent}50`,borderRadius:8,padding:"9px 16px",color:theme.accent,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>⚡ Export to Anki (.apkg)</button>
+              <button onClick={()=>setExportGate("excel")} style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:8,padding:"9px 16px",color:theme.dim,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>📊 Export to Excel</button>
+            </div>
+            <div style={{fontSize:11,color:theme.muted,marginTop:8}}>Real exports require a free account — click above to continue.</div>
           </div>
+
+          {exportGate && (
+            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}} onClick={e=>e.target===e.currentTarget&&setExportGate(null)}>
+              <div style={{background:theme.surface,border:`1px solid ${theme.border}`,borderRadius:18,padding:"36px 32px",maxWidth:400,width:"100%",textAlign:"center"}}>
+                <div style={{fontSize:40,marginBottom:12}}>{exportGate==="anki"?"⚡":"📊"}</div>
+                <div style={{fontSize:18,fontWeight:700,color:theme.text,marginBottom:8}}>
+                  {exportGate==="anki" ? "Ready to export your real Anki deck?" : "Ready to export your real Excel sheet?"}
+                </div>
+                <p style={{fontSize:13,color:theme.muted,lineHeight:1.65,marginBottom:24}}>
+                  Continue by creating a free account — it takes 30 seconds, and you'll land right back in the app to pick up where this demo left off.
+                </p>
+                <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+                  <button onClick={goToSignIn} style={{background:theme.accent,border:"none",borderRadius:8,padding:"11px 24px",color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Create Free Account →</button>
+                  <button onClick={()=>setExportGate(null)} style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:8,padding:"11px 18px",color:theme.muted,fontSize:14,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Not now</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {questions.length >= 2 && (
             <div style={{borderTop:`1px solid ${theme.border}`,paddingTop:16}}>
               {!showSave ? (
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
                   <span style={{fontSize:12,color:theme.muted}}>Save this demo data and continue inside the full app</span>
-                  <button
-                    onClick={() => setShowSave(true)}
-                    style={{
-                      background:theme.accent,
-                      border:"none",
-                      borderRadius:8,
-                      padding:"8px 18px",
-                      color:"#fff",
-                      fontSize:13,
-                      fontWeight:600,
-                      cursor:"pointer",
-                      fontFamily:"'DM Sans',sans-serif"
-                    }}
-                  >
-                    Save Free →
-                  </button>
+                  <button onClick={() => setShowSave(true)} style={{background:theme.accent,border:"none",borderRadius:8,padding:"8px 18px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Save Free →</button>
                 </div>
               ) : linkStatus === "done" ? (
                 <div style={{textAlign:"center",color:theme.success,fontSize:13,fontWeight:600}}>
@@ -676,51 +669,19 @@ function InteractiveDemo({ T }) {
                 </div>
               ) : (
                 <div>
-                  <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:10}}>Create your free account — your demo data carries over</div>
+                  <div style={{fontSize:13,fontWeight:600,color:theme.text,marginBottom:10}}>Create your free account — your demo data carries over</div>
                   {["email","password"].map((t, i) => (
-                    <input
-                      key={t}
-                      type={t}
-                      placeholder={t === "email" ? "you@email.com" : "Create password"}
-                      value={i===0?email:pass}
-                      onChange={e => i===0?setEmail(e.target.value):setPass(e.target.value)}
-                      style={{
-                        width:"100%",
-                        boxSizing:"border-box",
-                        background:theme.raised,
-                        border:`1px solid ${theme.border}`,
-                        borderRadius:8,
-                        padding:"9px 14px",
-                        color:theme.text,
-                        fontSize:13,
-                        fontFamily:"'DM Sans',sans-serif",
-                        outline:"none",
-                        marginBottom:8
-                      }}
-                    />
+                    <input key={t} type={t} placeholder={t === "email" ? "you@email.com" : "Create password"}
+                      value={i===0?email:pass} onChange={e => i===0?setEmail(e.target.value):setPass(e.target.value)}
+                      style={{width:"100%",boxSizing:"border-box",background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:8,padding:"9px 14px",color:theme.text,fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",marginBottom:8}}/>
                   ))}
                   {linkStatus==="error" && <div style={{color:theme.danger,fontSize:12,marginBottom:8}}>Something went wrong — try again.</div>}
-                  <button
-                    onClick={linkAccount}
-                    disabled={!email || !pass || linkStatus === "working"}
-                    style={{
-                      width:"100%",
-                      background:C.accent,
-                      border:"none",
-                      borderRadius:8,
-                      padding:"10px",
-                      color:"#fff",
-                      fontSize:13,
-                      fontWeight:600,
-                      cursor:"pointer",
-                      fontFamily:"'DM Sans',sans-serif",
-                      opacity:!email||!pass?0.6:1
-                    }}
-                  >
+                  <button onClick={linkAccount} disabled={!email||!pass||linkStatus==="working"}
+                    style={{width:"100%",background:theme.accent,border:"none",borderRadius:8,padding:"10px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",opacity:!email||!pass?0.6:1}}>
                     {linkStatus==="working" ? "Creating account…" : "Create Free Account →"}
                   </button>
-                  <div style={{textAlign:"center",marginTop:8,fontSize:12,color:C.muted}}>
-                    Already have an account? <a href="/app" style={{color:C.accent}}>Sign in</a>
+                  <div style={{textAlign:"center",marginTop:8,fontSize:12,color:theme.muted}}>
+                    Already have an account? <a href="/app" style={{color:theme.accent}}>Sign in</a>
                   </div>
                 </div>
               )}
@@ -1011,7 +972,9 @@ const HERO_SLIDES = [
     ctaSecondary: "Try the review flow →",
     blogSlug: "mcat-cars-framework",
     hasScreenshot: true,
-    screenshotLabel: "[Product screenshot: Question review interface]"
+    screenshotLabel: "[Product screenshot: Question review interface]",
+    // ADD JPEG HERE: drop your image at /public/mcat-cars-hero.jpeg and this will render automatically
+    imageSrc: "/mcat-cars-hero.jpeg"
   },
   {
     title: "USMLE Wrong Answers",
@@ -1020,7 +983,9 @@ const HERO_SLIDES = [
     cta: "Learn the Framework →",
     blogSlug: "learn-from-wrong-answers-usmle",
     hasScreenshot: true,
-    screenshotLabel: "[Product screenshot: Analysis dashboard]"
+    screenshotLabel: "[Product screenshot: Analysis dashboard]",
+    // ADD JPEG HERE: drop your image at /public/usmle-wrong-answers-hero.jpeg and this will render automatically
+    imageSrc: "/usmle-wrong-answers-hero.jpeg"
   },
   {
     title: "Building Your Anki Deck",
@@ -1029,7 +994,9 @@ const HERO_SLIDES = [
     cta: "See the Strategy →",
     blogSlug: "spaced-repetition-anki-premed",
     hasScreenshot: true,
-    screenshotLabel: "[Product screenshot: Anki export feature]"
+    screenshotLabel: "[Product screenshot: Anki export feature]",
+    // ADD JPEG HERE: drop your image at /public/anki-deck-hero.jpeg and this will render automatically
+    imageSrc: "/anki-deck-hero.jpeg"
   },
   {
     title: "LSAT Logical Reasoning",
@@ -1039,6 +1006,7 @@ const HERO_SLIDES = [
     blogSlug: "lsat-logical-reasoning",
     hasScreenshot: true,
     screenshotLabel: "[Product screenshot: Practice tracker]",
+    // ADD JPEG HERE: drop your image at /public/lsat-hero.jpeg (already wired up)
     imageSrc: "/lsat-hero.jpeg"
   }
 ];
