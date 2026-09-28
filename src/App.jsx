@@ -199,7 +199,7 @@ function SplashScreen({ dark, onDone }) {
   }, []);
  
   const bg = dark ? "#07090f" : "#f4f6fb";
-  const glowColor = dark ? "rgba(255,210,60,0.55)" : "rgba(230,175,20,0.45)";
+  const glowColor = "rgba(255,255,0,0.8)";
  
   return (
     <div style={{
@@ -208,16 +208,16 @@ function SplashScreen({ dark, onDone }) {
       opacity: phase === "out" ? 0 : 1,
       transition: phase === "out" ? "opacity 0.7s ease" : "none",
     }}>
-      {/* Glow effect — sized to sit within the ladder mark between VIMA and VIMA */}
+      {/* Glow effect — highlighter-yellow rectangle sized to sit within the ladder mark between VIMA and VIMA */}
       {phase === "glow" && (
         <div style={{
           position:"absolute",
           width:50, height:50,
-          background:`radial-gradient(circle, #fff8dc 0%, ${glowColor.replace(/0\.\d+/, m => Math.min(1, parseFloat(m) * 2))} 25%, ${glowColor} 55%, transparent 80%)`,
-          borderRadius:"50%",
+          background:`radial-gradient(circle, #ffffff 0%, #ffff33 30%, ${glowColor} 60%, transparent 85%)`,
+          borderRadius:4,
           animation:"splashGlow 1.2s ease-in-out",
           pointerEvents:"none",
-          filter:"blur(3px)",
+          filter:"blur(2px)",
           zIndex:0,
         }}/>
       )}
@@ -2138,10 +2138,38 @@ function VimaApp(){
   useEffect(() => {
     if (!user?.email) return;
     const key = `vimavima_data_${user.email}`;
+    let loaded;
     try {
       const raw = localStorage.getItem(key);
-      setSessionsByMode(raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(SAMPLE_DATA)));
-    } catch { setSessionsByMode(JSON.parse(JSON.stringify(SAMPLE_DATA))); }
+      loaded = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(SAMPLE_DATA));
+    } catch { loaded = JSON.parse(JSON.stringify(SAMPLE_DATA)); }
+
+    // One-time import of questions logged in the public landing-page demo before sign-up
+    // (see LandingPage.jsx InteractiveDemo, which writes "vimavima_demo_carryover").
+    try {
+      const carryoverRaw = localStorage.getItem("vimavima_demo_carryover");
+      if (carryoverRaw) {
+        const demoQuestions = JSON.parse(carryoverRaw);
+        const byExam = {};
+        demoQuestions.forEach(q => {
+          const exam = q.exam || "USMLE";
+          if (!byExam[exam]) byExam[exam] = [];
+          byExam[exam].push(q);
+        });
+        Object.entries(byExam).forEach(([exam, qs]) => {
+          if (!loaded[exam]) loaded[exam] = [];
+          loaded[exam] = [{
+            id: Date.now() + Math.random(),
+            name: "Imported from Demo",
+            date: new Date().toISOString().split("T")[0],
+            questions: qs,
+          }, ...loaded[exam]];
+        });
+        localStorage.removeItem("vimavima_demo_carryover");
+      }
+    } catch {}
+
+    setSessionsByMode(loaded);
   }, [user?.email]);
 
   // Save every change back to localStorage immediately

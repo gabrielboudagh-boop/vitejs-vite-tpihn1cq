@@ -339,6 +339,14 @@ function InteractiveDemo({ T }) {
     });
   }, []);
 
+  // Keep localStorage in sync so demo questions carry over into the real account after sign-in,
+  // regardless of which button/link the user takes to get to /app.
+  useEffect(() => {
+    if (questions.length > 0) {
+      try { localStorage.setItem("vimavima_demo_carryover", JSON.stringify(questions)); } catch {}
+    }
+  }, [questions]);
+
   const set = (k,v) => setData(d => ({...d,[k]:v}));
   const next = () => setStep(s => Math.min(s+1, FULL_STEPS.length-1));
   const back = () => setStep(s => Math.max(s-1, 0));
