@@ -969,8 +969,7 @@ const HERO_SLIDES = [
     body: "Log a few practice questions and watch instant analytics build. No account required.",
     cta: "Start Demo →",
     ctaSecondary: null,
-    isDemo: true,
-    hasScreenshot: false
+    isDemo: true
   },
   {
     title: "MCAT CARS",
@@ -978,46 +977,69 @@ const HERO_SLIDES = [
     body: "A precise system used by top scorers to read, reason, and perform under pressure.",
     cta: "Read the Guide",
     ctaSecondary: "Try the review flow →",
-    blogSlug: "mcat-cars-framework",
-    hasScreenshot: true,
-    screenshotLabel: "[Product screenshot: Question review interface]",
-    // ADD JPEG HERE: drop your image at /public/mcat-cars-hero.jpeg and this will render automatically
-    imageSrc: "/mcat-cars-hero.jpeg"
+    blogSlug: "mcat-cars-framework"
   },
   {
     title: "USMLE Wrong Answers",
     subtitle: "4 Types & How to Fix Each",
     body: "Not all wrong answers are equal. Learn the 4 types of mistakes and apply the right study strategy to each one.",
     cta: "Learn the Framework →",
-    blogSlug: "learn-from-wrong-answers-usmle",
-    hasScreenshot: true,
-    screenshotLabel: "[Product screenshot: Analysis dashboard]",
-    // ADD JPEG HERE: drop your image at /public/usmle-wrong-answers-hero.jpeg and this will render automatically
-    imageSrc: "/usmle-wrong-answers-hero.jpeg"
+    blogSlug: "learn-from-wrong-answers-usmle"
   },
   {
     title: "Building Your Anki Deck",
     subtitle: "From Real Exam Mistakes",
     body: "The most powerful Anki decks are built from your actual wrong answers. Generate cards automatically from logged questions.",
     cta: "See the Strategy →",
-    blogSlug: "spaced-repetition-anki-premed",
-    hasScreenshot: true,
-    screenshotLabel: "[Product screenshot: Anki export feature]",
-    // ADD JPEG HERE: drop your image at /public/anki-deck-hero.jpeg and this will render automatically
-    imageSrc: "/anki-deck-hero.jpeg"
+    blogSlug: "spaced-repetition-anki-premed"
   },
   {
     title: "LSAT Logical Reasoning",
     subtitle: "Master 10 Question Types",
     body: "LR accounts for 50% of your score. Learn question types and the exact plan to master them efficiently.",
     cta: "Start the Plan →",
-    blogSlug: "lsat-logical-reasoning",
-    hasScreenshot: true,
-    screenshotLabel: "[Product screenshot: Practice tracker]",
-    // ADD JPEG HERE: drop your image at /public/lsat-hero.jpeg (already wired up)
-    imageSrc: "/lsat-hero.jpeg"
+    blogSlug: "lsat-logical-reasoning"
   }
 ];
+
+const HERO_ICONS = ["✨", "📖", "🧠", "⚡", "⚖️"];
+
+// Dynamic SVG gradient visual — replaces static screenshots with a theme-aware, per-slide blob.
+function HeroVisual({ isDark, slideIndex, gradients }) {
+  const g = gradients.colors[slideIndex % gradients.colors.length];
+  const bg = gradients[`slide${(slideIndex % 5) + 1}`];
+  return (
+    <div style={{
+      position:"relative", width:"100%", maxWidth:560, height:260,
+      margin:"0 auto 40px", borderRadius:28, overflow:"hidden",
+      background:bg,
+      border:`1px solid ${isDark?"rgba(100,140,255,0.15)":"#e5e7eb"}`,
+    }}>
+      <style>{`
+        @keyframes heroBlobA { 0%,100% { transform: translate(0,0); } 50% { transform: translate(14px,-10px); } }
+        @keyframes heroBlobB { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-12px,12px); } }
+      `}</style>
+      <svg width="100%" height="100%" viewBox="0 0 560 260" style={{position:"absolute",inset:0}}>
+        <defs>
+          <filter id={`heroBlur${slideIndex}`} x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="36"/>
+          </filter>
+        </defs>
+        <circle cx="150" cy="90" r="110" fill={g.primary} filter={`url(#heroBlur${slideIndex})`} style={{animation:"heroBlobA 6s ease-in-out infinite"}}/>
+        <circle cx="410" cy="175" r="130" fill={g.secondary} filter={`url(#heroBlur${slideIndex})`} style={{animation:"heroBlobB 7s ease-in-out infinite"}}/>
+        <g opacity={isDark?0.12:0.08} stroke={isDark?"#8896b0":"#4b5563"} strokeWidth="1">
+          {Array.from({length:8}).map((_,i)=>(<line key={`v${i}`} x1={i*80} y1="0" x2={i*80} y2="260"/>))}
+          {Array.from({length:5}).map((_,i)=>(<line key={`h${i}`} x1="0" y1={i*65} x2="560" y2={i*65}/>))}
+        </g>
+      </svg>
+      <div style={{position:"relative",zIndex:1,height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <div style={{width:76,height:76,borderRadius:22,background:isDark?"rgba(255,255,255,0.08)":"rgba(255,255,255,0.7)",backdropFilter:"blur(6px)",border:`1px solid ${isDark?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.85)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,boxShadow:"0 8px 32px rgba(0,0,0,0.12)"}}>
+          {HERO_ICONS[slideIndex % HERO_ICONS.length]}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function LandingPage() {
   const { isDark, setIsDark, theme: C } = useTheme();
@@ -1106,73 +1128,47 @@ export default function LandingPage() {
           .slide-content { animation: fadeIn 0.5s ease-out; }
         `}</style>
         
-        {/* Slide Container - Premium 2-Column Layout */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:80,alignItems:"center",minHeight:500}}>
-          {/* Left Column: Content */}
-          <div className="slide-content" style={{paddingRight:40}}>
-            <div style={{marginBottom:32}}>
-              <h1 style={{fontSize:56,fontWeight:700,color:isDark?C.text:"#0a0d1a",lineHeight:1.15,
-                letterSpacing:"-1.5px",marginBottom:16}}>
-                {HERO_SLIDES[heroSlide]?.title}
-              </h1>
-              <p style={{fontSize:20,color:isDark?C.muted:"#4a5568",fontWeight:500,lineHeight:1.4,marginBottom:20}}>
-                {HERO_SLIDES[heroSlide]?.subtitle}
-              </p>
-              <p style={{fontSize:16,color:isDark?C.dim:"#5a6b7a",lineHeight:1.7,maxWidth:480}}>
-                {HERO_SLIDES[heroSlide]?.body}
-              </p>
-            </div>
-            
-            {/* CTA Buttons */}
-            <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-              {HERO_SLIDES[heroSlide]?.isDemo ? (
-                <button onClick={scrollToDemo} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:8,
-                  padding:"14px 32px",color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer",
-                  fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s",
-                  boxShadow:isDark?"0 4px 16px rgba(59,110,255,0.3)":"0 4px 12px rgba(0,85,212,0.25)"}}>
-                  {HERO_SLIDES[heroSlide]?.cta}
-                </button>
-              ) : (
-                <>
-                  <a href={`/blog/${HERO_SLIDES[heroSlide]?.blogSlug}`} style={{background:isDark?C.accent:"#0055d4",
-                    border:"none",borderRadius:8,padding:"14px 32px",color:"#fff",fontSize:15,fontWeight:600,
-                    cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s",display:"inline-block",
-                    textDecoration:"none",boxShadow:isDark?"0 4px 16px rgba(59,110,255,0.3)":"0 4px 12px rgba(0,85,212,0.25)"}}>
-                    {HERO_SLIDES[heroSlide]?.cta}
-                  </a>
-                  {HERO_SLIDES[heroSlide]?.ctaSecondary && (
-                    <button onClick={scrollToDemo} style={{background:"transparent",border:`1.5px solid ${isDark?C.accent:"#0055d4"}`,
-                      borderRadius:8,padding:"12px 30px",color:isDark?C.accent:"#0055d4",fontSize:15,fontWeight:600,
-                      cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>
-                      {HERO_SLIDES[heroSlide]?.ctaSecondary}
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
+        {/* Slide Container - Centered Single-Column Layout */}
+        <div style={{maxWidth:760,margin:"0 auto",textAlign:"center"}}>
+          <HeroVisual isDark={isDark} slideIndex={heroSlide} gradients={themeGradients}/>
+          <div className="slide-content" style={{marginBottom:32}}>
+            <h1 style={{fontSize:56,fontWeight:700,color:isDark?C.text:"#0a0d1a",lineHeight:1.15,
+              letterSpacing:"-1.5px",marginBottom:16}}>
+              {HERO_SLIDES[heroSlide]?.title}
+            </h1>
+            <p style={{fontSize:20,color:isDark?C.muted:"#4a5568",fontWeight:500,lineHeight:1.4,marginBottom:20}}>
+              {HERO_SLIDES[heroSlide]?.subtitle}
+            </p>
+            <p style={{fontSize:16,color:isDark?C.dim:"#5a6b7a",lineHeight:1.7,maxWidth:480,margin:"0 auto"}}>
+              {HERO_SLIDES[heroSlide]?.body}
+            </p>
           </div>
 
-          {/* Right Column: Product Screenshot / Visual */}
-          <div style={{background:isDark?"#0e1121":"#f8f9fa",borderRadius:12,minHeight:400,
-            display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${isDark?"rgba(100,140,255,0.13)":"#e5e7eb"}`,
-            padding:32,overflow:"hidden"}}>
-            {HERO_SLIDES[heroSlide]?.imageSrc ? (
-              <img src={HERO_SLIDES[heroSlide].imageSrc} alt={HERO_SLIDES[heroSlide].title}
-                style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:8}}/>
-            ) : HERO_SLIDES[heroSlide]?.hasScreenshot ? (
-              <div style={{textAlign:"center",color:isDark?C.dim:"#9ca3af",fontSize:14}}>
-                <div style={{marginBottom:12,fontSize:48}}>📱</div>
-                {HERO_SLIDES[heroSlide]?.screenshotLabel}
-                <br/>
-                <span style={{fontSize:12,marginTop:8,display:"block",color:isDark?C.muted:"#6b7280"}}>
-                  (Real product screenshot will be displayed here)
-                </span>
-              </div>
+          {/* CTA Buttons */}
+          <div style={{display:"flex",gap:16,flexWrap:"wrap",justifyContent:"center"}}>
+            {HERO_SLIDES[heroSlide]?.isDemo ? (
+              <button onClick={scrollToDemo} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:8,
+                padding:"14px 32px",color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer",
+                fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s",
+                boxShadow:isDark?"0 4px 16px rgba(59,110,255,0.3)":"0 4px 12px rgba(0,85,212,0.25)"}}>
+                {HERO_SLIDES[heroSlide]?.cta}
+              </button>
             ) : (
-              <div style={{textAlign:"center",color:isDark?C.dim:"#9ca3af",fontSize:14}}>
-                <div style={{marginBottom:12,fontSize:48}}>✨</div>
-                Interactive demo preview
-              </div>
+              <>
+                <a href={`/blog/${HERO_SLIDES[heroSlide]?.blogSlug}`} style={{background:isDark?C.accent:"#0055d4",
+                  border:"none",borderRadius:8,padding:"14px 32px",color:"#fff",fontSize:15,fontWeight:600,
+                  cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s",display:"inline-block",
+                  textDecoration:"none",boxShadow:isDark?"0 4px 16px rgba(59,110,255,0.3)":"0 4px 12px rgba(0,85,212,0.25)"}}>
+                  {HERO_SLIDES[heroSlide]?.cta}
+                </a>
+                {HERO_SLIDES[heroSlide]?.ctaSecondary && (
+                  <button onClick={scrollToDemo} style={{background:"transparent",border:`1.5px solid ${isDark?C.accent:"#0055d4"}`,
+                    borderRadius:8,padding:"12px 30px",color:isDark?C.accent:"#0055d4",fontSize:15,fontWeight:600,
+                    cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>
+                    {HERO_SLIDES[heroSlide]?.ctaSecondary}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
