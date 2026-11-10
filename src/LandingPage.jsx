@@ -1,1382 +1,2649 @@
-import { useState, useEffect, useRef } from "react";
-import { supabase } from "./supabase.js";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-import { useTheme } from "./ThemeContext.jsx";
-import BrandLogo from "./BrandLogo.jsx";
-import SEO from "./SEO.jsx";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { HelmetProvider } from "react-helmet-async";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
+import { supabase } from './supabase.js'
+import { ThemeProvider } from './ThemeContext.jsx';
+import LandingPage from './LandingPage.jsx';
+import BlogPage from './BlogPage.jsx';
+import AboutPage from './AboutPage.jsx';
+import FAQPage from './FAQPage.jsx';
+import ContactPage from './ContactPage.jsx';
+import TermsOfService from './TermsOfService.jsx';
+import PrivacyPolicy from './PrivacyPolicy.jsx';
+import BrandLogo from './BrandLogo.jsx';
+// ── Fonts ────────────────────────────────────────────────────────────────────
+const fontLink = document.createElement("link");
+fontLink.rel = "stylesheet";
+fontLink.href = "https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap";
+document.head.appendChild(fontLink);
+ 
+// Force full-width before React mounts — setProperty is the only reliable way to
+// set !important inline styles, overriding any Vite/index.css max-width rule.
+(function forceFullWidth() {
+  const props = [
+    ['max-width','none'],['width','100%'],['margin','0'],['padding','0']
+  ];
+  [document.documentElement, document.body].forEach(el => {
+    props.forEach(([p,v]) => el.style.setProperty(p,v,'important'));
+  });
+  const root = document.getElementById('root');
+  if (root) props.forEach(([p,v]) => root.style.setProperty(p,v,'important'));
+  // Re-apply after every style mutation (catches Vite HMR re-injections)
+  new MutationObserver(() => {
+    const r = document.getElementById('root');
+    if (r) props.forEach(([p,v]) => r.style.setProperty(p,v,'important'));
+  }).observe(document.head, {childList:true, subtree:true});
+})();
 
-// ── Brand tokens (mirrors DARK theme) ────────────────────────────────────────
-const C = {
-  bg:"#050810", surface:"#0a0f1f", raised:"#101629",
-  border:"rgba(100,140,255,0.12)", text:"#e8ecf5",
-  muted:"#8896b0", dim:"#a0b4cc", accent:"#3b6eff",
-  success:"#3dab80", danger:"#c86060", warn:"#b8943a",
+const styleEl = document.createElement("style");
+styleEl.textContent = `
+  html, body { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; overflow-x: hidden; }
+  #root { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; }
+  
+  /* Modern sleek scrollbars */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { border-radius: 10px; background: rgba(100,140,255,0.18); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(100,140,255,0.35); }
+  
+  /* Kill default form element styling */
+  input, select, textarea {
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    border-radius: 10px !important;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: rgba(59,110,255,0.55) !important;
+    box-shadow: 0 0 0 3px rgba(59,110,255,0.12) !important;
+  }
+  
+  /* Smooth modern dropdowns — custom arrow */
+  select {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 11px center !important;
+    background-size: 14px !important;
+    padding-right: 36px !important;
+    cursor: pointer;
+  }
+  
+  /* Sleek buttons */
+  button {
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    -webkit-font-smoothing: antialiased;
+  }
+  button:hover { transform: translateY(-1px); filter: brightness(1.12); }
+  button:active { transform: translateY(0px); filter: brightness(0.96); }
+  
+  /* Card hover */
+  .session-row { transition: border-color 0.15s, box-shadow 0.15s; }
+  .session-row:hover { border-color: var(--bhov) !important; box-shadow: 0 4px 20px rgba(59,110,255,0.08); }
+  
+  /* Animations */
+  .fade-in { animation: fadeIn 0.22s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  @keyframes splashLogoIn { from { opacity:0; transform:translateY(12px) scale(0.97); } to { opacity:1; transform:none; } }
+  @keyframes splashGlow { from { opacity:0; transform:scale(0.8); } to { opacity:1; transform:scale(1.2); } }
+`;
+document.head.appendChild(styleEl);
+
+const LOGO_B64 = "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";
+const LOGO_SRC = `data:image/png;base64,${LOGO_B64}`;
+ 
+// ── Exam Modes ───────────────────────────────────────────────────────────────
+const MODES = {
+  USMLE: {
+    label:"USMLE",
+    subjects:["Cardiology","Pulmonology","Neurology","OB/GYN","GI","Renal","MSK","Derm","Heme/Onc","ID","Endo","Peds","Psych","Surgery","Biostats/Ethics","Other"],
+    qtypes:["Diagnosis","Management","Biostats/Ethics","Pathophysiology","Pharmacology"],
+  },
+  MCAT: {
+    label:"MCAT",
+    subjects:["C/P","CARS","B/B","Psych/Soc"],
+    qtypes:["Passage-based","Discrete","Research interpretation","Data analysis","Critical analysis"],
+  },
+  LSAT: {
+    label:"LSAT",
+    subjects:["Logical Reasoning","Analytical Reasoning","Reading Comprehension"],
+    qtypes:["Strengthen","Weaken","Assumption","Inference","Flaw","Parallel","Method","Main Point","Must Be True","Cannot Be True"],
+  },
 };
-const PIE_COLORS = ["#3b82f6","#10b981","#8b5cf6","#f59e0b","#ec4899","#06b6d4","#f97316"];
-// Taxonomy below mirrors MODES / QBANKS_MAP in App.jsx exactly so the demo matches the real app.
-const DEMO_SUBJECTS = {
-  USMLE:["Cardiology","Pulmonology","Neurology","OB/GYN","GI","Renal","MSK","Derm","Heme/Onc","ID","Endo","Peds","Psych","Surgery","Biostats/Ethics","Other"],
-  MCAT: ["C/P","CARS","B/B","Psych/Soc"],
-  LSAT: ["Logical Reasoning","Analytical Reasoning","Reading Comprehension"],
-};
-const DEMO_QTYPES = {
-  USMLE:["Diagnosis","Management","Biostats/Ethics","Pathophysiology","Pharmacology"],
-  MCAT:["Passage-based","Discrete","Research interpretation","Data analysis","Critical analysis"],
-  LSAT:["Strengthen","Weaken","Assumption","Inference","Flaw","Parallel","Method","Main Point","Must Be True","Cannot Be True"],
-};
-const DEMO_QBANKS = {
+ 
+const WRONG_REASONS   = ["Didn't know the material","Knew material, wrong algorithm","Ran out of time","Silly mistake / misread"];
+const CORRECT_REASONS = ["Right reasoning","Guessed","Flawed reasoning"];
+const ANSWER_CHANGES  = ["No change","Incorrect → Correct","Correct → Incorrect","Incorrect → Incorrect"];
+const QBANKS_MAP = {
   USMLE:["UWorld","Amboss","NBME","Free 120","UWise","Kaplan","Other"],
   MCAT: ["UWorld MCAT","Kaplan","Princeton Review","Blueprint","AAMC Official","Khan Academy","Other"],
   LSAT: ["7Sage","PowerScore","Princeton Review","Manhattan Prep","LSAC Official","Khan Academy","Other"],
 };
-const DEMO_TIMING = ["Under the limit","At the limit","Over the limit"];
-const DEMO_ANSWER_CHANGES = ["No change","Incorrect → Correct","Correct → Incorrect","Incorrect → Incorrect"];
-const WRONG_REASONS   = ["Didn't know the material","Knew material, wrong algorithm","Ran out of time","Silly mistake / misread"];
-const CORRECT_REASONS = ["Right reasoning","Guessed","Flawed reasoning"];
-const DEMO_LIMIT = 5;
-const FULL_STEPS = ["result","time","change","why","category","summary","anki","notes"];
-const FULL_STEP_LABELS = ["Correct or incorrect?","Time taken","Answer changed?","Why?","What was this about?","Question summary","Flashcard","Reflection & notes"];
-
-// ── Theme-aware gradient helper ───────────────────────────────────────────────
-function getHeroGradients(isDark) {
-  if (isDark) {
-    return {
-      slide1: "linear-gradient(135deg, rgba(59,110,255,0.15) 0%, rgba(16,185,129,0.1) 100%)",
-      slide2: "linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(59,110,255,0.1) 100%)",
-      slide3: "linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(236,72,153,0.1) 100%)",
-      slide4: "linear-gradient(135deg, rgba(6,182,212,0.15) 0%, rgba(59,110,255,0.1) 100%)",
-      slide5: "linear-gradient(135deg, rgba(59,110,255,0.15) 0%, rgba(139,92,246,0.1) 100%)",
-      colors: [
-        {primary:"rgba(59,110,255,0.3)", secondary:"rgba(16,185,129,0.25)"},
-        {primary:"rgba(139,92,246,0.3)", secondary:"rgba(59,110,255,0.25)"},
-        {primary:"rgba(245,158,11,0.3)", secondary:"rgba(236,72,153,0.25)"},
-        {primary:"rgba(6,182,212,0.3)", secondary:"rgba(59,110,255,0.25)"},
-        {primary:"rgba(59,110,255,0.3)", secondary:"rgba(139,92,246,0.25)"},
-      ]
-    };
-  } else {
-    // Light mode: Much stronger gradients for better visibility on light backgrounds
-    return {
-      slide1: "linear-gradient(135deg, rgba(0,85,212,0.28) 0%, rgba(34,197,94,0.22) 100%)",
-      slide2: "linear-gradient(135deg, rgba(147,51,234,0.28) 0%, rgba(0,85,212,0.22) 100%)",
-      slide3: "linear-gradient(135deg, rgba(217,119,6,0.28) 0%, rgba(190,24,93,0.22) 100%)",
-      slide4: "linear-gradient(135deg, rgba(6,182,212,0.28) 0%, rgba(0,85,212,0.22) 100%)",
-      slide5: "linear-gradient(135deg, rgba(0,85,212,0.28) 0%, rgba(147,51,234,0.22) 100%)",
-      colors: [
-        {primary:"rgba(0,85,212,0.5)", secondary:"rgba(34,197,94,0.45)"},
-        {primary:"rgba(147,51,234,0.5)", secondary:"rgba(0,85,212,0.45)"},
-        {primary:"rgba(217,119,6,0.5)", secondary:"rgba(190,24,93,0.45)"},
-        {primary:"rgba(6,182,212,0.5)", secondary:"rgba(0,85,212,0.45)"},
-        {primary:"rgba(0,85,212,0.5)", secondary:"rgba(147,51,234,0.45)"},
-      ]
-    };
-  }
-}
-
-// ── AdSense (public pages only) ───────────────────────────────────────────────
-function injectAdSense() {
-  if (document.querySelector('script[src*="adsbygoogle"]')) return;
-  const s = document.createElement("script");
-  s.async = true;
-  s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4179326594130154";
-  s.crossOrigin = "anonymous";
-  document.head.appendChild(s);
-}
-
-function AdUnit() {
+const CAR_SKILLS=[
+  {key:"mainIdea",label:"Main Idea",desc:"Author's central point in one sentence",placeholder:"The author argues that..."},
+  {key:"tone",label:"Tone",desc:"Author's tone toward the subject",placeholder:"e.g. Skeptical, supportive, neutral, critical, mixed..."},
+  {key:"arguments",label:"Arguments",desc:"What was the author trying to prove?",placeholder:"The main argument is..."},
+  {key:"author",label:"The Author",desc:"Author's opinions, beliefs, and what they care about",placeholder:"The author believes... / The author is concerned about..."},
+  {key:"contrastingTheories",label:"Contrasting Theories",desc:"Any opposing views or alternative frameworks presented",placeholder:"None / Yes — Theory A argues X vs Theory B which argues Y..."},
+  {key:"inference",label:"Inference / Logic",desc:"Questions that required a leap beyond the passage",placeholder:"No traps / Yes — Q3 required outside knowledge..."},
+];
+const RC_WRONG_REASONS=["Misread the passage","Got the tone wrong","Confused contrasting theories","Made too big an inference","Ran out of time","Misidentified the main idea","Ignored the author's perspective","Outside knowledge crept in"];
+ 
+const pct = (c,t) => t ? Math.round((c/t)*100) : 0;
+ 
+// ── Themes ───────────────────────────────────────────────────────────────────
+const COLORS = ['#5b8fbd', '#8272c2', '#4da6a0', '#9668b2'];
+const DARK = {
+  bg:"#07090f", surface:"#0e1121", raised:"#141829",
+  border:"rgba(100,140,255,0.13)", borderHov:"rgba(100,140,255,0.26)",
+  text:"#dce8ff", muted:"#8896b0", dim:"#a0b4cc",
+  accent:"#3b6eff", accentGlow:"rgba(59,110,255,0.18)",
+  success:"#3dab80", danger:"#c86060", warn:"#b8943a", gold:"#a88e50",
+  scoreColor:(p)=>p>=75?"#3dab80":p>=60?"#b8943a":"#c86060",
+  name:"dark",
+};
+const LIGHT = {
+  bg:"#f4f6fb", surface:"#ffffff", raised:"#eef1f8",
+  border:"rgba(0,0,0,0.09)", borderHov:"rgba(0,0,0,0.18)",
+  text:"#0a0d1a", muted:"#64748b", dim:"#374151",
+  accent:"#0055d4", accentGlow:"rgba(0,85,212,0.10)",
+  success:"#2a8a60", danger:"#a84848", warn:"#9a7828", gold:"#8a7020",
+  scoreColor:(p)=>p>=75?"#2a8a60":p>=60?"#9a7828":"#a84848",
+  name:"light",
+};
+ 
+const subjColors = {
+  Cardiology:"#3b82f6",  Pulmonology:"#06b6d4",  Neurology:"#8b5cf6",  "OB/GYN":"#ec4899",
+  GI:"#f59e0b",          Renal:"#10b981",          MSK:"#84cc16",          Derm:"#f97316",
+  "Heme/Onc":"#ef4444", ID:"#14b8a6",             Endo:"#a78bfa",         Peds:"#fb923c",
+  Psych:"#c084fc",       Surgery:"#6366f1",        "Biostats/Ethics":"#64748b", Other:"#94a3b8",
+  "C/P":"#3b82f6","CARS":"#10b981","B/B":"#8b5cf6","Psych/Soc":"#ec4899",
+  "Logical Reasoning":"#f59e0b","Analytical Reasoning":"#06b6d4","Reading Comprehension":"#6366f1",
+};
+ 
+// ── AdBanner ─────────────────────────────────────────────────────────────────
+function AdBanner({ style = {} }) {
   useEffect(() => {
-    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch(e) {}
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {}
   }, []);
   return (
-    <div style={{width:"100%",overflow:"hidden",margin:"40px 0"}}>
-      <ins className="adsbygoogle" style={{display:"block"}}
+    <div style={{ width: "100%", overflow: "hidden", ...style }}>
+      <ins
+        className="adsbygoogle"
+        style={{ display: "block" }}
         data-ad-client="ca-pub-4179326594130154"
-        data-ad-format="auto" data-full-width-responsive="true"/>
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
     </div>
   );
 }
 
-// ── Interactive Demo ──────────────────────────────────────────────────────────
-function LegacyInteractiveDemo() {
-  const [exam, setExam]           = useState("USMLE");
-  const [questions, setQuestions] = useState([]);
-  const [result, setResult]       = useState("");
-  const [subject, setSubject]     = useState("");
-  const [showSave, setShowSave]   = useState(false);
-  const [email, setEmail]         = useState("");
-  const [pass, setPass]           = useState("");
-  const [linkStatus, setLinkStatus] = useState("idle"); // idle | working | done | error
-
+// ── Splash Screen ─────────────────────────────────────────────────────────────
+function SplashScreen({ dark, onDone }) {
+  const [phase, setPhase] = useState("in");
+  // in → glow → out
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) supabase.auth.signInAnonymously().catch(() => {});
-    });
+    const t1 = setTimeout(() => setPhase("glow"), 800);
+    const t2 = setTimeout(() => setPhase("out"),  1800);
+    const t3 = setTimeout(() => onDone(),          2500);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, []);
-
-  const addQuestion = () => {
-    if (!result || !subject) return;
-    setQuestions(prev => [...prev, {
-      id: Date.now(), result, subject, exam,
-      date: new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"}),
-    }]);
-    setResult(""); setSubject("");
-  };
-
-  const linkAccount = async () => {
-    if (!email || !pass) return;
-    setLinkStatus("working");
-    const { error } = await supabase.auth.updateUser({ email, password: pass });
-    if (error) {
-      // anonymous user — try upgrading with signUp which merges the session
-      const { error: e2 } = await supabase.auth.signUp({ email, password: pass });
-      setLinkStatus(e2 ? "error" : "done");
-    } else {
-      setLinkStatus("done");
-    }
-  };
-
-  const correct  = questions.filter(q => q.result === "correct").length;
-  const score    = questions.length ? Math.round((correct / questions.length) * 100) : 0;
-  const bySubj   = {};
-  questions.forEach(q => { bySubj[q.subject] = (bySubj[q.subject] || 0) + 1; });
-  const pieData  = Object.entries(bySubj).map(([name, value]) => ({ name, value }));
-  const isDone   = questions.length >= DEMO_LIMIT;
-
-  const btn = (active, danger) => ({
-    flex:1, background: active ? (danger ? C.danger+"22" : C.success+"22") : C.raised,
-    border: `1px solid ${active ? (danger ? C.danger : C.success) : C.border}`,
-    color: active ? (danger ? C.danger : C.success) : C.dim,
-    borderRadius:8, padding:"10px", fontSize:13, cursor:"pointer",
-    fontFamily:"'DM Sans',sans-serif", fontWeight: active ? 600 : 400, transition:"all 0.15s",
-  });
-
+ 
+  const bg = dark ? "#07090f" : "#f4f6fb";
+  const glowColor = "rgba(255,255,0,0.8)";
+ 
   return (
-    <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,padding:"28px 24px",maxWidth:620,margin:"0 auto"}}>
-      {/* Exam selector */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
-        <div>
-          <div style={{fontSize:17,fontWeight:700,color:C.text}}>Live Demo — no account needed</div>
-          <div style={{fontSize:12,color:C.muted,marginTop:3}}>Log up to {DEMO_LIMIT} questions and watch your analytics build live.</div>
-        </div>
-        <div style={{display:"flex",gap:6}}>
-          {["USMLE","MCAT","LSAT"].map(e => (
-            <button key={e} onClick={() => {setExam(e);setSubject("");}}
-              style={{background:exam===e?C.accent:C.raised,border:`1px solid ${exam===e?C.accent:C.border}`,
-                borderRadius:7,padding:"5px 12px",color:exam===e?"#fff":C.dim,fontSize:12,
-                fontWeight:exam===e?600:400,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-              {e}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Input area */}
-      {!isDone ? (
-        <div style={{marginBottom:22}}>
-          <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:8}}>
-            Question {questions.length + 1} of {DEMO_LIMIT} — result?
-          </div>
-          <div style={{display:"flex",gap:10,marginBottom:14}}>
-            <button onClick={() => setResult("correct")} style={btn(result==="correct",false)}>✓ Correct</button>
-            <button onClick={() => setResult("incorrect")} style={btn(result==="incorrect",true)}>✗ Incorrect</button>
-          </div>
-          <div style={{fontSize:10,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:8}}>Subject</div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
-            {DEMO_SUBJECTS[exam].map(s => (
-              <button key={s} onClick={() => setSubject(s)}
-                style={{background:subject===s?C.accent+"22":C.raised,border:`1px solid ${subject===s?C.accent+"60":C.border}`,
-                  borderRadius:7,padding:"5px 12px",color:subject===s?C.accent:C.dim,fontSize:11,
-                  cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all 0.15s"}}>
-                {s}
-              </button>
-            ))}
-          </div>
-          <button onClick={addQuestion} disabled={!result || !subject}
-            style={{width:"100%",background:result&&subject?C.accent:C.raised,border:`1px solid ${result&&subject?C.accent:C.border}`,
-              borderRadius:8,padding:"11px",color:result&&subject?"#fff":C.muted,fontSize:14,
-              fontWeight:600,cursor:result&&subject?"pointer":"not-allowed",opacity:result&&subject?1:0.5,
-              fontFamily:"'DM Sans',sans-serif"}}>
-            Log Question →
-          </button>
-        </div>
-      ) : (
-        <div style={{background:C.accent+"14",border:`1px solid ${C.accent}30`,borderRadius:10,padding:"14px",marginBottom:20,textAlign:"center"}}>
-          <div style={{fontSize:14,fontWeight:600,color:C.accent,marginBottom:4}}>Demo complete 🎯</div>
-          <div style={{fontSize:12,color:C.muted}}>Create a free account to log unlimited sessions, Anki export, and full analytics.</div>
-        </div>
+    <div style={{
+      position:"fixed", inset:0, background:bg,
+      display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999,
+      opacity: phase === "out" ? 0 : 1,
+      transition: phase === "out" ? "opacity 0.7s ease" : "none",
+    }}>
+      {/* Glow effect — highlighter-yellow rectangle sized to sit within the ladder mark between VIMA and VIMA */}
+      {phase === "glow" && (
+        <div style={{
+          position:"absolute",
+          width:50, height:50,
+          background:`radial-gradient(circle, #ffffff 0%, #ffff33 30%, ${glowColor} 60%, transparent 85%)`,
+          borderRadius:4,
+          animation:"splashGlow 1.2s ease-in-out",
+          pointerEvents:"none",
+          filter:"blur(2px)",
+          zIndex:0,
+        }}/>
       )}
-
-      {/* Analytics */}
-      {questions.length > 0 && (
-        <div>
-          <div style={{display:"flex",gap:10,marginBottom:16}}>
-            {[
-              {l:"Questions",v:questions.length,c:C.text},
-              {l:"Score",v:`${score}%`,c:score>=75?C.success:score>=60?C.warn:C.danger},
-              {l:"Correct",v:correct,c:C.success},
-            ].map(s => (
-              <div key={s.l} style={{flex:1,background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,padding:"12px 14px"}}>
-                <div style={{fontSize:9,color:C.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:4}}>{s.l}</div>
-                <div style={{fontSize:22,fontWeight:700,color:s.c}}>{s.v}</div>
-              </div>
-            ))}
-          </div>
-          {pieData.length > 0 && (
-            <>
-              <div style={{height:140,marginBottom:10}}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" outerRadius={62} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
-                      {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]}/>)}
-                    </Pie>
-                    <Tooltip contentStyle={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,fontSize:11,color:C.text}}
-                      formatter={(v) => [`${v} Q`, ""]}/>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:16}}>
-                {pieData.map((d, i) => (
-                  <div key={d.name} style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{width:8,height:8,borderRadius:2,background:PIE_COLORS[i%PIE_COLORS.length],flexShrink:0}}/>
-                    <span style={{fontSize:12,color:C.dim,flex:1}}>{d.name}</span>
-                    <span style={{fontSize:12,fontWeight:700,color:PIE_COLORS[i%PIE_COLORS.length]}}>{d.value} Q</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Save prompt */}
-          {questions.length >= 2 && (
-            <div style={{borderTop:`1px solid ${C.border}`,paddingTop:16}}>
-              {!showSave ? (
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-                  <span style={{fontSize:12,color:C.muted}}>Save your data &amp; unlock the full platform</span>
-                  <button onClick={() => setShowSave(true)}
-                    style={{background:C.accent,border:"none",borderRadius:8,padding:"8px 18px",color:"#fff",
-                      fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-                    Save Free →
-                  </button>
-                </div>
-              ) : linkStatus === "done" ? (
-                <div style={{textAlign:"center",color:C.success,fontSize:13,fontWeight:600}}>
-                  ✓ Account created! Check your email, then{" "}
-                  <a href="/app" style={{color:C.accent}}>open the full app →</a>
-                </div>
-              ) : (
-                <div>
-                  <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:10}}>Create your free account — your demo data carries over</div>
-                  {["email","password"].map((t, i) => (
-                    <input key={t} type={t} placeholder={t === "email" ? "you@email.com" : "Create password"}
-                      value={i===0?email:pass} onChange={e => i===0?setEmail(e.target.value):setPass(e.target.value)}
-                      style={{width:"100%",boxSizing:"border-box",background:C.raised,border:`1px solid ${C.border}`,
-                        borderRadius:8,padding:"9px 14px",color:C.text,fontSize:13,fontFamily:"'DM Sans',sans-serif",
-                        outline:"none",marginBottom:8}}/>
-                  ))}
-                  {linkStatus==="error" && <div style={{color:C.danger,fontSize:12,marginBottom:8}}>Something went wrong — try again.</div>}
-                  <button onClick={linkAccount} disabled={!email||!pass||linkStatus==="working"}
-                    style={{width:"100%",background:C.accent,border:"none",borderRadius:8,padding:"10px",color:"#fff",
-                      fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",
-                      opacity:!email||!pass?0.6:1}}>
-                    {linkStatus==="working" ? "Creating account…" : "Create Free Account →"}
-                  </button>
-                  <div style={{textAlign:"center",marginTop:8,fontSize:12,color:C.muted}}>
-                    Already have an account?{" "}<a href="/app" style={{color:C.accent}}>Sign in</a>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      <VimaLogo
+        dark={dark}
+        width={400}
+        style={{
+          maxWidth: "72vw",
+          opacity: phase === "in" ? 0 : 1,
+          animation: phase === "in" ? "splashLogoIn 0.6s ease forwards" : "none",
+          position:"relative",
+          zIndex:1,
+        }}
+      />
     </div>
   );
 }
-
-function DemoLbl({children,T}){
-  return <div style={{fontSize:10,color:T.muted,letterSpacing:"0.9px",textTransform:"uppercase",marginBottom:6}}>{children}</div>;
+ 
+// ── Logo component (header) ───────────────────────────────────────────────────
+function VimaLogo({ dark, height = 28, width, style = {} }) {
+  return (
+    <BrandLogo
+      alt="VIMA VIMA"
+      dark={dark}
+      height={height}
+      width={width}
+      fallbackSrc={LOGO_SRC}
+      style={style}
+    />
+  );
 }
-function DemoInp({T,style={},textarea=false,...props}){
-  const s={width:"100%",boxSizing:"border-box",background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"10px 14px",color:T.text,fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",...style};
+ // ── Excel Export ──────────────────────────────────────────────────────────────
+async function exportExcel(session) {
+  // Build CSV-style data and create a styled HTML table that Excel can open
+  const qs = session.questions;
+  const total = qs.length;
+  const correct = qs.filter(q=>q.result==="correct").length;
+  const score = total ? Math.round((correct/total)*100) : 0;
+
+  // We'll generate an HTML file that Excel reads with nice formatting
+  const green = "#D6F5E3"; const red = "#FDE8E8"; const amber = "#FEF3C7";
+  const navy = "#0D1020"; const gold = "#C9A84C"; const white = "#FFFFFF";
+  const midGray = "#3A3F52"; const lightBg = "#F4F6FA"; const subBlue = "#DBEAFE";
+
+  const scoreColor = score>=75?"#145C32":score>=60?"#78350F":"#8B1A1A";
+  const scoreBg = score>=75?green:score>=60?amber:red;
+
+  const changeStyle = (c) => {
+    if(c==="Incorrect → Correct") return `background:${green};color:#145C32;font-weight:bold`;
+    if(c==="Correct → Incorrect") return `background:${red};color:#8B1A1A;font-weight:bold`;
+    if(c==="Incorrect → Incorrect") return `background:${amber};color:#78350F;font-weight:bold`;
+    return `background:${lightBg};color:#374151`;
+  };
+
+  const rows = qs.map((q,i) => {
+    const isC = q.result==="correct";
+    const why = isC ? (q.correctReason||"") : (q.wrongReason||"");
+    const change = q.answerChange || "No change";
+    return `
+    <tr style="height:22px">
+      <td style="background:${midGray};color:${white};font-weight:bold;text-align:center;border:1px solid #555">${i+1}</td>
+      <td style="background:${isC?green:red};color:${isC?"#145C32":"#8B1A1A"};font-weight:bold;text-align:center;border:1px solid #ccc">${isC?"✓  Correct":"✗  Incorrect"}</td>
+      <td style="background:${i%2===0?white:lightBg};border:1px solid #e5e7eb">${q.date||""}</td>
+      <td style="background:${subBlue};color:#1E40AF;font-weight:bold;border:1px solid #bfdbfe">${q.subject||""}</td>
+      <td style="background:${i%2===0?white:lightBg};border:1px solid #e5e7eb">${q.qtype||""}</td>
+      <td style="background:${i%2===0?white:lightBg};border:1px solid #e5e7eb">${q.concept||""}</td>
+      <td style="background:${isC?"#F0FFF4":"#FFF5F5"};color:${isC?"#145C32":"#8B1A1A"};border:1px solid #e5e7eb">${why}</td>
+      <td style="background:${i%2===0?white:lightBg};border:1px solid #e5e7eb">${q.time||""}</td>
+      <td style="${changeStyle(change)};border:1px solid #e5e7eb;text-align:center">${change}</td>
+      <td style="background:${i%2===0?white:lightBg};border:1px solid #e5e7eb">${q.qbank||""}</td>
+      <td style="background:${i%2===0?white:lightBg};border:1px solid #e5e7eb">${q.resource||""}</td>
+      <td style="background:${i%2===0?white:lightBg};border:1px solid #e5e7eb">${q.notes||""}</td>
+    </tr>`;
+  }).join("");
+
+  // Subject breakdown
+  const bySubj = {};
+  qs.forEach(q=>{
+    const s=q.subject||"Other";
+    if(!bySubj[s])bySubj[s]={c:0,t:0};
+    bySubj[s].t++;
+    if(q.result==="correct")bySubj[s].c++;
+  });
+  const subjRows = Object.entries(bySubj).map(([s,d])=>{
+    const p=d.t?Math.round((d.c/d.t)*100):0;
+    const bg=p>=75?green:p>=60?amber:red;
+    const fg=p>=75?"#145C32":p>=60?"#78350F":"#8B1A1A";
+    return `<tr style="height:20px">
+      <td style="background:${bg};border:1px solid #ccc;padding:4px 8px">${s}</td>
+      <td style="background:${bg};text-align:center;border:1px solid #ccc;padding:4px">${d.t}</td>
+      <td style="background:${bg};text-align:center;border:1px solid #ccc;padding:4px">${d.c}</td>
+      <td style="background:${bg};text-align:center;border:1px solid #ccc;padding:4px">${d.t-d.c}</td>
+      <td style="background:${bg};color:${fg};font-weight:bold;text-align:center;border:1px solid #ccc;padding:4px">${p}%</td>
+    </tr>`;
+  }).join("");
+
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<style>
+  body { font-family: Arial, sans-serif; font-size: 10pt; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { padding: 5px 8px; font-size: 10pt; }
+  .title-row td { font-size: 14pt; font-weight: bold; color: ${white}; background: ${navy}; text-align: center; height: 36px; }
+  .sub-row td { font-size: 9pt; color: ${gold}; background: ${midGray}; text-align: center; height: 20px; font-style: italic; }
+  .stat-label { background: ${midGray}; color: ${white}; font-weight: bold; padding: 6px 12px; }
+  .stat-val { background: #F5E6BE; color: ${navy}; font-weight: bold; text-align: center; padding: 6px 10px; }
+  .score-val { background: ${scoreBg}; color: ${scoreColor}; font-weight: bold; text-align: center; font-size: 13pt; }
+</style>
+</head><body>
+
+<table>
+<tr class="title-row"><td colspan="12">VIMA VIMA &nbsp;·&nbsp; ${session.name}</td></tr>
+<tr class="sub-row"><td colspan="12">Session Export &nbsp;·&nbsp; ${total} Questions &nbsp;·&nbsp; Score: ${score}%</td></tr>
+<tr style="height:8px"><td colspan="12"></td></tr>
+<tr style="background:${midGray};color:${white};font-weight:bold;height:28px;font-size:10pt">
+  <th style="border:1px solid #555;width:30px">#</th>
+  <th style="border:1px solid #555;width:90px">Result</th>
+  <th style="border:1px solid #555;width:80px">Date</th>
+  <th style="border:1px solid #555;width:110px">Subject</th>
+  <th style="border:1px solid #555;width:110px">Q Type</th>
+  <th style="border:1px solid #555;width:180px">Concept</th>
+  <th style="border:1px solid #555;width:180px">Why Wrong / Why Correct</th>
+  <th style="border:1px solid #555;width:110px">Time</th>
+  <th style="border:1px solid #555;width:140px">Answer Change</th>
+  <th style="border:1px solid #555;width:90px">QBank</th>
+  <th style="border:1px solid #555;width:130px">Resource</th>
+  <th style="border:1px solid #555;width:180px">Notes</th>
+</tr>
+${rows}
+</table>
+
+<br/><br/>
+
+<table style="width:400px">
+<tr class="title-row"><td colspan="2">Summary Statistics</td></tr>
+<tr><td class="stat-label">Total Questions</td><td class="stat-val">${total}</td></tr>
+<tr><td class="stat-label">Correct</td><td class="stat-val" style="color:#145C32;background:#D6F5E3">${correct}</td></tr>
+<tr><td class="stat-label">Incorrect</td><td class="stat-val" style="color:#8B1A1A;background:#FDE8E8">${total-correct}</td></tr>
+<tr><td class="stat-label">Score</td><td class="score-val">${score}%</td></tr>
+</table>
+
+<br/>
+
+<table style="width:500px">
+<tr class="title-row"><td colspan="5">Performance by Subject</td></tr>
+<tr style="background:${midGray};color:${white};font-weight:bold;height:24px">
+  <th style="border:1px solid #555;padding:5px 8px">Subject</th>
+  <th style="border:1px solid #555;text-align:center">Total</th>
+  <th style="border:1px solid #555;text-align:center">Correct</th>
+  <th style="border:1px solid #555;text-align:center">Incorrect</th>
+  <th style="border:1px solid #555;text-align:center">Score</th>
+</tr>
+${subjRows}
+</table>
+
+</body></html>`;
+
+  const blob = new Blob([html], { type:"application/vnd.ms-excel;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${session.name.replace(/\s+/g,"_")}_VIMAVIMAexport.xls`;
+  a.click();
+}
+
+
+// ── Shared UI ─────────────────────────────────────────────────────────────────
+function Card({children,style={},onClick,T}){
+  return <div className={onClick?"session-row":""} onClick={onClick} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,transition:"border-color 0.15s",cursor:onClick?"pointer":undefined,"--bhov":T.borderHov,...style}}>{children}</div>;
+}
+function Pill({label,color}){
+  return <span style={{background:(color||"#6b7280")+"18",color:color||"#94a3b8",border:`1px solid ${(color||"#6b7280")}28`,borderRadius:6,padding:"2px 9px",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{label}</span>;
+}
+function ResultBadge({result,T}){
+  const ok=result==="correct";
+  return <span style={{background:ok?T.success+"22":T.danger+"22",color:ok?T.success:T.danger,border:`1px solid ${ok?T.success:T.danger}28`,borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{ok?"✓  Correct":"✗  Incorrect"}</span>;
+}
+function StatCard({label,value,sub,color,T}){
+  return <Card T={T} style={{padding:"20px 22px"}}>
+    <div style={{fontSize:10,color:T.muted,letterSpacing:"0.9px",textTransform:"uppercase",marginBottom:10}}>{label}</div>
+    <div style={{fontSize:32,fontWeight:700,color:color||T.text,lineHeight:1}}>{value}</div>
+    {sub&&<div style={{fontSize:12,color:T.muted,marginTop:6}}>{sub}</div>}
+  </Card>;
+}
+function TabBar({tabs,active,onChange,T,style={}}){
+  return <div style={{display:"flex",borderBottom:`1px solid ${T.border}`,overflowX:"auto",...style}}>
+    {tabs.map(([id,label])=>(
+      <button key={id} onClick={()=>onChange(id)} style={{background:"none",border:"none",borderBottom:active===id?`2px solid ${T.accent}`:"2px solid transparent",padding:"12px 20px",fontSize:13,fontWeight:active===id?600:400,color:active===id?T.text:T.muted,cursor:"pointer",whiteSpace:"nowrap",transition:"color 0.15s"}}>{label}</button>
+    ))}
+  </div>;
+}
+function Inp({T,style={},textarea=false,...props}){
+  const s={width:"100%",background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"10px 14px",color:T.text,fontSize:13,...style};
   return textarea?<textarea style={{...s,resize:"vertical"}} {...props}/>:<input style={s} {...props}/>;
 }
-function DemoSel({T,style={},children,...props}){
-  return <select style={{width:"100%",background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"10px 14px",color:T.text,fontSize:13,fontFamily:"'DM Sans',sans-serif",...style}} {...props}>{children}</select>;
+function Sel({T,style={},children,...props}){
+  return <select style={{width:"100%",background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"10px 14px",color:T.text,fontSize:13,...style}} {...props}>{children}</select>;
 }
-function DemoChoice({T,selected,onSelect,icon,title,sub,selBg}){
+function Lbl({children,T}){
+  return <div style={{fontSize:10,color:T.muted,letterSpacing:"0.9px",textTransform:"uppercase",marginBottom:6}}>{children}</div>;
+}
+function BarRow({label,p,T}){
+  return <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+    <div style={{fontSize:12,color:T.dim,width:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{label}</div>
+    <div style={{flex:1,height:6,background:T.raised,borderRadius:3,overflow:"hidden"}}>
+      <div style={{height:"100%",width:`${p}%`,background:T.scoreColor(p),borderRadius:3,transition:"width 0.5s ease"}}/>
+    </div>
+    <div style={{fontSize:12,color:T.muted,width:34,textAlign:"right"}}>{p}%</div>
+  </div>;
+}
+
+// ── Chart helpers (avoid IIFE pattern in JSX) ──────────────────────────────
+const REASON_COLORS = ["#a86060","#a89040","#b88860","#8272c2"];
+
+function WrongReasonDonut({byReason, T, size=140, inner=44, outer=62}) {
+  const entries = Object.entries(byReason);
+  if (entries.length === 0) return <div style={{textAlign:"center",color:T.muted,padding:"30px 0",fontSize:12}}>No incorrect answers yet.</div>;
+  const rd = entries.map(([name,value],i) => ({name,value,color:REASON_COLORS[i%REASON_COLORS.length]}));
   return (
-    <button onClick={onSelect} style={{width:"100%",background:selected?(selBg||T.accent+"18"):T.raised,border:`1px solid ${selected?T.accent+"60":T.border}`,borderRadius:12,padding:"14px 18px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",marginBottom:9,textAlign:"left",transition:"all 0.15s",fontFamily:"'DM Sans',sans-serif"}}>
-      <span style={{fontSize:20,width:26,textAlign:"center"}}>{icon}</span>
-      <div><div style={{fontSize:14,fontWeight:600,color:T.text}}>{title}</div>{sub&&<div style={{fontSize:11,color:T.muted,marginTop:2}}>{sub}</div>}</div>
-    </button>
+    <div style={{display:"flex",alignItems:"center",gap:20}}>
+      <div style={{width:size,height:size,flexShrink:0}}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={rd} cx="50%" cy="50%" innerRadius={inner} outerRadius={outer} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
+              {rd.map((e,i)=><Cell key={i} fill={e.color}/>)}
+            </Pie>
+            <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:12,color:T.text}}/>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div style={{flex:1,display:"flex",flexDirection:"column",gap:9}}>
+        {rd.map(({name,value,color})=>(
+          <div key={name} style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{width:8,height:8,borderRadius:2,background:color,flexShrink:0}}/>
+            <span style={{fontSize:11,color:T.dim,flex:1,lineHeight:1.3}}>{name}</span>
+            <span style={{fontSize:14,fontWeight:700,color}}>{value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
-// This is the exact 8-step review flow from the real app (App.jsx Wizard), reused here so the
-// public demo matches the authenticated product 1:1. Anki/Excel exports are gated to sign-in.
-function InteractiveDemo({ T }) {
-  const theme = T;
-  const [exam, setExam]             = useState("USMLE");
-  const [questions, setQuestions]   = useState([]);
-  const [step, setStep]             = useState(0);
-  const [justLogged, setJustLogged] = useState(false);
-  const [data, setData] = useState({result:"",time:"",answerChange:"",wrongReason:"",correctReason:"",subject:"",qtype:"",concept:"",qnum:"",qbank:"",ankiFront:"",ankiBack:"",summary:"",wrongAction:"",nextApproach:"",resource:"",notes:""});
-  const [showMatrix, setShowMatrix] = useState(false);
-  const [matrix, setMatrix]         = useState({mainIdea:"",tone:"",arguments:"",author:""});
+function SubjectPieChart({data, T}) {
+  const entries = Object.entries(data);
+  if (entries.length === 0) return <div style={{fontSize:12,color:T.muted}}>No data yet.</div>;
+  const _fc=['#5b8fbd','#8272c2','#4da6a0','#b878a0','#a89040','#40a8a0','#c86060','#40a878','#b88860','#8878c0'];
+  const pd = entries.map(([name,v],i) => ({name, value:v.t, correct:v.c, p:pct(v.c,v.t), color:subjColors[name]||_fc[i%_fc.length]}));
+  return (
+    <div style={{display:"flex",gap:16,alignItems:"flex-start"}}>
+      <div style={{width:130,height:130,flexShrink:0}}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={pd} cx="50%" cy="50%" outerRadius={58} paddingAngle={2} dataKey="value" startAngle={90} endAngle={450}>
+              {pd.map((e,i)=><Cell key={i} fill={e.color}/>)}
+            </Pie>
+            <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:11,color:T.text}}/>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div style={{flex:1,display:"flex",flexDirection:"column",gap:6,maxHeight:170,overflowY:"auto"}}>
+        {pd.map(({name,p,color})=>(
+          <div key={name} style={{display:"flex",alignItems:"center",gap:7}}>
+            <div style={{width:7,height:7,borderRadius:2,background:color,flexShrink:0}}/>
+            <span style={{fontSize:11,color:T.dim,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</span>
+            <div style={{display:"flex",alignItems:"center",gap:5}}>
+              <div style={{width:44,height:4,background:T.raised,borderRadius:2,overflow:"hidden"}}>
+                <div style={{width:`${p}%`,height:"100%",background:T.scoreColor(p),borderRadius:2,transition:"width 0.5s ease"}}/>
+              </div>
+              <span style={{fontSize:11,fontWeight:700,color:T.scoreColor(p),width:30,textAlign:"right"}}>{p}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+// ── WIZARD ────────────────────────────────────────────────────────────────────
+const STEPS=["result","time","change","why","category","summary","anki","notes"];
+const STEP_LABELS=["Correct or incorrect?","Time taken","Answer changed?","Why?","What was this about?","Question summary","Flashcard","Reflection & notes"];
+
+function Wizard({onClose,onSave,mode,T,onSwitchToPassage}){
+  const [step,setStep]=useState(0);
+  const [data,setData]=useState({result:"",time:"",answerChange:"",wrongReason:"",correctReason:"",subject:"",qtype:"",concept:"",qnum:"",qbank:"",ankiFront:"",ankiBack:"",summary:"",wrongAction:"",nextApproach:"",resource:"",notes:""});
   const [aiText,setAiText]=useState(""); const [aiLoading,setAiLoading]=useState(false);
   const [aiAnki,setAiAnki]=useState(""); const [ankiLoading,setAnkiLoading]=useState(false);
   const [aiAnkiBack,setAiAnkiBack]=useState(""); const [ankiBackLoading,setAnkiBackLoading]=useState(false);
-  const [showSave, setShowSave]     = useState(false);
-  const [email, setEmail]           = useState("");
-  const [pass, setPass]             = useState("");
-  const [linkStatus, setLinkStatus] = useState("idle");
-  const [exportGate, setExportGate] = useState(null); // null | "anki" | "excel"
-  const analyticsRef = useRef(null);
+  const [submitted,setSubmitted]=useState(false);
+  const cfg=MODES[mode];
+  const set=(k,v)=>setData(d=>({...d,[k]:v}));
+  const next=()=>setStep(s=>Math.min(s+1,STEPS.length-1));
+  const back=()=>setStep(s=>Math.max(s-1,0));
+  const autoNext=(k,v)=>{set(k,v);setTimeout(next,160);};
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) supabase.auth.signInAnonymously().catch(() => {});
-    });
-  }, []);
-
-  // Keep localStorage in sync so demo questions carry over into the real account after sign-in,
-  // regardless of which button/link the user takes to get to /app.
-  useEffect(() => {
-    if (questions.length > 0) {
-      try { localStorage.setItem("vimavima_demo_carryover", JSON.stringify(questions)); } catch {}
-    }
-  }, [questions]);
-
-  const set = (k,v) => setData(d => ({...d,[k]:v}));
-  const next = () => setStep(s => Math.min(s+1, FULL_STEPS.length-1));
-  const back = () => setStep(s => Math.max(s-1, 0));
-  const autoNext = (k,v) => { set(k,v); setTimeout(next,160); };
-
-  const resetWizard = () => {
-    setData({result:"",time:"",answerChange:"",wrongReason:"",correctReason:"",subject:"",qtype:"",concept:"",qnum:"",qbank:"",ankiFront:"",ankiBack:"",summary:"",wrongAction:"",nextApproach:"",resource:"",notes:""});
-    setMatrix({mainIdea:"",tone:"",arguments:"",author:""});
-    setShowMatrix(false);
-    setStep(0);
-    setJustLogged(false);
-    setAiText(""); setAiAnki(""); setAiAnkiBack("");
-  };
-
-  useEffect(() => {
-    const s = FULL_STEPS[step];
-    if (s === "anki" && data.concept) {
-      const wrongCtx = data.wrongAction ? ` Student noted: "${data.wrongAction}".` : data.wrongReason ? ` Got it wrong because: ${data.wrongReason}.` : "";
-      const approachCtx = data.nextApproach ? ` Next time approach: "${data.nextApproach}".` : "";
-      if (!data.ankiFront) {
-        setAnkiLoading(true); setAiAnki("");
-        fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,messages:[{role:"user",content:`Create one concise Anki flashcard FRONT for a ${exam} question about "${data.concept}" (${data.qtype||""}, ${data.subject||""}).${wrongCtx}${approachCtx} Make it a conceptual cue testing the core mechanism, exam-vignette style. Max 20 words. Return ONLY the front text.`}]})})
+  useEffect(()=>{
+    const s=STEPS[step];
+    if(s==="anki"&&data.concept){
+      const wrongCtx=data.wrongAction?` Student noted: "${data.wrongAction}".`:data.wrongReason?` Got it wrong because: ${data.wrongReason}.`:"";
+      const approachCtx=data.nextApproach?` Next time approach: "${data.nextApproach}".`:"";
+      if(!data.ankiFront){
+        setAnkiLoading(true);setAiAnki("");
+        fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,messages:[{role:"user",content:`Create one concise Anki flashcard FRONT for a ${mode} question about "${data.concept}" (${data.qtype||""}, ${data.subject||""}).${wrongCtx}${approachCtx} Make it a conceptual cue testing the core mechanism, exam-vignette style. Max 20 words. Return ONLY the front text.`}]})})
         .then(r=>r.json()).then(j=>{setAiAnki(j.content?.find(b=>b.type==="text")?.text?.trim()||"");setAnkiLoading(false);}).catch(()=>setAnkiLoading(false));
       }
-      if (!data.ankiBack) {
-        setAnkiBackLoading(true); setAiAnkiBack("");
-        fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,messages:[{role:"user",content:`Create one concise Anki flashcard BACK (answer) for a ${exam} question about "${data.concept}" (${data.qtype||""}, ${data.subject||""}). Give the key fact, mechanism, diagnosis, or next step in 1-2 lines. Max 25 words. Return ONLY the answer text.`}]})})
+      if(!data.ankiBack){
+        setAnkiBackLoading(true);setAiAnkiBack("");
+        fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,messages:[{role:"user",content:`Create one concise Anki flashcard BACK (answer) for a ${mode} question about "${data.concept}" (${data.qtype||""}, ${data.subject||""}). Give the key fact, mechanism, diagnosis, or next step in 1-2 lines. Max 25 words. Return ONLY the answer text.`}]})})
         .then(r=>r.json()).then(j=>{setAiAnkiBack(j.content?.find(b=>b.type==="text")?.text?.trim()||"");setAnkiBackLoading(false);}).catch(()=>setAnkiBackLoading(false));
       }
     }
-    if (s === "notes") {
-      setAiLoading(true); setAiText("");
-      fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:700,messages:[{role:"user",content:`A ${exam} student just ${data.result==="correct"?`answered correctly (${data.correctReason})`:`got wrong (${data.wrongReason})`} a question on "${data.concept||data.subject}" (${data.qtype}, ${data.subject}). Give a 2-sentence clinical/exam insight. List 2 relevant references as "REF: [source] — [tip]". End with one short motivational line.`}]})})
+    if(s==="notes"){
+      setAiLoading(true);setAiText("");
+      fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:700,messages:[{role:"user",content:`A ${mode} student just ${data.result==="correct"?`answered correctly (${data.correctReason})`:`got wrong (${data.wrongReason})`} a question on "${data.concept||data.subject}" (${data.qtype}, ${data.subject}). Give a 2-sentence clinical/exam insight. List 2 relevant references as "REF: [source] — [tip]". End with one short motivational line.`}]})})
       .then(r=>r.json()).then(j=>{setAiText(j.content?.find(b=>b.type==="text")?.text||"");setAiLoading(false);}).catch(()=>setAiLoading(false));
     }
-  }, [step]);
+  },[step]);
 
-  const isDone = questions.length >= DEMO_LIMIT;
-
-  const finish = () => {
-    setQuestions(prev => [...prev, {
-      ...data, exam,
-      matrix: showMatrix ? matrix : null,
-      id: Date.now(),
-      date: new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"}),
-    }]);
-    setJustLogged(true);
-  };
-
-  const linkAccount = async () => {
-    if (!email || !pass) return;
-    setLinkStatus("working");
-    const { error } = await supabase.auth.updateUser({ email, password: pass });
-    if (error) {
-      const { error: e2 } = await supabase.auth.signUp({ email, password: pass });
-      setLinkStatus(e2 ? "error" : "done");
-    } else {
-      setLinkStatus("done");
-    }
-  };
-
-  const goToSignIn = () => { window.location.href = "/app"; };
-
-  const correct = questions.filter(q => q.result === "correct").length;
-  const score = questions.length ? Math.round((correct / questions.length) * 100) : 0;
-  const bySubj = {};
-  const wrongReasonsTally = {};
-  questions.forEach(q => {
-    if (q.subject) bySubj[q.subject] = (bySubj[q.subject] || 0) + 1;
-    if (q.result === "incorrect" && q.wrongReason) wrongReasonsTally[q.wrongReason] = (wrongReasonsTally[q.wrongReason] || 0) + 1;
-  });
-  const pieData = Object.entries(bySubj).map(([name, value]) => ({ name, value }));
-  const reasonData = Object.entries(wrongReasonsTally).map(([name, value]) => ({ name, value }));
-  const ankiReadyCount = questions.filter(q => q.ankiFront && q.ankiFront.trim() && q.ankiBack && q.ankiBack.trim()).length;
-
-  const s = FULL_STEPS[step];
-
-  return (
-    <div style={{background:theme.surface,border:`1px solid ${theme.border}`,borderRadius:16,padding:"28px 24px",maxWidth:760,margin:"0 auto"}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
-        <div>
-          <div style={{fontSize:17,fontWeight:700,color:theme.text}}>Live Demo — the real 8-step review flow</div>
-          <div style={{fontSize:12,color:theme.muted,marginTop:3}}>This is the exact question-logging wizard used inside the app. No account required to try it.</div>
-        </div>
-        <div style={{display:"flex",gap:6}}>
-          {["USMLE","MCAT","LSAT"].map(e => (
-            <button key={e} onClick={() => { setExam(e); resetWizard(); }}
-              style={{background:exam===e?theme.accent:theme.raised,border:`1px solid ${exam===e?theme.accent:theme.border}`,borderRadius:7,padding:"5px 12px",color:exam===e?"#fff":theme.dim,fontSize:12,fontWeight:exam===e?600:400,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-              {e}
-            </button>
-          ))}
+  const finish=()=>{onSave({...data,id:Date.now(),date:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})});setSubmitted(true);};
+  const resetWizard=()=>{setData({result:"",time:"",answerChange:"",wrongReason:"",correctReason:"",subject:"",qtype:"",concept:"",qnum:"",qbank:"",ankiFront:"",ankiBack:"",summary:"",wrongAction:"",nextApproach:"",resource:"",notes:""});setStep(0);setSubmitted(false);setAiText("");setAiAnki("");setAiAnkiBack("");};
+  if(submitted) return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,padding:20}}>
+      <div className="fade-in" style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:18,width:"100%",maxWidth:420,padding:"44px 32px",textAlign:"center"}}>
+        <div style={{fontSize:52,marginBottom:14}}>✅</div>
+        <div style={{fontSize:21,fontWeight:700,color:T.text,marginBottom:8}}>Question Logged!</div>
+        <div style={{fontSize:13,color:T.muted,marginBottom:30}}>Great job reflecting on this one. Keep the momentum going.</div>
+        <div style={{display:"flex",gap:12,justifyContent:"center"}}>
+          <button onClick={resetWizard} style={{background:T.accent,border:"none",borderRadius:8,padding:"11px 24px",color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer"}}>Log Next Question →</button>
+          <button onClick={onClose} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"11px 20px",color:T.muted,fontSize:14,cursor:"pointer"}}>Done</button>
         </div>
       </div>
+    </div>
+  );
 
-      {isDone ? (
-        <div style={{background:theme.accent+"14",border:`1px solid ${theme.accent}30`,borderRadius:10,padding:"14px",marginBottom:20,textAlign:"center"}}>
-          <div style={{fontSize:14,fontWeight:600,color:theme.accent,marginBottom:4}}>Demo complete 🎯</div>
-          <div style={{fontSize:12,color:theme.muted}}>You just ran the full review cycle {DEMO_LIMIT} times. Create a free account to log unlimited sessions and unlock real exports.</div>
+  const Choice=({selected,onSelect,icon,title,sub,selBg})=>(
+    <button onClick={onSelect} style={{width:"100%",background:selected?(selBg||T.accentGlow):T.raised,border:`1px solid ${selected?T.accent+"60":T.border}`,borderRadius:12,padding:"17px 20px",display:"flex",alignItems:"center",gap:16,cursor:"pointer",marginBottom:10,textAlign:"left",transition:"all 0.15s"}}>
+      <span style={{fontSize:22,width:30,textAlign:"center"}}>{icon}</span>
+      <div><div style={{fontSize:15,fontWeight:600,color:T.text}}>{title}</div>{sub&&<div style={{fontSize:12,color:T.muted,marginTop:2}}>{sub}</div>}</div>
+    </button>
+  );
+
+  const s=STEPS[step];
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,padding:20}}>
+      <div className="fade-in" style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:18,width:"100%",maxWidth:520,maxHeight:"92vh",overflowY:"auto",display:"flex",flexDirection:"column"}}>
+        <div style={{padding:"20px 24px 14px",borderBottom:`1px solid ${T.border}`,position:"sticky",top:0,background:T.surface,zIndex:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+            <div><div style={{fontSize:15,fontWeight:600,color:T.text}}>Log Question</div><div style={{fontSize:12,color:T.muted,marginTop:2}}>{STEP_LABELS[step]}</div></div>
+            <button onClick={onClose} style={{background:"none",border:"none",color:T.muted,fontSize:20,cursor:"pointer",lineHeight:1}}>×</button>
+          </div>
+          <div style={{display:"flex",gap:4}}>
+            {STEPS.map((_,i)=><div key={i} style={{flex:1,height:4,borderRadius:2,background:i<=step?T.accent:T.raised,transition:"background 0.25s"}}/>)}
+          </div>
+          <div style={{fontSize:11,color:T.muted,textAlign:"center",marginTop:5}}>{step+1} of {STEPS.length}</div>
         </div>
-      ) : justLogged ? (
-        <div style={{background:theme.success+"14",border:`1px solid ${theme.success}30`,borderRadius:10,padding:"18px",marginBottom:20,textAlign:"center"}}>
-          <div style={{fontSize:28,marginBottom:8}}>✅</div>
-          <div style={{fontSize:15,fontWeight:700,color:theme.text,marginBottom:6}}>Question logged!</div>
-          <div style={{fontSize:12,color:theme.muted,marginBottom:14}}>Your analytics below just updated.</div>
-          <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
-            <button onClick={resetWizard} style={{background:theme.accent,border:"none",borderRadius:8,padding:"9px 18px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Log Next Question →</button>
-            <button onClick={()=>{resetWizard();analyticsRef.current?.scrollIntoView({behavior:"smooth"});}} style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:8,padding:"9px 18px",color:theme.dim,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>View Analytics ↓</button>
-          </div>
-        </div>
-      ) : (
-        <div style={{marginBottom:22}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,alignItems:"center",gap:10}}>
-            <div style={{fontSize:10,color:theme.muted,letterSpacing:"0.8px",textTransform:"uppercase"}}>
-              Question {questions.length+1} of {DEMO_LIMIT} · Step {step+1} of {FULL_STEPS.length}
+        <div style={{padding:"24px",flex:1}}>
+          {s==="result"&&(<><div style={{textAlign:"center",marginBottom:26}}><div style={{fontSize:34,marginBottom:8}}>❓</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Did you get it right?</div><div style={{fontSize:13,color:T.muted}}>Be honest with yourself</div></div><Choice selected={data.result==="correct"} onSelect={()=>autoNext("result","correct")} icon="✅" title="Correct" sub="I picked the right answer" selBg={T.success+"18"}/><Choice selected={data.result==="incorrect"} onSelect={()=>autoNext("result","incorrect")} icon="❌" title="Incorrect" sub="I got it wrong" selBg={T.danger+"18"}/></>)}
+          {s==="time"&&(<><div style={{textAlign:"center",marginBottom:26}}><div style={{fontSize:34,marginBottom:8}}>🕐</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>How long did it take?</div><div style={{fontSize:13,color:T.muted}}>Relative to the question time limit</div></div><Choice selected={data.time==="Under the limit"} onSelect={()=>autoNext("time","Under the limit")} icon="⚡" title="Under the limit" sub="Finished with time to spare"/><Choice selected={data.time==="At the limit"} onSelect={()=>autoNext("time","At the limit")} icon="🕐" title="At the limit" sub="Used the full time allotted"/><Choice selected={data.time==="Over the limit"} onSelect={()=>autoNext("time","Over the limit")} icon="🚨" title="Over the limit" sub="Ran over time" selBg={T.danger+"18"}/></>)}
+          {s==="change"&&(<><div style={{textAlign:"center",marginBottom:26}}><div style={{fontSize:34,marginBottom:8}}>🔄</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Did you change your answer?</div><div style={{fontSize:13,color:T.muted}}>Track your second-guessing patterns</div></div>{ANSWER_CHANGES.map(c=><Choice key={c} selected={data.answerChange===c} onSelect={()=>autoNext("answerChange",c)} icon={c==="No change"?"➡️":c==="Incorrect → Correct"?"✅":c==="Correct → Incorrect"?"❌":"🔁"} title={c} selBg={c==="Incorrect → Correct"?T.success+"18":c==="Correct → Incorrect"?T.danger+"18":T.warn+"18"}/>)}</>)}
+          {s==="why"&&data.result==="correct"&&(<><div style={{textAlign:"center",marginBottom:26}}><div style={{fontSize:34,marginBottom:8}}>✅</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Why were you correct?</div><div style={{fontSize:13,color:T.muted}}>Understanding your wins matters too</div></div>{CORRECT_REASONS.map(r=><Choice key={r} selected={data.correctReason===r} onSelect={()=>autoNext("correctReason",r)} icon={r==="Right reasoning"?"🎯":r==="Guessed"?"🎲":"⚠️"} title={r}/>)}</>)}
+          {s==="why"&&data.result!=="correct"&&(<><div style={{textAlign:"center",marginBottom:26}}><div style={{fontSize:34,marginBottom:8}}>❌</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Why did you get it wrong?</div><div style={{fontSize:13,color:T.muted}}>Identify your weak points</div></div>{WRONG_REASONS.map(r=><Choice key={r} selected={data.wrongReason===r} onSelect={()=>autoNext("wrongReason",r)} icon={r==="Didn't know the material"?"📚":r==="Knew material, wrong algorithm"?"🧠":r==="Ran out of time"?"⏰":"😅"} title={r}/>)}</>)}
+          {s==="category"&&(<><div style={{textAlign:"center",marginBottom:22}}><div style={{fontSize:34,marginBottom:8}}>⚡</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>What was this about?</div><div style={{fontSize:13,color:T.muted}}>Categorize the question</div></div><div style={{display:"grid",gap:14}}><div><Lbl T={T}>Subject</Lbl><Sel T={T} value={data.subject} onChange={e=>set("subject",e.target.value)}><option value="">Select subject...</option>{cfg.subjects.map(s=><option key={s}>{s}</option>)}</Sel></div><div><Lbl T={T}>Question Type</Lbl><Sel T={T} value={data.qtype} onChange={e=>set("qtype",e.target.value)}><option value="">Select type...</option>{cfg.qtypes.map(t=><option key={t}>{t}</option>)}</Sel></div><div><Lbl T={T}>Concept Tested</Lbl><Inp T={T} placeholder="e.g. Giant cell arteritis..." value={data.concept} onChange={e=>set("concept",e.target.value)}/></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><Lbl T={T}>Question #</Lbl><Inp T={T} placeholder="Optional" value={data.qnum} onChange={e=>set("qnum",e.target.value)}/></div><div><Lbl T={T}>QBank</Lbl><Sel T={T} value={data.qbank} onChange={e=>set("qbank",e.target.value)}><option value="">Select...</option>{(QBANKS_MAP[mode]||QBANKS_MAP.USMLE).map(q=><option key={q}>{q}</option>)}</Sel></div></div></div>{(data.subject==="CARS"||data.subject==="Reading Comprehension")&&onSwitchToPassage&&(<div style={{marginTop:14,background:T.accent+"10",border:`1px solid ${T.accent}35`,borderRadius:10,padding:"12px 14px"}}><div style={{fontSize:11,fontWeight:600,color:T.accent,marginBottom:4}}>📖 Passage Analysis Mode available</div><div style={{fontSize:11,color:T.dim,marginBottom:8,lineHeight:1.5}}>This section uses the CAR Skills Matrix for deeper process diagnostics. Output is a process note, not a flashcard — because RC mistakes are reasoning failures, not knowledge gaps.</div><button onClick={onSwitchToPassage} style={{background:T.accent,border:"none",borderRadius:6,padding:"6px 14px",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>Switch to Passage Analysis →</button></div>)}</>)}
+          {s==="anki"&&(<>
+            <div style={{textAlign:"center",marginBottom:20}}>
+              <div style={{fontSize:34,marginBottom:8}}>⚡</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Flashcard</div>
+              <div style={{fontSize:13,color:T.muted}}>AI-generated card based on your reflection</div>
             </div>
-            <div style={{fontSize:11,color:theme.accent,fontWeight:600}}>{FULL_STEP_LABELS[step]}</div>
-          </div>
-          <div style={{display:"flex",gap:4,marginBottom:16}}>
-            {FULL_STEPS.map((_,i) => <div key={i} style={{flex:1,height:5,borderRadius:2,background:i<=step?theme.accent:theme.raised,transition:"background 0.2s"}}/>)}
-          </div>
 
-          {s === "result" && (<>
-            <div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:30,marginBottom:6}}>❓</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Did you get it right?</div></div>
-            <DemoChoice T={theme} selected={data.result==="correct"} onSelect={()=>autoNext("result","correct")} icon="✅" title="Correct" sub="I picked the right answer" selBg={theme.success+"18"}/>
-            <DemoChoice T={theme} selected={data.result==="incorrect"} onSelect={()=>autoNext("result","incorrect")} icon="❌" title="Incorrect" sub="I got it wrong" selBg={theme.danger+"18"}/>
-          </>)}
-
-          {s === "time" && (<>
-            <div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:30,marginBottom:6}}>🕐</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>How long did it take?</div></div>
-            <DemoChoice T={theme} selected={data.time==="Under the limit"} onSelect={()=>autoNext("time","Under the limit")} icon="⚡" title="Under the limit"/>
-            <DemoChoice T={theme} selected={data.time==="At the limit"} onSelect={()=>autoNext("time","At the limit")} icon="🕐" title="At the limit"/>
-            <DemoChoice T={theme} selected={data.time==="Over the limit"} onSelect={()=>autoNext("time","Over the limit")} icon="🚨" title="Over the limit" selBg={theme.danger+"18"}/>
-          </>)}
-
-          {s === "change" && (<>
-            <div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:30,marginBottom:6}}>🔄</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Did you change your answer?</div></div>
-            {DEMO_ANSWER_CHANGES.map(c => (
-              <DemoChoice key={c} T={theme} selected={data.answerChange===c} onSelect={()=>autoNext("answerChange",c)}
-                icon={c==="No change"?"➡️":c==="Incorrect → Correct"?"✅":c==="Correct → Incorrect"?"❌":"🔁"} title={c}
-                selBg={c==="Incorrect → Correct"?theme.success+"18":c==="Correct → Incorrect"?theme.danger+"18":theme.warn+"18"}/>
-            ))}
-          </>)}
-
-          {s === "why" && data.result === "correct" && (<>
-            <div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:30,marginBottom:6}}>✅</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Why were you correct?</div></div>
-            {CORRECT_REASONS.map(r => <DemoChoice key={r} T={theme} selected={data.correctReason===r} onSelect={()=>autoNext("correctReason",r)} icon={r==="Right reasoning"?"🎯":r==="Guessed"?"🎲":"⚠️"} title={r}/>)}
-          </>)}
-          {s === "why" && data.result !== "correct" && (<>
-            <div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:30,marginBottom:6}}>❌</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Why did you get it wrong?</div></div>
-            {WRONG_REASONS.map(r => <DemoChoice key={r} T={theme} selected={data.wrongReason===r} onSelect={()=>autoNext("wrongReason",r)} icon={r==="Didn't know the material"?"📚":r==="Knew material, wrong algorithm"?"🧠":r==="Ran out of time"?"⏰":"😅"} title={r}/>)}
-          </>)}
-
-          {s === "category" && (<>
-            <div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:30,marginBottom:6}}>⚡</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>What was this about?</div></div>
-            <div style={{display:"grid",gap:12}}>
-              <div><DemoLbl T={theme}>Subject</DemoLbl><DemoSel T={theme} value={data.subject} onChange={e=>set("subject",e.target.value)}><option value="">Select subject...</option>{DEMO_SUBJECTS[exam].map(s=><option key={s}>{s}</option>)}</DemoSel></div>
-              <div><DemoLbl T={theme}>Question Type</DemoLbl><DemoSel T={theme} value={data.qtype} onChange={e=>set("qtype",e.target.value)}><option value="">Select type...</option>{DEMO_QTYPES[exam].map(t=><option key={t}>{t}</option>)}</DemoSel></div>
-              <div><DemoLbl T={theme}>Concept Tested</DemoLbl><DemoInp T={theme} placeholder="e.g. Giant cell arteritis..." value={data.concept} onChange={e=>set("concept",e.target.value)}/></div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <div><DemoLbl T={theme}>Question #</DemoLbl><DemoInp T={theme} placeholder="Optional" value={data.qnum} onChange={e=>set("qnum",e.target.value)}/></div>
-                <div><DemoLbl T={theme}>QBank</DemoLbl><DemoSel T={theme} value={data.qbank} onChange={e=>set("qbank",e.target.value)}><option value="">Select...</option>{DEMO_QBANKS[exam].map(q=><option key={q}>{q}</option>)}</DemoSel></div>
-              </div>
+            {/* FRONT */}
+            <Lbl T={T}>Front — Question / Cue</Lbl>
+            <Inp T={T} placeholder="e.g. 55M jaw claudication + vision loss → next step?" value={data.ankiFront} onChange={e=>set("ankiFront",e.target.value)} style={{marginBottom:8}}/>
+            <div style={{background:T.raised,border:"1px solid "+T.border,borderRadius:10,padding:"10px 14px",marginBottom:14}}>
+              <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:6}}>✨ AI SUGGESTED FRONT</div>
+              {ankiLoading?<div style={{color:T.muted,fontSize:12,fontStyle:"italic"}}>Generating suggestion...</div>
+              :aiAnki?<><div style={{fontSize:13,color:T.text,lineHeight:1.5,marginBottom:8}}>{aiAnki}</div><button onClick={()=>set("ankiFront",aiAnki)} style={{background:T.accent,border:"none",borderRadius:6,padding:"5px 12px",color:"#fff",fontSize:11,cursor:"pointer"}}>Use this →</button></>
+              :<div style={{fontSize:12,color:T.muted}}>Fill in concept on previous step for a suggestion.</div>}
             </div>
-            {(data.subject==="CARS"||data.subject==="Reading Comprehension") && (
-              <div style={{marginTop:14,background:theme.accent+"10",border:`1px solid ${theme.accent}35`,borderRadius:10,padding:"12px 14px"}}>
-                <div style={{fontSize:11,fontWeight:600,color:theme.accent,marginBottom:4}}>📖 Author's Blueprint available</div>
-                <div style={{fontSize:11,color:theme.dim,marginBottom:8,lineHeight:1.5}}>The real app uses a 6-skill passage matrix for CARS/RC. Add a quick version here:</div>
-                <button onClick={()=>setShowMatrix(!showMatrix)} style={{background:showMatrix?theme.accent:"transparent",border:`1.5px solid ${theme.accent}`,borderRadius:6,padding:"6px 14px",color:showMatrix?"#fff":theme.accent,fontSize:11,fontWeight:600,cursor:"pointer"}}>{showMatrix?"✓ Added":"+ Add Passage Analysis"}</button>
-                {showMatrix && (
-                  <div style={{marginTop:10,display:"grid",gap:8}}>
-                    {[{k:"mainIdea",ph:"Main idea in one sentence"},{k:"tone",ph:"Author's tone"},{k:"arguments",ph:"Key arguments"},{k:"author",ph:"Author's perspective"}].map(f=>(
-                      <DemoInp key={f.k} T={theme} placeholder={f.ph} value={matrix[f.k]} onChange={e=>setMatrix(m=>({...m,[f.k]:e.target.value}))}/>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </>)}
 
-          {s === "summary" && (<>
-            <div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:30,marginBottom:6}}>📄</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Question Summary</div></div>
-            <DemoLbl T={theme}>What was this question about?</DemoLbl>
-            <DemoInp T={theme} textarea placeholder="Describe the stem, answer choices, and core concept..." value={data.summary} onChange={e=>set("summary",e.target.value)} style={{height:80,marginBottom:12}}/>
+            {/* BACK */}
+            <Lbl T={T}>Back — Answer</Lbl>
+            <Inp T={T} placeholder="e.g. Giant cell arteritis → temporal artery biopsy" value={data.ankiBack} onChange={e=>set("ankiBack",e.target.value)} style={{marginBottom:8}}/>
+            <div style={{background:T.raised,border:"1px solid "+T.border,borderRadius:10,padding:"10px 14px",marginBottom:16}}>
+              <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:6}}>✨ AI SUGGESTED BACK</div>
+              {ankiBackLoading?<div style={{color:T.muted,fontSize:12,fontStyle:"italic"}}>Generating answer...</div>
+              :aiAnkiBack?<><div style={{fontSize:13,color:T.text,lineHeight:1.5,marginBottom:8}}>{aiAnkiBack}</div><button onClick={()=>set("ankiBack",aiAnkiBack)} style={{background:T.success,border:"none",borderRadius:6,padding:"5px 12px",color:"#fff",fontSize:11,cursor:"pointer"}}>Use this →</button></>
+              :<div style={{fontSize:12,color:T.muted}}>Fill in concept for an AI answer suggestion.</div>}
+            </div>
+
+            {/* Preview — both sides */}
+            {(data.ankiFront||data.ankiBack)&&(
+            <div style={{background:T.name==="dark"?"#0a1628":"#fff8e6",border:"1px solid "+(T.name==="dark"?"#c9a84c40":"#c9a84c60"),borderRadius:12,padding:"14px 16px"}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#c9a84c",letterSpacing:"1px",marginBottom:10}}>🃏 PREVIEW</div>
+              {/* front row */}
+              <div style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}>
+                <span style={{fontSize:9,color:T.muted,letterSpacing:"0.6px",textTransform:"uppercase",minWidth:38,paddingTop:2}}>Front</span>
+                <span style={{fontSize:13,fontWeight:600,color:T.name==="dark"?"#fde68a":T.text,lineHeight:1.45,flex:1}}>{data.ankiFront||<em style={{color:T.muted,fontWeight:400}}>empty</em>}</span>
+              </div>
+              <div style={{borderTop:"1px solid "+(T.name==="dark"?"#c9a84c30":"#c9a84c50"),margin:"8px 0"}}/>
+              {/* back row */}
+              <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                <span style={{fontSize:9,color:T.muted,letterSpacing:"0.6px",textTransform:"uppercase",minWidth:38,paddingTop:2}}>Back</span>
+                <span style={{fontSize:13,color:T.name==="dark"?"#a5f3b4":"#166534",lineHeight:1.45,flex:1}}>{data.ankiBack||<em style={{color:T.muted,fontWeight:400}}>empty</em>}</span>
+              </div>
+              <div style={{display:"flex",gap:8,marginTop:10}}>
+                {data.ankiFront&&<button onClick={()=>navigator.clipboard?.writeText(data.ankiFront)} style={{background:"#c9a84c",border:"none",borderRadius:6,padding:"4px 10px",color:"#000",fontSize:10,fontWeight:700,cursor:"pointer"}}>📋 Copy Front</button>}
+                {data.ankiBack&&<button onClick={()=>navigator.clipboard?.writeText(data.ankiBack)} style={{background:T.success,border:"none",borderRadius:6,padding:"4px 10px",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer"}}>📋 Copy Back</button>}
+              </div>
+            </div>)}
+          </>)}
+          {s==="summary"&&(<>
+            <div style={{textAlign:"center",marginBottom:18}}>
+              <div style={{fontSize:34,marginBottom:8}}>📄</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Question Summary</div>
+              <div style={{fontSize:13,color:T.muted}}>Cement the learning in your own words</div>
+            </div>
+            <div style={{background:T.name==="dark"?"#0e1624":"#f0f4ff",border:`1px solid ${T.name==="dark"?"#3b4a6040":"#c7d2fe"}`,borderRadius:10,padding:"10px 14px",marginBottom:14}}>
+              <div style={{fontSize:11,color:T.name==="dark"?"#a5b4fc":T.accent,fontWeight:600,marginBottom:4}}>💡 Purpose of this step</div>
+              <div style={{fontSize:12,color:T.dim,lineHeight:1.65}}>In your own words, describe what this question was asking, what the answer choices were about, and what key concept they were trying to get you to think about. Writing it yourself cements the material far better than re-reading.</div>
+            </div>
+            <Lbl T={T}>What was this question about?</Lbl>
+            <Inp T={T} textarea placeholder="Describe the stem, the answer choices, and the core concept being tested..." value={data.summary} onChange={e=>set("summary",e.target.value)} style={{height:90,marginBottom:14}}/>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-              <div><DemoLbl T={theme}>{data.result==="incorrect"?"What did I do wrong?":"Key insight"}</DemoLbl><DemoInp T={theme} textarea placeholder="..." value={data.wrongAction} onChange={e=>set("wrongAction",e.target.value)} style={{height:70}}/></div>
-              <div><DemoLbl T={theme}>Next time approach</DemoLbl><DemoInp T={theme} textarea placeholder="Next time I will..." value={data.nextApproach} onChange={e=>set("nextApproach",e.target.value)} style={{height:70}}/></div>
-            </div>
-          </>)}
-
-          {s === "anki" && (<>
-            <div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:30,marginBottom:6}}>⚡</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Flashcard</div><div style={{fontSize:12,color:theme.muted}}>AI-generated card based on your reflection</div></div>
-            <DemoLbl T={theme}>Front — Question / Cue</DemoLbl>
-            <DemoInp T={theme} placeholder="e.g. 55M jaw claudication + vision loss → next step?" value={data.ankiFront} onChange={e=>set("ankiFront",e.target.value)} style={{marginBottom:8}}/>
-            <div style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:10,padding:"10px 14px",marginBottom:12}}>
-              <div style={{fontSize:10,color:theme.muted,letterSpacing:"0.8px",marginBottom:6}}>✨ AI SUGGESTED FRONT</div>
-              {ankiLoading?<div style={{color:theme.muted,fontSize:12,fontStyle:"italic"}}>Generating suggestion...</div>
-              :aiAnki?<><div style={{fontSize:13,color:theme.text,lineHeight:1.5,marginBottom:8}}>{aiAnki}</div><button onClick={()=>set("ankiFront",aiAnki)} style={{background:theme.accent,border:"none",borderRadius:6,padding:"5px 12px",color:"#fff",fontSize:11,cursor:"pointer"}}>Use this →</button></>
-              :<div style={{fontSize:12,color:theme.muted}}>Fill in the concept from the previous step for a suggestion.</div>}
-            </div>
-            <DemoLbl T={theme}>Back — Answer</DemoLbl>
-            <DemoInp T={theme} placeholder="e.g. Giant cell arteritis → temporal artery biopsy" value={data.ankiBack} onChange={e=>set("ankiBack",e.target.value)} style={{marginBottom:8}}/>
-            <div style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:10,padding:"10px 14px",marginBottom:14}}>
-              <div style={{fontSize:10,color:theme.muted,letterSpacing:"0.8px",marginBottom:6}}>✨ AI SUGGESTED BACK</div>
-              {ankiBackLoading?<div style={{color:theme.muted,fontSize:12,fontStyle:"italic"}}>Generating answer...</div>
-              :aiAnkiBack?<><div style={{fontSize:13,color:theme.text,lineHeight:1.5,marginBottom:8}}>{aiAnkiBack}</div><button onClick={()=>set("ankiBack",aiAnkiBack)} style={{background:theme.success,border:"none",borderRadius:6,padding:"5px 12px",color:"#fff",fontSize:11,cursor:"pointer"}}>Use this →</button></>
-              :<div style={{fontSize:12,color:theme.muted}}>Fill in the concept for an AI answer suggestion.</div>}
-            </div>
-          </>)}
-
-          {s === "notes" && (<>
-            <div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:30,marginBottom:6}}>💡</div><div style={{fontSize:17,fontWeight:700,color:theme.text}}>Reflection & Notes</div></div>
-            <div style={{background:theme.name==="dark"?"#0e0e2a":"#eff2ff",border:`1px solid ${theme.name==="dark"?"#3730a360":"#c7d2fe"}`,borderRadius:12,padding:"14px 16px",marginBottom:14}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span>✨</span><span style={{fontSize:10,fontWeight:700,color:theme.name==="dark"?"#a5b4fc":theme.accent,letterSpacing:"0.8px"}}>AI STUDY INSIGHT</span></div>
-              {aiLoading?<div style={{color:theme.muted,fontSize:12,fontStyle:"italic"}}>Generating...</div>:aiText?<div style={{color:theme.name==="dark"?"#c7d2fe":theme.dim,fontSize:12,lineHeight:1.75,whiteSpace:"pre-wrap"}}>{aiText}</div>:<div style={{fontSize:12,color:theme.muted}}>Fill in subject/concept above.</div>}
-            </div>
-            <div style={{marginBottom:12}}><DemoLbl T={theme}>Resource to Review</DemoLbl><DemoInp T={theme} placeholder="e.g. FA p.342, Pathoma Ch.3..." value={data.resource} onChange={e=>set("resource",e.target.value)}/></div>
-            <div><DemoLbl T={theme}>Personal Notes</DemoLbl><DemoInp T={theme} textarea placeholder="Your own notes..." value={data.notes} onChange={e=>set("notes",e.target.value)} style={{height:70}}/></div>
-          </>)}
-
-          {step > 0 && (
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:18,paddingTop:14,borderTop:`1px solid ${theme.border}`}}>
-              <button onClick={back} style={{background:"none",border:"none",color:theme.muted,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>← Back</button>
-              {step===FULL_STEPS.length-1
-                ? <button onClick={finish} style={{background:theme.accent,border:"none",borderRadius:8,padding:"9px 22px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Submit ✓</button>
-                : ["category","summary","anki"].includes(s)
-                  ? <button onClick={next} style={{background:theme.accent,border:"none",borderRadius:8,padding:"9px 20px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Next →</button>
-                  : <div/>
-              }
-            </div>
-          )}
-        </div>
-      )}
-
-      {questions.length > 0 && (
-        <div ref={analyticsRef}>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:16,borderTop:`1px solid ${theme.border}`,paddingTop:20}}>
-            {[
-              {l:"Questions",v:questions.length,c:theme.text},
-              {l:"Score",v:`${score}%`,c:score>=75?theme.success:score>=60?theme.warn:theme.danger},
-              {l:"Correct",v:correct,c:theme.success},
-              {l:"Anki-ready",v:ankiReadyCount,c:theme.accent},
-            ].map(st => (
-              <div key={st.l} style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:8,padding:"11px 12px"}}>
-                <div style={{fontSize:9,color:theme.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:5}}>{st.l}</div>
-                <div style={{fontSize:18,fontWeight:700,color:st.c,lineHeight:1.25}}>{st.v}</div>
+              <div>
+                <Lbl T={T}>{data.result==="incorrect"?"What did I do wrong?":"Key insight / takeaway"}</Lbl>
+                <Inp T={T} textarea placeholder={data.result==="incorrect"?"What specifically led to your mistake?":"What made this question click for you?"} value={data.wrongAction} onChange={e=>set("wrongAction",e.target.value)} style={{height:80}}/>
               </div>
-            ))}
-          </div>
+              <div>
+                <Lbl T={T}>Next time approach</Lbl>
+                <Inp T={T} textarea placeholder="Next time I see this type of question, I will..." value={data.nextApproach} onChange={e=>set("nextApproach",e.target.value)} style={{height:80}}/>
+              </div>
+            </div>
+          </>)}
+          {s==="notes"&&(<><div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:34,marginBottom:8}}>💡</div><div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Reflection & Notes</div><div style={{fontSize:13,color:T.muted}}>Cement what you learned</div></div><div style={{background:T.name==="dark"?"#0e0e2a":"#eff2ff",border:`1px solid ${T.name==="dark"?"#3730a360":"#c7d2fe"}`,borderRadius:12,padding:"14px 16px",marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span>✨</span><span style={{fontSize:10,fontWeight:700,color:T.name==="dark"?"#a5b4fc":T.accent,letterSpacing:"0.8px"}}>AI STUDY INSIGHT</span></div>{aiLoading?<div style={{color:T.muted,fontSize:12,fontStyle:"italic"}}>Generating...</div>:aiText?<div style={{color:T.name==="dark"?"#c7d2fe":T.dim,fontSize:12,lineHeight:1.75,whiteSpace:"pre-wrap"}}>{aiText}</div>:<div style={{fontSize:12,color:T.muted}}>Fill in subject/concept above.</div>}</div><div style={{marginBottom:14}}><Lbl T={T}>Resource to Review</Lbl><Inp T={T} placeholder="e.g. FA p.342, Pathoma Ch.3..." value={data.resource} onChange={e=>set("resource",e.target.value)}/></div><div><Lbl T={T}>Personal Notes</Lbl><Inp T={T} textarea placeholder="Your own notes..." value={data.notes} onChange={e=>set("notes",e.target.value)} style={{height:72}}/></div><div style={{marginTop:12,background:data.result==="correct"?T.success+"18":T.danger+"18",border:`1px solid ${data.result==="correct"?T.success+"30":T.danger+"30"}`,borderRadius:8,padding:"10px 14px",fontSize:12,color:data.result==="correct"?T.success:T.danger}}>{data.result==="correct"?"✅  Great job! Add notes and submit.":"📚  Review the concept, add resources, then submit."}</div></>)}
+        </div>
+        {step>0&&(<div style={{padding:"12px 24px",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",bottom:0,background:T.surface}}>
+          <button onClick={back} style={{background:"none",border:"none",color:T.muted,fontSize:13,cursor:"pointer"}}>← Back</button>
+          {step===STEPS.length-1?<button onClick={finish} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 22px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Submit ✓</button>:["category","summary","anki"].includes(s)?<button onClick={next} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 20px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Next →</button>:<div/>}
+        </div>)}
+      </div>
+    </div>
+  );
+}
 
-          {pieData.length > 0 && (
-            <div style={{marginBottom:16}}>
-              <div style={{fontSize:11,color:theme.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:10}}>Score by Subject</div>
-              <div style={{display:"flex",alignItems:"center",gap:18}}>
-                <div style={{width:130,height:130,flexShrink:0}}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={pieData} cx="50%" cy="50%" outerRadius={58} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
-                        {pieData.map((_,i) => <Cell key={i} fill={PIE_COLORS[i%PIE_COLORS.length]}/>)}
-                      </Pie>
-                      <Tooltip contentStyle={{background:theme.surface,border:`1px solid ${theme.border}`,borderRadius:8,fontSize:11,color:theme.text}} formatter={(v)=>[`${v} Q`,""]}/>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div style={{flex:1,display:"flex",flexDirection:"column",gap:4}}>
-                  {pieData.map((d,i) => (
-                    <div key={d.name} style={{display:"flex",alignItems:"center",gap:8}}>
-                      <div style={{width:8,height:8,borderRadius:2,background:PIE_COLORS[i%PIE_COLORS.length],flexShrink:0}}/>
-                      <span style={{fontSize:12,color:theme.dim,flex:1}}>{d.name}</span>
-                      <span style={{fontSize:12,fontWeight:700,color:PIE_COLORS[i%PIE_COLORS.length]}}>{d.value} Q</span>
-                    </div>
+
+// ── Passage Wizard ────────────────────────────────────────────────────────────
+function PassageWizard({onClose,onSave,mode,T}){
+  const [step,setStep]=useState(0);
+  const [numQuestions,setNumQuestions]=useState(3);
+  const [passageTitle,setPassageTitle]=useState("");
+  const [matrix,setMatrix]=useState({mainIdea:"",tone:"",arguments:"",author:"",contrastingTheories:"",inference:""});
+  const [questions,setQuestions]=useState([]);
+  const [currentQ,setCurrentQ]=useState(0);
+  const [currentQData,setCurrentQData]=useState({result:"",carSkill:"",wrongReason:""});
+  const [processMistake,setProcessMistake]=useState("");
+  const [processNote,setProcessNote]=useState("");
+  const [aiCorrection,setAiCorrection]=useState(""); const [aiCorrLoading,setAiCorrLoading]=useState(false);
+  const [submitted,setSubmitted]=useState(false);
+  const subject=mode==="MCAT"?"CARS":"Reading Comprehension";
+
+  const initQuestions=()=>{
+    setQuestions(Array.from({length:numQuestions},(_,i)=>({num:i+1,result:"",carSkill:"",wrongReason:""})));
+    setStep(1);
+  };
+
+  useEffect(()=>{
+    if(step===3){
+      setAiCorrLoading(true);setAiCorrection("");
+      const wrongQs=questions.filter(q=>q.result==="incorrect");
+      const wrongSkills=[...new Set(wrongQs.map(q=>q.carSkill).filter(Boolean))].join(", ")||"unknown";
+      const wrongReasonsList=[...new Set(wrongQs.map(q=>q.wrongReason).filter(Boolean))].join(", ")||"unknown";
+      const prompt=`A ${mode} student completed a ${subject} passage. ${wrongQs.length}/${questions.length} questions wrong. CAR skills missed: ${wrongSkills}. Error patterns: ${wrongReasonsList}. Matrix — Tone: "${matrix.tone}", Main Idea: "${matrix.mainIdea}", Contrasting Theories: "${matrix.contrastingTheories}". Student's process note: "${processMistake}". Write 2-3 sentences of specific, actionable process correction for what to do differently next time. Focus on reading approach, not content knowledge.`;
+      fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:300,messages:[{role:"user",content:prompt}]})})
+      .then(r=>r.json()).then(j=>{setAiCorrection(j.content?.find(b=>b.type==="text")?.text||"");setAiCorrLoading(false);}).catch(()=>setAiCorrLoading(false));
+    }
+  },[step]);
+
+  const saveCurrentQ=()=>{
+    const updated=questions.map((q,i)=>i===currentQ?{...q,...currentQData}:q);
+    setQuestions(updated);
+    setCurrentQData({result:"",carSkill:"",wrongReason:""});
+    if(currentQ<numQuestions-1){setCurrentQ(q=>q+1);}
+    else{setStep(3);}
+  };
+
+  const finish=()=>{
+    const allPassageQs=questions.map((q,i)=>i===currentQ&&currentQData.result?{...q,...currentQData}:q);
+    onSave({
+      id:Date.now(),
+      date:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"}),
+      type:"passage",subject,
+      passageTitle:passageTitle||`${subject} Passage`,
+      matrix,questions:allPassageQs,processMistake,processNote,aiCorrection,
+      result:allPassageQs.filter(q=>q.result==="correct").length>=allPassageQs.length/2?"correct":"incorrect",
+      qtype:mode==="MCAT"?"Critical analysis":"Inference",
+      concept:passageTitle||`${subject} Passage`,
+    });
+    setSubmitted(true);
+  };
+
+  if(submitted) return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,padding:20}}>
+      <div className="fade-in" style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:18,width:"100%",maxWidth:420,padding:"44px 32px",textAlign:"center"}}>
+        <div style={{fontSize:52,marginBottom:14}}>📖</div>
+        <div style={{fontSize:21,fontWeight:700,color:T.text,marginBottom:8}}>Passage Logged!</div>
+        <div style={{fontSize:13,color:T.muted,marginBottom:30}}>Process note saved. Keep refining your approach.</div>
+        <button onClick={onClose} style={{background:T.accent,border:"none",borderRadius:8,padding:"11px 24px",color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer"}}>Done</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,padding:20}}>
+      <div className="fade-in" style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:18,width:"100%",maxWidth:560,maxHeight:"92vh",overflowY:"auto",display:"flex",flexDirection:"column"}}>
+        <div style={{padding:"20px 24px 14px",borderBottom:`1px solid ${T.border}`,position:"sticky",top:0,background:T.surface,zIndex:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+            <div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:15,fontWeight:600,color:T.text}}>📖 Passage Analysis</span>
+                <span style={{fontSize:10,background:T.accent+"22",color:T.accent,borderRadius:5,padding:"1px 7px",fontWeight:600}}>{subject}</span>
+              </div>
+              <div style={{fontSize:12,color:T.muted,marginTop:2}}>
+                {step===0?"Passage setup":step===1?(mode==="MCAT"?"Author's Blueprint":"Author's Blueprint"):step===2?`Question ${currentQ+1} of ${numQuestions}`:"Passage Debrief"}
+              </div>
+            </div>
+            <button onClick={onClose} style={{background:"none",border:"none",color:T.muted,fontSize:20,cursor:"pointer",lineHeight:1}}>×</button>
+          </div>
+          <div style={{display:"flex",gap:4}}>
+            {[0,1,2,3].map(i=><div key={i} style={{flex:1,height:4,borderRadius:2,background:i<=step?T.accent:T.raised,transition:"background 0.25s"}}/>)}
+          </div>
+          <div style={{fontSize:11,color:T.muted,textAlign:"center",marginTop:5}}>Step {step+1} of 4</div>
+        </div>
+
+        <div style={{padding:"24px",flex:1}}>
+          {step===0&&(<>
+            <div style={{textAlign:"center",marginBottom:20}}>
+              <div style={{fontSize:34,marginBottom:8}}>📖</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Passage Setup</div>
+              <div style={{fontSize:13,color:T.muted}}>Let's analyze the passage before reviewing your questions</div>
+            </div>
+            <div style={{background:T.name==="dark"?"#0e1624":"#f0f4ff",border:`1px solid ${T.name==="dark"?"#3b4a6040":"#c7d2fe"}`,borderRadius:10,padding:"12px 14px",marginBottom:18}}>
+              <div style={{fontSize:11,color:T.name==="dark"?"#a5b4fc":T.accent,fontWeight:600,marginBottom:4}}>📌 Passage Analysis Mode</div>
+              <div style={{fontSize:12,color:T.dim,lineHeight:1.6}}>Uses the <b style={{color:T.text}}>Author's Blueprint</b> to identify process errors. Output is a <b style={{color:T.text}}>process note</b>, not a flashcard — RC mistakes are reasoning failures, not knowledge gaps.</div>
+            </div>
+            <div style={{display:"grid",gap:14}}>
+              <div><Lbl T={T}>Passage Label (optional)</Lbl><Inp T={T} placeholder="e.g. Passage 3, Science & Society..." value={passageTitle} onChange={e=>setPassageTitle(e.target.value)}/></div>
+              <div>
+                <Lbl T={T}>How many questions from this passage?</Lbl>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
+                  {[1,2,3,4,5,6,7,8].map(n=>(
+                    <button key={n} onClick={()=>setNumQuestions(n)} style={{width:42,height:42,borderRadius:8,background:numQuestions===n?T.accent:T.raised,border:`1px solid ${numQuestions===n?T.accent:T.border}`,color:numQuestions===n?"#fff":T.dim,fontWeight:numQuestions===n?700:400,fontSize:14,cursor:"pointer",transition:"all 0.15s"}}>{n}</button>
                   ))}
                 </div>
               </div>
             </div>
-          )}
+          </>)}
 
-          {reasonData.length > 0 && (
-            <div style={{marginBottom:16}}>
-              <div style={{fontSize:11,color:theme.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:10}}>Why You Got It Wrong</div>
-              <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {reasonData.map((d) => (
-                  <div key={d.name} style={{display:"flex",alignItems:"center",gap:8,background:theme.raised,borderRadius:6,padding:"7px 10px"}}>
-                    <span style={{fontSize:12,color:theme.dim,flex:1}}>{d.name}</span>
-                    <span style={{fontSize:12,fontWeight:700,color:theme.danger}}>{d.value}</span>
+          {step===1&&(<>
+            <div style={{textAlign:"center",marginBottom:18}}>
+              <div style={{fontSize:34,marginBottom:8}}>🧠</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Author's Blueprint</div>
+              <div style={{fontSize:13,color:T.muted}}>Analyze the passage structure before reviewing your answers</div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {CAR_SKILLS.map(skill=>(
+                <div key={skill.key} style={{background:T.raised,borderRadius:10,padding:"12px 14px"}}>
+                  <div style={{fontSize:10,fontWeight:700,color:T.accent,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:3}}>{skill.label}</div>
+                  <div style={{fontSize:11,color:T.muted,marginBottom:7}}>{skill.desc}</div>
+                  <Inp T={T} textarea placeholder={skill.placeholder} value={matrix[skill.key]} onChange={e=>setMatrix(m=>({...m,[skill.key]:e.target.value}))} style={{height:54,background:T.surface}}/>
+                </div>
+              ))}
+            </div>
+          </>)}
+
+          {step===2&&(<>
+            <div style={{textAlign:"center",marginBottom:18}}>
+              <div style={{fontSize:34,marginBottom:8}}>❓</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Question {currentQ+1} of {numQuestions}</div>
+              <div style={{fontSize:13,color:T.muted}}>Review against your matrix analysis</div>
+            </div>
+            <div style={{marginBottom:14}}>
+              <Lbl T={T}>Did you get it right?</Lbl>
+              <div style={{display:"flex",gap:10}}>
+                {["correct","incorrect"].map(r=>(
+                  <button key={r} onClick={()=>setCurrentQData(d=>({...d,result:r}))} style={{flex:1,background:currentQData.result===r?(r==="correct"?T.success+"22":T.danger+"22"):T.raised,border:`1px solid ${currentQData.result===r?(r==="correct"?T.success:T.danger):T.border}`,borderRadius:8,padding:"10px",color:currentQData.result===r?(r==="correct"?T.success:T.danger):T.muted,fontWeight:currentQData.result===r?600:400,cursor:"pointer",fontSize:13,transition:"all 0.15s"}}>
+                    {r==="correct"?"✓ Correct":"✗ Incorrect"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{marginBottom:14}}>
+              <Lbl T={T}>Which CAR skill was being tested?</Lbl>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                {CAR_SKILLS.map(skill=>(
+                  <button key={skill.key} onClick={()=>setCurrentQData(d=>({...d,carSkill:skill.label}))} style={{background:currentQData.carSkill===skill.label?T.accent+"22":T.raised,border:`1px solid ${currentQData.carSkill===skill.label?T.accent+"60":T.border}`,borderRadius:8,padding:"8px 10px",color:currentQData.carSkill===skill.label?T.accent:T.dim,fontSize:12,cursor:"pointer",textAlign:"left",transition:"all 0.15s"}}>{skill.label}</button>
+                ))}
+              </div>
+            </div>
+            {currentQData.result==="incorrect"&&(
+              <div style={{marginBottom:14}}>
+                <Lbl T={T}>Why did you get it wrong?</Lbl>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {RC_WRONG_REASONS.map(reason=>(
+                    <button key={reason} onClick={()=>setCurrentQData(d=>({...d,wrongReason:reason}))} style={{background:currentQData.wrongReason===reason?T.danger+"18":T.raised,border:`1px solid ${currentQData.wrongReason===reason?T.danger+"60":T.border}`,borderRadius:8,padding:"9px 14px",color:currentQData.wrongReason===reason?T.danger:T.dim,fontSize:12,cursor:"pointer",textAlign:"left",transition:"all 0.15s"}}>{reason}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{display:"flex",gap:6,justifyContent:"center",marginTop:8}}>
+              {Array.from({length:numQuestions},(_,i)=>(
+                <div key={i} style={{width:i===currentQ?20:8,height:8,borderRadius:4,background:questions[i]?.result==="correct"?T.success:questions[i]?.result==="incorrect"?T.danger:i===currentQ?T.accent:T.raised,transition:"all 0.2s"}}/>
+              ))}
+            </div>
+          </>)}
+
+          {step===3&&(<>
+            <div style={{textAlign:"center",marginBottom:18}}>
+              <div style={{fontSize:34,marginBottom:8}}>🎯</div>
+              <div style={{fontSize:20,fontWeight:700,color:T.text,marginBottom:4}}>Passage Debrief</div>
+              <div style={{fontSize:13,color:T.muted}}>Identify the process error, not the content gap</div>
+            </div>
+            <div style={{background:T.raised,borderRadius:10,padding:"12px 14px",marginBottom:14}}>
+              <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:8}}>PASSAGE RESULTS</div>
+              <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
+                <span style={{fontSize:14,color:T.success,fontWeight:600}}>✓ {questions.filter(q=>q.result==="correct").length} correct</span>
+                <span style={{fontSize:14,color:T.danger,fontWeight:600}}>✗ {questions.filter(q=>q.result==="incorrect").length} incorrect</span>
+                {questions.filter(q=>q.result==="incorrect"&&q.carSkill).length>0&&(
+                  <span style={{fontSize:11,color:T.muted}}>Skills missed: {[...new Set(questions.filter(q=>q.result==="incorrect").map(q=>q.carSkill).filter(Boolean))].join(", ")}</span>
+                )}
+              </div>
+            </div>
+            <div style={{marginBottom:14}}>
+              <Lbl T={T}>What was your main process mistake on this passage?</Lbl>
+              <Inp T={T} textarea placeholder="e.g. I tracked details instead of following the author's argument structure..." value={processMistake} onChange={e=>setProcessMistake(e.target.value)} style={{height:80}}/>
+            </div>
+            <div style={{background:T.name==="dark"?"#0e0e2a":"#eff2ff",border:`1px solid ${T.name==="dark"?"#3730a360":"#c7d2fe"}`,borderRadius:12,padding:"14px 16px",marginBottom:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                <span>✨</span><span style={{fontSize:10,fontWeight:700,color:T.name==="dark"?"#a5b4fc":T.accent,letterSpacing:"0.8px"}}>AI PROCESS CORRECTION</span>
+              </div>
+              {aiCorrLoading?<div style={{color:T.muted,fontSize:12,fontStyle:"italic"}}>Generating process correction...</div>
+              :aiCorrection?<div style={{color:T.name==="dark"?"#c7d2fe":T.dim,fontSize:12,lineHeight:1.75,whiteSpace:"pre-wrap"}}>{aiCorrection}</div>
+              :<div style={{fontSize:12,color:T.muted}}>Fill in your process mistake above first.</div>}
+            </div>
+            <div>
+              <Lbl T={T}>One-line process note (saved to session history)</Lbl>
+              <Inp T={T} placeholder="e.g. Passage 3: confused contrasting theories — re-read pivot sentences next time" value={processNote} onChange={e=>setProcessNote(e.target.value)}/>
+            </div>
+          </>)}
+        </div>
+
+        <div style={{padding:"12px 24px",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",bottom:0,background:T.surface}}>
+          {step>0?<button onClick={()=>{if(step===2&&currentQ>0){setCurrentQ(q=>q-1);setCurrentQData({result:questions[currentQ-1]?.result||"",carSkill:questions[currentQ-1]?.carSkill||"",wrongReason:questions[currentQ-1]?.wrongReason||""});}else{setStep(s=>s-1);}}} style={{background:"none",border:"none",color:T.muted,fontSize:13,cursor:"pointer"}}>← Back</button>:<div/>}
+          {step===0&&<button onClick={initQuestions} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 20px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Start Matrix Analysis →</button>}
+          {step===1&&<button onClick={()=>setStep(2)} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 20px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Review Questions →</button>}
+          {step===2&&<button onClick={saveCurrentQ} disabled={!currentQData.result} style={{background:currentQData.result?T.accent:T.raised,border:"none",borderRadius:8,padding:"9px 20px",color:currentQData.result?"#fff":T.muted,fontSize:13,fontWeight:600,cursor:currentQData.result?"pointer":"not-allowed",opacity:currentQData.result?1:0.5}}>{currentQ<numQuestions-1?"Next Question →":"Go to Debrief →"}</button>}
+          {step===3&&<button onClick={finish} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 22px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Save Passage ✓</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Edit Question Modal ────────────────────────────────────────────────────────
+function EditQuestionModal({question,mode,T,onSave,onClose}){
+  const [data,setData]=useState({...question});
+  const cfg=MODES[mode];
+  const set=(k,v)=>setData(d=>({...d,[k]:v}));
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:600,padding:20}}>
+      <div className="fade-in" style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:18,width:"100%",maxWidth:540,maxHeight:"90vh",overflowY:"auto",display:"flex",flexDirection:"column"}}>
+        <div style={{padding:"18px 24px 14px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:T.surface,zIndex:10}}>
+          <div style={{fontSize:15,fontWeight:600,color:T.text}}>Edit Question</div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:T.muted,fontSize:20,cursor:"pointer",lineHeight:1}}>×</button>
+        </div>
+        <div style={{padding:"20px 24px",display:"flex",flexDirection:"column",gap:14,flex:1}}>
+          <div>
+            <Lbl T={T}>Result</Lbl>
+            <div style={{display:"flex",gap:10}}>
+              {["correct","incorrect"].map(r=>(
+                <button key={r} onClick={()=>set("result",r)} style={{flex:1,background:data.result===r?(r==="correct"?T.success+"22":T.danger+"22"):T.raised,border:`1px solid ${data.result===r?(r==="correct"?T.success:T.danger):T.border}`,borderRadius:8,padding:"9px",color:data.result===r?(r==="correct"?T.success:T.danger):T.muted,fontWeight:data.result===r?600:400,cursor:"pointer",fontSize:13,transition:"all 0.15s"}}>{r==="correct"?"✓ Correct":"✗ Incorrect"}</button>
+              ))}
+            </div>
+          </div>
+          {data.result==="correct"
+            ?<div><Lbl T={T}>Why Correct</Lbl><Sel T={T} value={data.correctReason||""} onChange={e=>set("correctReason",e.target.value)}><option value="">Select...</option>{CORRECT_REASONS.map(r=><option key={r}>{r}</option>)}</Sel></div>
+            :<div><Lbl T={T}>Why Wrong</Lbl><Sel T={T} value={data.wrongReason||""} onChange={e=>set("wrongReason",e.target.value)}><option value="">Select...</option>{WRONG_REASONS.map(r=><option key={r}>{r}</option>)}</Sel></div>
+          }
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div><Lbl T={T}>Time</Lbl><Sel T={T} value={data.time||""} onChange={e=>set("time",e.target.value)}><option value="">Select...</option>{["Under the limit","At the limit","Over the limit"].map(t=><option key={t}>{t}</option>)}</Sel></div>
+            <div><Lbl T={T}>Answer Change</Lbl><Sel T={T} value={data.answerChange||""} onChange={e=>set("answerChange",e.target.value)}><option value="">Select...</option>{ANSWER_CHANGES.map(a=><option key={a}>{a}</option>)}</Sel></div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div><Lbl T={T}>Subject</Lbl><Sel T={T} value={data.subject||""} onChange={e=>set("subject",e.target.value)}><option value="">Select...</option>{cfg.subjects.map(s=><option key={s}>{s}</option>)}</Sel></div>
+            <div><Lbl T={T}>Question Type</Lbl><Sel T={T} value={data.qtype||""} onChange={e=>set("qtype",e.target.value)}><option value="">Select...</option>{cfg.qtypes.map(t=><option key={t}>{t}</option>)}</Sel></div>
+          </div>
+          <div><Lbl T={T}>Concept Tested</Lbl><Inp T={T} value={data.concept||""} onChange={e=>set("concept",e.target.value)} placeholder="e.g. Giant cell arteritis..."/></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div><Lbl T={T}>Question #</Lbl><Inp T={T} value={data.qnum||""} onChange={e=>set("qnum",e.target.value)} placeholder="Optional"/></div>
+            <div><Lbl T={T}>QBank</Lbl><Sel T={T} value={data.qbank||""} onChange={e=>set("qbank",e.target.value)}><option value="">Select...</option>{(QBANKS_MAP[mode]||QBANKS_MAP.USMLE).map(q=><option key={q}>{q}</option>)}</Sel></div>
+          </div>
+          <div><Lbl T={T}>Anki Front</Lbl><Inp T={T} value={data.ankiFront||""} onChange={e=>set("ankiFront",e.target.value)} placeholder="Front of flashcard"/></div>
+          <div><Lbl T={T}>Anki Back</Lbl><Inp T={T} value={data.ankiBack||""} onChange={e=>set("ankiBack",e.target.value)} placeholder="Back of flashcard"/></div>
+          <div><Lbl T={T}>Summary</Lbl><Inp T={T} textarea value={data.summary||""} onChange={e=>set("summary",e.target.value)} placeholder="Brief summary..." style={{height:70}}/></div>
+          <div><Lbl T={T}>Resource</Lbl><Inp T={T} value={data.resource||""} onChange={e=>set("resource",e.target.value)} placeholder="e.g. FA p.342..."/></div>
+          <div><Lbl T={T}>Notes</Lbl><Inp T={T} textarea value={data.notes||""} onChange={e=>set("notes",e.target.value)} placeholder="Your notes..." style={{height:70}}/></div>
+        </div>
+        <div style={{padding:"14px 24px",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"flex-end",gap:8,position:"sticky",bottom:0,background:T.surface}}>
+          <button onClick={onClose} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 18px",color:T.muted,cursor:"pointer",fontSize:13}}>Cancel</button>
+          <button onClick={()=>onSave(data)} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 22px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Save Changes ✓</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SESSION DETAIL ─────────────────────────────────────────────────────────────
+function SessionDetail({session,sessions,onBack,onAddQuestion,onAddPassage,onUpdateQuestion,mode,T}){
+  const [tab,setTab]=useState("questions");
+  const [viewMode,setViewMode]=useState("list"); // "list" or "card"
+  const [cardIndex,setCardIndex]=useState(0); // for card view navigation
+  const [expanded,setExpanded]=useState({});
+  const [analyticsSlide,setAnalyticsSlide]=useState(0);
+  const [editingQ,setEditingQ]=useState(null);
+  const qs=session.questions;
+  const regularQs=qs.filter(q=>q.type!=="passage");
+  const cardQs=regularQs; // for card view
+  const currentCard=cardQs[cardIndex];
+  const passages=qs.filter(q=>q.type==="passage");
+  const correct=regularQs.filter(q=>q.result==="correct").length;
+  const score=pct(correct,regularQs.length);
+  const changedWrong=regularQs.filter(q=>q.answerChange==="Correct → Incorrect").length;
+  const ankiReady=regularQs.filter(q=>q.ankiFront&&q.ankiFront.trim()&&q.ankiBack&&q.ankiBack.trim()).length;
+  const bySubject={},byType={},wrongReasons={};
+  regularQs.forEach(q=>{
+    if(!bySubject[q.subject])bySubject[q.subject]={c:0,t:0};bySubject[q.subject].t++;if(q.result==="correct")bySubject[q.subject].c++;
+    if(!byType[q.qtype])byType[q.qtype]={c:0,t:0};byType[q.qtype].t++;if(q.result==="correct")byType[q.qtype].c++;
+    if(q.result==="incorrect"&&q.wrongReason)wrongReasons[q.wrongReason]=(wrongReasons[q.wrongReason]||0)+1;
+  });
+  const timingData=[
+    {name:"Under the limit",value:regularQs.filter(q=>q.time==="Under the limit").length,color:T.success,icon:"⚡"},
+    {name:"At the limit",value:regularQs.filter(q=>q.time==="At the limit").length,color:T.warn,icon:"🕐"},
+    {name:"Over the limit",value:regularQs.filter(q=>q.time==="Over the limit").length,color:T.danger,icon:"🚨"},
+  ].filter(d=>d.value>0);
+  const answerData=ANSWER_CHANGES.map(a=>({name:a,value:regularQs.filter(q=>q.answerChange===a).length,color:a==="No change"?T.dim:a==="Incorrect → Correct"?T.success:a==="Correct → Incorrect"?T.danger:T.warn,icon:a==="No change"?"➡️":a==="Incorrect → Correct"?"📈":a==="Correct → Incorrect"?"📉":"🔁"})).filter(d=>d.value>0);
+  const progressData=[...sessions].sort((a,b)=>new Date(a.date)-new Date(b.date)).filter(s=>s.questions.filter(q=>q.type!=="passage").length>0).map(s=>{const rqs=s.questions.filter(q=>q.type!=="passage");const t=rqs.length,c=rqs.filter(q=>q.result==="correct").length;return{name:s.name.length>12?s.name.substring(0,12)+'…':s.name,score:Math.round((c/t)*100),isCurrent:s.id===session.id,date:s.date};});
+
+  return (
+    <div style={{minHeight:"100vh",background:T.bg,color:T.text,fontFamily:"'DM Sans',sans-serif"}}>
+      <div style={{padding:"22px 32px 16px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+          <button onClick={onBack} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"6px 14px",color:T.dim,cursor:"pointer",fontSize:13}}>← Back</button>
+          <div>
+            <span style={{fontSize:20,fontWeight:700}}>{session.name}</span>
+            <span style={{fontSize:11,background:T.accent+"22",color:T.accent,borderRadius:6,padding:"2px 8px",marginLeft:10,fontWeight:500}}>{mode}</span>
+            <div style={{fontSize:12,color:T.muted,marginTop:3}}>{session.date}</div>
+          </div>
+        </div>
+        <div/>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,padding:"20px 32px"}}>
+        <StatCard T={T} label="Total" value={regularQs.length} sub={passages.length>0?`+${passages.length} passage${passages.length>1?"s":""}`:">questions"}/>
+        <StatCard T={T} label="Score" value={`${score}%`} sub={`${correct}/${regularQs.length}`} color={T.scoreColor(score)}/>
+        <StatCard T={T} label="Incorrect" value={regularQs.length-correct} sub="questions"/>
+        <StatCard T={T} label="Changed → Wrong" value={changedWrong} sub="trust your gut" color={T.danger}/>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${T.border}`,padding:"0 32px"}}>
+        <div style={{display:"flex",overflowX:"auto"}}>
+          {[["questions","≡  Questions"],["analytics","📊  Analytics"]].map(([id,label])=>(
+            <button key={id} onClick={()=>setTab(id)} style={{background:"none",border:"none",borderBottom:tab===id?`2px solid ${T.accent}`:"2px solid transparent",padding:"12px 20px",fontSize:13,fontWeight:tab===id?600:400,color:tab===id?T.text:T.muted,cursor:"pointer",whiteSpace:"nowrap",transition:"color 0.15s"}}>{label}</button>
+          ))}
+        </div>
+        {tab==="questions"&&<div style={{display:"flex",gap:6,alignItems:"center",padding:"0 12px"}}>
+          {[["list","📋 List"],["card","🗂️ Card"]].map(([mode,label])=>(
+            <button key={mode} onClick={()=>{setViewMode(mode);setCardIndex(0);}} style={{background:viewMode===mode?T.accent:T.raised,border:viewMode===mode?"none":`1px solid ${T.border}`,borderRadius:6,padding:"5px 11px",color:viewMode===mode?"#fff":T.muted,fontSize:11,fontWeight:600,cursor:"pointer",transition:"all 0.15s"}}>{label}</button>
+          ))}
+        </div>}
+        <div style={{display:"flex",gap:8,alignItems:"center",padding:"6px 0"}}>
+          <button onClick={()=>exportExcel(session)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"6px 12px",color:T.dim,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>📊 Export Excel</button>
+          {ankiReady>0&&<button onClick={()=>downloadApkg(session, mode, ANKI_SERVER_URL)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"6px 12px",color:T.accent,fontSize:12,cursor:"pointer"}}>⚡ Anki ({ankiReady})</button>}
+          {(mode==="MCAT"||mode==="LSAT")&&onAddPassage&&<button onClick={onAddPassage} style={{background:T.raised,border:`1px solid ${T.accent}40`,borderRadius:8,padding:"7px 13px",color:T.accent,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>📖 Passage</button>}
+          <button onClick={onAddQuestion} style={{background:T.accent,border:"none",borderRadius:8,padding:"7px 16px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Log Question</button>
+        </div>
+      </div>
+      <div style={{padding:"18px 32px"}}>
+        {tab==="questions"&&viewMode==="card"&&currentCard&&(<>
+          {/* Card View: Metadata on left, notes on right */}
+          <div style={{display:"grid",gridTemplateColumns:"340px 1fr",gap:24,minHeight:"500px"}}>
+            {/* Left: Question metadata */}
+            <div style={{background:T.raised,borderRadius:12,padding:24,border:`1px solid ${T.border}`}}>
+              <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
+                <button onClick={()=>setEditingQ(currentCard)} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:7,padding:"5px 12px",color:"#fb923c",cursor:"pointer",fontSize:12,fontWeight:600}}>✏ Edit</button>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:18}}>
+                <div>
+                  <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>RESULT</div>
+                  <div><ResultBadge result={currentCard.result} T={T}/></div>
+                </div>
+                <div>
+                  <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>Q#</div>
+                  <div style={{fontSize:14,fontWeight:600,color:T.text}}>{currentCard.qnum||"—"}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>DATE</div>
+                  <div style={{fontSize:12,color:T.text}}>{currentCard.date}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>TIME</div>
+                  <div style={{fontSize:12,color:T.text}}>{currentCard.time||"—"}</div>
+                </div>
+              </div>
+              
+              {currentCard.subject&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>SUBJECT</div>
+                <div style={{fontSize:12,background:subjColors[currentCard.subject]+"20",color:subjColors[currentCard.subject],borderRadius:6,padding:"4px 8px",fontWeight:600}}>{currentCard.subject}</div>
+              </div>}
+              
+              {currentCard.concept&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>CONCEPT</div>
+                <div style={{fontSize:12,color:T.text}}>{currentCard.concept}</div>
+              </div>}
+              
+              {currentCard.qtype&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>TYPE</div>
+                <div style={{fontSize:12,color:T.text}}>{currentCard.qtype}</div>
+              </div>}
+              
+              {currentCard.qbank&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>QBANK</div>
+                <div style={{fontSize:12,color:T.text}}>{currentCard.qbank}</div>
+              </div>}
+              
+              {currentCard.result==="incorrect"&&currentCard.wrongReason&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>WHY WRONG</div>
+                <div style={{fontSize:11,color:T.danger,background:T.danger+"18",borderRadius:6,padding:"6px 8px"}}>{currentCard.wrongReason}</div>
+              </div>}
+              
+              {currentCard.result==="correct"&&currentCard.correctReason&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>WHY CORRECT</div>
+                <div style={{fontSize:11,color:T.success,background:T.success+"18",borderRadius:6,padding:"6px 8px"}}>{currentCard.correctReason}</div>
+              </div>}
+              
+              {currentCard.answerChange&&currentCard.answerChange!=="No change"&&<div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>ANSWER CHANGE</div>
+                <div style={{fontSize:11,color:currentCard.answerChange==="Incorrect → Correct"?T.success:T.danger,background:currentCard.answerChange==="Incorrect → Correct"?T.success+"18":T.danger+"18",borderRadius:6,padding:"4px 8px",fontWeight:600}}>🔄 {currentCard.answerChange}</div>
+              </div>}
+            </div>
+            
+            {/* Right: Notes and Anki */}
+            <div style={{display:"flex",flexDirection:"column",gap:16}}>
+              {currentCard.summary&&<div style={{background:T.raised,borderRadius:12,padding:18,border:`1px solid ${T.border}`}}>
+                <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:8,fontWeight:600}}>SUMMARY</div>
+                <div style={{fontSize:13,color:T.text,lineHeight:1.6}}>{currentCard.summary}</div>
+              </div>}
+              
+              {currentCard.notes&&<div style={{background:T.raised,borderRadius:12,padding:18,border:`1px solid ${T.border}`}}>
+                <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:8,fontWeight:600}}>NOTES</div>
+                <div style={{fontSize:13,color:T.dim,lineHeight:1.6}}>{currentCard.notes}</div>
+              </div>}
+              
+              {currentCard.resource&&<div style={{background:T.raised,borderRadius:12,padding:18,border:`1px solid ${T.border}`}}>
+                <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:8,fontWeight:600}}>RESOURCE</div>
+                <div style={{fontSize:13,color:T.accent}}>{currentCard.resource}</div>
+              </div>}
+              
+              {(currentCard.ankiFront||currentCard.ankiBack)&&<div style={{background:currentCard.ankiBack?T.success+"15":T.accent+"15",borderRadius:12,padding:18,border:`1px solid ${currentCard.ankiBack?T.success+"40":T.accent+"40"}`}}>
+                <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",marginBottom:8,fontWeight:600}}>⚡ ANKI CARD</div>
+                {currentCard.ankiFront&&<div style={{marginBottom:12}}>
+                  <div style={{fontSize:9,color:T.muted,marginBottom:4}}>FRONT</div>
+                  <div style={{fontSize:12,color:T.text,background:T.bg,borderRadius:6,padding:"8px 10px",fontStyle:"italic"}}>"{currentCard.ankiFront}"</div>
+                </div>}
+                {currentCard.ankiBack&&<div>
+                  <div style={{fontSize:9,color:T.muted,marginBottom:4}}>BACK</div>
+                  <div style={{fontSize:12,color:currentCard.ankiBack?T.success:T.muted,background:T.bg,borderRadius:6,padding:"8px 10px",fontStyle:"italic"}}>"{currentCard.ankiBack}"</div>
+                </div>}
+                {!currentCard.ankiBack&&<div style={{fontSize:11,color:T.warn}}>❌ No answer added yet</div>}
+              </div>}
+            </div>
+          </div>
+          
+          {/* Navigation */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:24,paddingTop:16,borderTop:`1px solid ${T.border}`}}>
+            <button onClick={()=>setCardIndex(Math.max(0,cardIndex-1))} disabled={cardIndex===0} style={{background:cardIndex>0?T.accent:T.raised,border:"none",borderRadius:8,padding:"8px 16px",color:cardIndex>0?"#fff":T.muted,fontWeight:600,cursor:cardIndex>0?"pointer":"default",opacity:cardIndex>0?1:0.4,transition:"all 0.15s"}}>← Previous</button>
+            <div style={{color:T.muted,fontSize:13,fontWeight:600}}>{cardIndex+1} / {cardQs.length}</div>
+            <button onClick={()=>setCardIndex(Math.min(cardQs.length-1,cardIndex+1))} disabled={cardIndex===cardQs.length-1} style={{background:cardIndex<cardQs.length-1?T.accent:T.raised,border:"none",borderRadius:8,padding:"8px 16px",color:cardIndex<cardQs.length-1?"#fff":T.muted,fontWeight:600,cursor:cardIndex<cardQs.length-1?"pointer":"default",opacity:cardIndex<cardQs.length-1?1:0.4,transition:"all 0.15s"}}>Next →</button>
+          </div>
+        </>)}
+        {tab==="questions"&&viewMode==="list"&&(<>
+          <div style={{display:"grid",gridTemplateColumns:"110px 56px 78px 1fr 180px",gap:10,padding:"6px 14px",marginBottom:6}}>
+            {["RESULT","Q#","DATE","SUBJECT / CONCEPT","ACTIONS"].map(h=><div key={h} style={{fontSize:9,color:T.muted,letterSpacing:"0.9px"}}>{h}</div>)}
+          </div>
+          {qs.length===0&&<div style={{textAlign:"center",color:T.muted,padding:"50px 0",fontSize:13}}>No questions yet.</div>}
+          {qs.map(q=>q.type==="passage"?(
+            <Card key={q.id} T={T} style={{marginBottom:8,border:`1px solid ${T.accent}30`,background:T.name==="dark"?"#090d1a":T.surface}}>
+              <div style={{padding:"13px 14px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{fontSize:18}}>📖</span>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:600,color:T.text}}>{q.passageTitle||"Passage Analysis"}</div>
+                      <div style={{fontSize:11,color:T.muted,marginTop:2}}>{q.date} · {q.questions?.length||0} Q · <span style={{color:T.success}}>{q.questions?.filter(qq=>qq.result==="correct").length||0} ✓</span> <span style={{color:T.danger}}>{q.questions?.filter(qq=>qq.result==="incorrect").length||0} ✗</span></div>
+                    </div>
                   </div>
+                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                    <span style={{fontSize:10,background:T.accent+"22",color:T.accent,borderRadius:5,padding:"2px 8px",fontWeight:600}}>{q.subject}</span>
+                    <button onClick={()=>setExpanded(e=>({...e,[q.id]:!e[q.id]}))} style={{background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:12}}>{expanded[q.id]?"▲":"▼"} Details</button>
+                  </div>
+                </div>
+                {expanded[q.id]&&(
+                  <div style={{borderTop:`1px solid ${T.border}`,marginTop:12,paddingTop:12}}>
+                    {q.matrix&&Object.values(q.matrix).some(Boolean)&&(<div style={{marginBottom:12}}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:8}}>AUTHOR'S BLUEPRINT</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{CAR_SKILLS.filter(s=>q.matrix[s.key]).map(skill=>(<div key={skill.key} style={{background:T.raised,borderRadius:6,padding:"7px 10px"}}><div style={{fontSize:9,color:T.accent,letterSpacing:"0.6px",fontWeight:600,marginBottom:3}}>{skill.label.toUpperCase()}</div><div style={{fontSize:11,color:T.dim}}>{q.matrix[skill.key]}</div></div>))}</div></div>)}
+                    {q.processNote&&<div style={{marginBottom:8}}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>PROCESS NOTE</div><div style={{fontSize:12,color:T.warn,background:T.warn+"12",borderRadius:6,padding:"8px 10px"}}>{q.processNote}</div></div>}
+                    {q.aiCorrection&&<div><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:4}}>AI PROCESS CORRECTION</div><div style={{fontSize:12,color:T.dim,lineHeight:1.65}}>{q.aiCorrection}</div></div>}
+                  </div>
+                )}
+              </div>
+            </Card>
+          ):(
+            <Card key={q.id} T={T} style={{marginBottom:8}}>
+              <div style={{display:"grid",gridTemplateColumns:"110px 56px 78px 1fr 180px",gap:10,padding:"13px 14px",alignItems:"center"}}>
+                <ResultBadge result={q.result} T={T}/>
+                <span style={{fontSize:13,fontWeight:600,color:T.text}}>{q.qnum||"—"}</span>
+                <span style={{fontSize:12,color:T.muted}}>{q.date}</span>
+                <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
+                  {q.subject&&<Pill label={q.subject} color={subjColors[q.subject]}/>}
+                  {q.concept&&<span style={{fontSize:12,color:T.muted}}>· {q.concept}</span>}
+                  {q.answerChange&&q.answerChange!=="No change"&&<span style={{fontSize:10,color:q.answerChange==="Incorrect → Correct"?T.success:T.danger,background:q.answerChange==="Incorrect → Correct"?T.success+"18":T.danger+"18",borderRadius:4,padding:"1px 6px"}}>🔄 {q.answerChange}</span>}
+                  {q.ankiFront&&<span style={{fontSize:10,color:T.accent,background:T.accent+"18",borderRadius:4,padding:"1px 6px"}}>⚡ Anki</span>}
+                </div>
+                <div style={{display:"flex",gap:10,alignItems:"center",justifyContent:"flex-end"}}>
+                  <button onClick={()=>setExpanded(e=>({...e,[q.id]:!e[q.id]}))} style={{background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:12}}>{expanded[q.id]?"▲":"▼"} Notes</button>
+                  <span onClick={()=>setEditingQ(q)} style={{color:"#fb923c",fontSize:12,cursor:"pointer"}}>✏ Edit</span>
+                </div>
+              </div>
+              {expanded[q.id]&&(
+                <div style={{borderTop:`1px solid ${T.border}`,padding:"12px 14px",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+                  {[q.result==="incorrect"&&q.wrongReason&&["WHY WRONG",q.wrongReason,T.danger],q.result==="correct"&&q.correctReason&&["WHY CORRECT",q.correctReason,T.success],q.time&&["TIME",q.time,T.dim],q.qtype&&["TYPE",q.qtype,T.dim],q.qbank&&["QBANK",q.qbank,T.dim],q.resource&&["RESOURCE",q.resource,T.accent]].filter(Boolean).map(([lbl,val,color])=>(
+                    <div key={lbl}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:3}}>{lbl}</div><div style={{fontSize:12,color}}>{val}</div></div>
+                  ))}
+                  {q.ankiFront&&<div style={{gridColumn:"1/-1"}}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:3}}>ANKI FRONT</div><div style={{fontSize:12,color:T.accent,fontStyle:"italic"}}>"{q.ankiFront}"</div></div>}
+                  {q.summary&&<div style={{gridColumn:"1/-1"}}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:3}}>SUMMARY</div><div style={{fontSize:12,color:T.dim}}>{q.summary}</div></div>}
+                  {q.notes&&<div style={{gridColumn:"1/-1"}}><div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",marginBottom:3}}>NOTES</div><div style={{fontSize:12,color:T.dim}}>{q.notes}</div></div>}
+                </div>
+              )}
+            </Card>
+          ))}
+        </>)}
+        {tab==="analytics"&&(
+          <div>
+            {/* Carousel header: title + prev/next */}
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:18}}>
+              <button
+                onClick={()=>setAnalyticsSlide(s=>Math.max(0,s-1))}
+                disabled={analyticsSlide===0}
+                style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:10,width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:T.muted,cursor:analyticsSlide===0?"default":"pointer",opacity:analyticsSlide===0?0.25:1,flexShrink:0}}
+              >←</button>
+              <div style={{flex:1}}>
+                <div style={{fontSize:16,fontWeight:700,color:T.text}}>
+                  {["Session Overview","Subjects & Types","Timing & Patterns","Mistake Analysis","Progress"][analyticsSlide]}
+                </div>
+                <div style={{display:"flex",gap:6,marginTop:6}}>
+                  {[0,1,2,3,4].map(i=>(
+                    <button key={i} onClick={()=>setAnalyticsSlide(i)} style={{width:i===analyticsSlide?22:8,height:8,borderRadius:4,background:i===analyticsSlide?T.accent:T.raised,border:`1px solid ${i===analyticsSlide?T.accent:T.border}`,padding:0,cursor:"pointer",transition:"all 0.2s"}}/>
+                  ))}
+                  <span style={{fontSize:11,color:T.muted,marginLeft:6}}>{analyticsSlide+1} / 5</span>
+                </div>
+              </div>
+              <button
+                onClick={()=>setAnalyticsSlide(s=>Math.min(4,s+1))}
+                disabled={analyticsSlide===4}
+                style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:10,width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:T.muted,cursor:analyticsSlide===4?"default":"pointer",opacity:analyticsSlide===4?0.25:1,flexShrink:0}}
+              >→</button>
+            </div>
+
+            {/* Slide 0: Overview */}
+            {analyticsSlide===0&&(
+              <div className="fade-in" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+                <Card T={T} style={{padding:"28px 24px",display:"flex",flexDirection:"column",alignItems:"center",gap:16}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase"}}>Session Score</div>
+                  <div style={{position:"relative",width:200,height:200}}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={[{name:"Correct",value:correct||0.001},{name:"Incorrect",value:(qs.length-correct)||0.001}]}
+                          cx="50%" cy="50%" innerRadius={68} outerRadius={90} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
+                          <Cell fill={T.scoreColor(score)}/>
+                          <Cell fill={T.name==="dark"?"#1e293b":"#e5e7eb"}/>
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+                      <div style={{fontSize:38,fontWeight:800,color:T.scoreColor(score),lineHeight:1}}>{score}%</div>
+                      <div style={{fontSize:11,color:T.muted,marginTop:4}}>correct</div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:28}}>
+                    {[{l:"✓ Correct",v:correct,c:T.success},{l:"✗ Incorrect",v:qs.length-correct,c:T.danger}].map(({l,v,c})=>(
+                      <div key={l} style={{textAlign:"center"}}>
+                        <div style={{fontSize:26,fontWeight:700,color:c}}>{v}</div>
+                        <div style={{fontSize:11,color:T.muted}}>{l}</div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  <Card T={T} style={{padding:"18px 20px",background:T.scoreColor(score)+"12",border:`1px solid ${T.scoreColor(score)}30`}}>
+                    <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>Status</div>
+                    <div style={{fontSize:17,fontWeight:700,color:T.scoreColor(score)}}>
+                      {score>=75?"On Track 🎯":score>=60?"Getting There ⚡":"Needs Work 📚"}
+                    </div>
+                    <div style={{fontSize:12,color:T.muted,marginTop:4}}>
+                      {score>=75?"Strong session — keep the momentum":score>=60?"Review your misses carefully":"Focus on flagged concepts below"}
+                    </div>
+                  </Card>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    {[
+                      {l:"Total",v:qs.length,c:T.dim},
+                      {l:"Correct",v:correct,c:T.success},
+                      {l:"Incorrect",v:qs.length-correct,c:T.danger},
+                      {l:"Changed → Wrong",v:changedWrong,c:T.warn},
+                    ].map(({l,v,c})=>(
+                      <Card key={l} T={T} style={{padding:"14px 16px"}}>
+                        <div style={{fontSize:9,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:6}}>{l}</div>
+                        <div style={{fontSize:24,fontWeight:700,color:c}}>{v}</div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Slide 1: Subjects & Types */}
+            {analyticsSlide===1&&(
+              <div className="fade-in" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+                <Card T={T} style={{padding:"20px 22px"}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>Score by Subject</div>
+                  <SubjectPieChart data={bySubject} T={T}/>
+                </Card>
+                <Card T={T} style={{padding:"20px 22px"}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>Score by Question Type</div>
+                  <SubjectPieChart data={byType} T={T}/>
+                </Card>
+              </div>
+            )}
+
+            {/* Slide 2: Timing & Patterns */}
+            {analyticsSlide===2&&(
+              <div className="fade-in" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+                <Card T={T} style={{padding:"20px 22px"}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>Time per Question</div>
+                  {timingData.length===0
+                    ? <div style={{textAlign:"center",color:T.muted,padding:"30px 0",fontSize:12}}>No timing data yet.</div>
+                    : <div style={{display:"flex",alignItems:"center",gap:20}}>
+                        <div style={{width:150,height:150,flexShrink:0}}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={timingData} cx="50%" cy="50%" outerRadius={68} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
+                                {timingData.map((e,i)=><Cell key={i} fill={e.color}/>)}
+                              </Pie>
+                              <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:11,color:T.text}}/>
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div style={{flex:1,display:"flex",flexDirection:"column",gap:10}}>
+                          {timingData.map(({name,value,color,icon})=>(
+                            <div key={name} style={{display:"flex",alignItems:"center",gap:8}}>
+                              <span style={{fontSize:16}}>{icon}</span>
+                              <span style={{fontSize:11,color:T.dim,flex:1,lineHeight:1.3}}>{name}</span>
+                              <span style={{fontSize:16,fontWeight:700,color}}>{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                  }
+                </Card>
+                <Card T={T} style={{padding:"20px 22px"}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:16}}>Answer Changes</div>
+                  {answerData.length===0
+                    ? <div style={{textAlign:"center",color:T.muted,padding:"30px 0",fontSize:12}}>No data yet.</div>
+                    : <div style={{display:"flex",alignItems:"center",gap:20}}>
+                        <div style={{width:150,height:150,flexShrink:0}}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={answerData} cx="50%" cy="50%" outerRadius={68} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
+                                {answerData.map((e,i)=><Cell key={i} fill={e.color}/>)}
+                              </Pie>
+                              <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:11,color:T.text}}/>
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div style={{flex:1,display:"flex",flexDirection:"column",gap:10}}>
+                          {answerData.map(({name,value,color,icon})=>(
+                            <div key={name} style={{display:"flex",alignItems:"center",gap:8}}>
+                              <span style={{fontSize:14}}>{icon}</span>
+                              <span style={{fontSize:11,color:T.dim,flex:1,lineHeight:1.3}}>{name}</span>
+                              <span style={{fontSize:16,fontWeight:700,color}}>{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                  }
+                </Card>
+              </div>
+            )}
+
+            {/* Slide 3: Mistakes */}
+            {analyticsSlide===3&&(
+              <div className="fade-in" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+                <Card T={T} style={{padding:"20px 22px"}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:14}}>Why You Got It Wrong</div>
+                  <WrongReasonDonut byReason={wrongReasons} T={T} size={160} inner={52} outer={72}/>
+                </Card>
+                <Card T={T} style={{padding:"20px 22px"}}>
+                  <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:14}}>Concepts to Review</div>
+                  {qs.filter(q=>q.result==="incorrect"&&q.concept).length===0
+                    ?<div style={{textAlign:"center",color:T.muted,padding:"30px 0",fontSize:12}}>No incorrect answers — great session! 🎯</div>
+                    :<div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:300,overflowY:"auto"}}>
+                        {qs.filter(q=>q.result==="incorrect"&&q.concept).map(q=>(
+                          <div key={q.id} style={{background:T.raised,borderRadius:8,padding:"10px 12px",borderLeft:`3px solid ${T.danger}`}}>
+                            <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:3}}>{q.concept}</div>
+                            <div style={{fontSize:11,color:T.muted,display:"flex",gap:8,flexWrap:"wrap"}}>
+                              {q.subject&&<span style={{color:subjColors[q.subject]||T.dim}}>{q.subject}</span>}
+                              {q.wrongReason&&<span>· {q.wrongReason}</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                  }
+                </Card>
+              </div>
+            )}
+
+            {/* Slide 4: Progress */}
+            {analyticsSlide===4&&(
+              <div className="fade-in">
+                {progressData.length<2
+                  ? <div style={{textAlign:"center",color:T.muted,padding:"60px 0",fontSize:13}}>
+                      <div style={{fontSize:36,marginBottom:12}}>📈</div>
+                      <div style={{fontWeight:600,color:T.dim,marginBottom:6}}>Not enough data yet</div>
+                      <div style={{fontSize:12}}>Complete at least 2 sessions with questions to see your progress trend.</div>
+                    </div>
+                  : <Card T={T} style={{padding:"24px 22px"}}>
+                      <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:4}}>Score Across Sessions</div>
+                      <div style={{fontSize:12,color:T.muted,marginBottom:20}}>
+                        {progressData.find(s=>s.isCurrent)&&<><span style={{color:T.accent,fontWeight:600}}>{progressData.find(s=>s.isCurrent).name}</span> vs. previous sessions</>}
+                      </div>
+                      <div style={{height:230}}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={progressData} margin={{top:10,right:16,left:-10,bottom:40}}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
+                            <XAxis dataKey="name" tick={{fontSize:10,fill:T.dim,fontWeight:500}} axisLine={{stroke:T.border}} tickLine={false} angle={-35} textAnchor="end" interval={0} height={60}/>
+                            <YAxis domain={[0,100]} tick={{fontSize:10,fill:T.dim,fontWeight:500}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
+                            <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:12,color:T.text}} formatter={(v)=>[`${v}%`,"Score"]}/>
+                            <ReferenceLine y={75} stroke={T.success} strokeDasharray="4 4" strokeOpacity={0.5}/>
+                            <ReferenceLine y={60} stroke={T.warn} strokeDasharray="4 4" strokeOpacity={0.5}/>
+                            <Line type="monotone" dataKey="score" stroke={T.accent} strokeWidth={2.5}
+                              dot={(dp)=>{const {cx,cy,payload}=dp;return <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={payload.isCurrent?7:4} fill={payload.isCurrent?T.accent:T.surface} stroke={T.accent} strokeWidth={2}/>;} }
+                              activeDot={{r:7,fill:T.accent}}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div style={{display:"flex",gap:18,marginTop:14,flexWrap:"wrap"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.muted}}><div style={{width:20,height:3,background:T.accent,borderRadius:2}}/> Score trend</div>
+                        <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.muted}}><div style={{width:14,height:14,borderRadius:"50%",background:T.accent}}/> Current session</div>
+                        <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.success}}><div style={{width:20,height:2,background:T.success,opacity:0.6}}/> 75% goal</div>
+                        <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.warn}}><div style={{width:20,height:2,background:T.warn,opacity:0.6}}/> 60% threshold</div>
+                      </div>
+                    </Card>
+                }
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {editingQ&&<EditQuestionModal question={editingQ} mode={mode} T={T} onSave={(updated)=>{onUpdateQuestion(updated);setEditingQ(null);}} onClose={()=>setEditingQ(null)}/>}
+    </div>
+  );
+}
+
+
+// ── Anki .apkg Export ─────────────────────────────────────────────────────────
+// Set this to your deployed backend URL after deploying anki_server.py
+const ANKI_SERVER_URL = "https://vimavima.onrender.com";
+
+async function downloadApkg(session, mode, serverUrl) {
+  if (!serverUrl || serverUrl.includes("YOUR_BACKEND")) {
+    alert("To download .apkg files, deploy the anki_server.py backend and update ANKI_SERVER_URL in the app.\n\nSee the README for setup instructions.");
+    return;
+  }
+  const cards = session.questions.filter(q => q.ankiFront && q.ankiFront.trim() && q.ankiBack && q.ankiBack.trim());
+  if (!cards.length) { alert("No complete flashcards in this session yet. Make sure each card has both a front AND back before exporting."); return; }
+  try {
+    const res = await fetch(`${serverUrl}/export/apkg`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deck_name: session.name, mode, questions: cards }),
+    });
+    if (!res.ok) { const err = await res.json(); alert("Export failed: " + err.error); return; }
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `VIMAVIMA_${session.name.replace(/\s+/g,"_")}.apkg`;
+    a.click();
+  } catch(e) {
+    alert("Could not reach the export server. Make sure anki_server.py is running.");
+  }
+}
+
+// ── Flip Card ─────────────────────────────────────────────────────────────────
+function FlipCard({ T, front, answer, session }) {
+  const [flipped, setFlipped] = useState(false);
+  return (
+    <div onClick={() => setFlipped(f => !f)} style={{ cursor:"pointer", perspective:1000 }}>
+      <div style={{
+        position:"relative", width:"100%",
+        transformStyle:"preserve-3d",
+        transition:"transform 0.5s cubic-bezier(0.4,0.2,0.2,1)",
+        transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+      }}>
+        {/* FRONT */}
+        <div style={{
+          backfaceVisibility:"hidden",
+          background: T.surface, border:`1px solid ${T.border}`,
+          borderRadius:14, padding:"22px 20px",
+          display:"flex", flexDirection:"column", gap:12,
+          minHeight:160,
+        }}>
+          <div style={{fontSize:10,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase"}}>Front · Tap to reveal</div>
+          <div style={{fontSize:14,fontWeight:600,color:T.text,lineHeight:1.55,flex:1}}>{front}</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:10,color:T.muted}}>{session}</span>
+            <span style={{fontSize:18,color:T.muted,opacity:0.5}}>↻</span>
+          </div>
+        </div>
+        {/* BACK */}
+        <div style={{
+          position:"absolute", inset:0, backfaceVisibility:"hidden",
+          transform:"rotateY(180deg)",
+          background: T.name==="dark" ? "#0d1520" : "#f0f4ff",
+          border:`1px solid ${T.accent}40`,
+          borderRadius:14, padding:"22px 20px",
+          display:"flex", flexDirection:"column", gap:12,
+          minHeight:160,
+        }}>
+          <div style={{fontSize:10,color:T.accent,letterSpacing:"0.8px",textTransform:"uppercase",fontWeight:700}}>Back · Answer</div>
+          <div style={{fontSize:18,fontWeight:700,color:T.name==="dark"?"#a5f3b4":"#166534",lineHeight:1.5,flex:1}}>
+            {answer || <span style={{color:T.muted,fontStyle:"italic",fontWeight:400,fontSize:14}}>No answer set — edit card to add one.</span>}
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:10,color:T.muted}}>{session}</span>
+            <span style={{fontSize:18,color:T.accent,opacity:0.6}}>↻</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Sample Data ────────────────────────────────────────────────────────────────
+const SAMPLE_DATA={
+  USMLE:[
+    {id:1,name:"NBME 13",date:"2026-05-10",questions:[
+      {id:101,qnum:"4.50",date:"May 11",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Pulmonology",qtype:"Diagnosis",concept:"ARDS",qbank:"NBME",ankiFront:"Young trauma pt, bilateral infiltrates, low PaO2/FiO2 → diagnosis?",ankiBack:"ARDS (Acute Respiratory Distress Syndrome): PaO2/FiO2 < 300, bilateral infiltrates, high PEEP needed",summary:"",resource:"",notes:""},
+      {id:102,qnum:"4.47",date:"May 11",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Cardiology",qtype:"Diagnosis",concept:"Giant cell arteritis",qbank:"NBME",ankiFront:"70F jaw claudication + temporal headache + ESR 110 → next step?",ankiBack:"Temporal artery biopsy (gold standard); start high-dose steroids immediately to prevent blindness",summary:"",resource:"",notes:""},
+      {id:103,qnum:"4.46",date:"May 11",result:"correct",correctReason:"Guessed",time:"At the limit",answerChange:"No change",subject:"MSK",qtype:"Diagnosis",concept:"Flatfeet",qbank:"NBME",ankiFront:"Child with flat arches + normal gait → diagnosis?",ankiBack:"Physiologic flatfeet; resolves by age 5-6 as arch develops",summary:"",resource:"",notes:""},
+      {id:104,qnum:"4.45",date:"May 11",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Neurology",qtype:"Diagnosis",concept:"Subdural hematoma",qbank:"NBME",ankiFront:"Elderly on warfarin: confusion + midline shift on CT → type of bleed?",ankiBack:"Subdural hematoma (venous bleeding, crescent-shaped on CT); needs evacuation if symptomatic",summary:"",resource:"",notes:""},
+      {id:105,qnum:"4.44",date:"May 11",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"OB/GYN",qtype:"Management",concept:"Primary dysmenorrhea",qbank:"NBME",ankiFront:"25F severe cramping during period, no pelvic pathology → treatment?",ankiBack:"NSAIDs (start before period) + combined oral contraceptives; no structural abnormality",summary:"",resource:"",notes:""},
+      {id:108,qnum:"4.12",date:"May 11",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"Correct → Incorrect",subject:"Cardiology",qtype:"Management",concept:"Hypertension Management",qbank:"NBME",ankiFront:"",ankiBack:"",summary:"Missed the ACE inhibitor + diuretic combo for initial management",resource:"FA p.280",notes:"Second-line for HTN"},
+      {id:109,qnum:"3.88",date:"May 11",result:"incorrect",wrongReason:"Silly mistake / misread",time:"Under the limit",answerChange:"No change",subject:"Neurology",qtype:"Diagnosis",concept:"MS vs ALS",qbank:"NBME",ankiFront:"Progressive weakness + upper motor signs + lower motor signs → diagnosis?",ankiBack:"ALS (not MS which has sensory loss and optic neuritis); no cure, supportive care + riluzole",summary:"Confused UMN vs LMN",resource:"",notes:""},
+    ]},
+    {id:2,name:"NBME 12",date:"2026-05-07",questions:[
+      {id:201,qnum:"3.1",date:"May 7",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"GI",qtype:"Diagnosis",concept:"Crohn's vs UC",qbank:"NBME",ankiFront:"Diarrhea + RLQ pain + skip lesions on colonoscopy → diagnosis?",ankiBack:"Crohn's disease (skip lesions, transmural, fistulas); UC is continuous mucosal-only",summary:"",resource:"",notes:""},
+      {id:202,qnum:"3.2",date:"May 7",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"Incorrect → Correct",subject:"Heme/Onc",qtype:"Management",concept:"CML treatment",qbank:"NBME",ankiFront:"",ankiBack:"Imatinib (Gleevec) — tyrosine kinase inhibitor targeting BCR-ABL; first-line for CML",summary:"",resource:"",notes:""},
+    ]},
+    {id:3,name:"NBME 11",date:"2026-04-22",questions:[{id:301,qnum:"2.1",date:"Apr 22",result:"incorrect",wrongReason:"Ran out of time",time:"Over the limit",answerChange:"No change",subject:"Psych",qtype:"Diagnosis",concept:"Bipolar vs MDD",qbank:"NBME",ankiFront:"",ankiBack:"Bipolar I: mania × 1 wk or mixed × 2 wk; Bipolar II: hypomania + depression; MDD: depression only",summary:"",resource:"",notes:""}]},
+    {id:4,name:"Amboss Session 4/19/26",date:"2026-04-18",questions:[{id:401,qnum:"1.1",date:"Apr 18",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Renal",qtype:"Management",concept:"AKI management",qbank:"Amboss",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""}]},
+    {id:5,name:"USMLE Demo — Block 1",date:"2026-07-28",questions:[
+      {id:501,qnum:"Q1",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Cardiology",qtype:"Management",concept:"STEMI management",qbank:"UWorld",ankiFront:"45M crushing chest pain, ST elevation V2-V4 → next best step?",ankiBack:"Activate cath lab for primary PCI (door-to-balloon < 90 min)",summary:"",resource:"FA p.290",notes:""},
+      {id:502,qnum:"Q2",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"Pulmonology",qtype:"Diagnosis",concept:"Hypersensitivity pneumonitis",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"Bilateral infiltrates + bird exposure + improves away from home",resource:"Pathoma Ch.13",notes:"Distinguish from sarcoidosis"},
+      {id:503,qnum:"Q3",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Neurology",qtype:"Diagnosis",concept:"Wernicke encephalopathy",qbank:"UWorld",ankiFront:"Alcoholic: confusion + ophthalmoplegia + ataxia → diagnosis?",ankiBack:"Wernicke encephalopathy (thiamine/B1 deficiency)",summary:"",resource:"",notes:""},
+      {id:504,qnum:"Q4",date:"Jul 28",result:"correct",correctReason:"Guessed",time:"At the limit",answerChange:"No change",subject:"OB/GYN",qtype:"Management",concept:"Preeclampsia management",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:505,qnum:"Q5",date:"Jul 28",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"Incorrect → Correct",subject:"GI",qtype:"Pathophysiology",concept:"Celiac disease",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"Villous atrophy + anti-tTG Ab → biopsy confirms",resource:"FA p.372",notes:"IgA anti-tTG first-line; biopsy confirms"},
+      {id:506,qnum:"Q6",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Renal",qtype:"Management",concept:"Hyperkalemia treatment",qbank:"UWorld",ankiFront:"K+ 6.8 + peaked T waves → first drug to give?",ankiBack:"IV calcium gluconate (stabilizes cardiac membrane)",summary:"",resource:"",notes:""},
+      {id:507,qnum:"Q7",date:"Jul 28",result:"incorrect",wrongReason:"Silly mistake / misread",time:"Under the limit",answerChange:"No change",subject:"MSK",qtype:"Diagnosis",concept:"Gout vs pseudogout",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"Gout = negative birefringent; Pseudogout = positive birefringent",resource:"",notes:"Misread birefringence"},
+      {id:508,qnum:"Q8",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Derm",qtype:"Diagnosis",concept:"Pemphigus vulgaris",qbank:"UWorld",ankiFront:"Flaccid bullae + positive Nikolsky sign → diagnosis?",ankiBack:"Pemphigus vulgaris (IgG anti-desmoglein 1 & 3)",summary:"",resource:"",notes:""},
+      {id:509,qnum:"Q9",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"Heme/Onc",qtype:"Management",concept:"Tumor lysis syndrome",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"",resource:"FA p.430",notes:"Give allopurinol or rasburicase prophylactically"},
+      {id:510,qnum:"Q10",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"ID",qtype:"Pharmacology",concept:"MRSA treatment",qbank:"UWorld",ankiFront:"MRSA bacteremia → drug of choice?",ankiBack:"Vancomycin IV (or daptomycin for bacteremia)",summary:"",resource:"",notes:""},
+      {id:511,qnum:"Q11",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Endo",qtype:"Diagnosis",concept:"Primary hyperaldosteronism",qbank:"UWorld",ankiFront:"HTN + hypokalemia + metabolic alkalosis → next step?",ankiBack:"Aldosterone/renin ratio > 30 → primary hyperaldosteronism",summary:"",resource:"",notes:""},
+      {id:512,qnum:"Q12",date:"Jul 28",result:"incorrect",wrongReason:"Ran out of time",time:"Over the limit",answerChange:"No change",subject:"Peds",qtype:"Management",concept:"Kawasaki disease",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"Fever > 5 days + 4/5 criteria → IVIG + aspirin",resource:"FA p.650",notes:""},
+    ]},
+    {id:6,name:"USMLE Demo — Block 2",date:"2026-07-29",questions:[
+      {id:601,qnum:"Q13",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Psych",qtype:"Diagnosis",concept:"Bipolar I vs II",qbank:"UWorld",ankiFront:"Grandiosity + decreased sleep + pressured speech × 1 week → diagnosis?",ankiBack:"Bipolar I (manic episode ≥ 7 days or requires hospitalization)",summary:"",resource:"",notes:""},
+      {id:602,qnum:"Q14",date:"Jul 29",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"No change",subject:"Surgery",qtype:"Management",concept:"Appendicitis — perforated vs non-perforated",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"Perforated appendicitis needs IV abx before surgery",resource:"",notes:""},
+      {id:603,qnum:"Q15",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Biostats/Ethics",qtype:"Biostats/Ethics",concept:"Sensitivity vs specificity",qbank:"UWorld",ankiFront:"Test with 100% sensitivity is best used for...?",ankiBack:"Screening (rule OUT disease — SnNout)",summary:"",resource:"",notes:""},
+      {id:604,qnum:"Q16",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Cardiology",qtype:"Pharmacology",concept:"Beta-blocker use in heart failure",qbank:"UWorld",ankiFront:"Beta-blockers proven to reduce mortality in stable HFrEF?",ankiBack:"Carvedilol, metoprolol succinate, bisoprolol",summary:"",resource:"",notes:""},
+      {id:605,qnum:"Q17",date:"Jul 29",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"Neurology",qtype:"Management",concept:"Status epilepticus management",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"First: benzos → phenytoin/fosphenytoin → propofol/midazolam",resource:"FA p.536",notes:""},
+      {id:606,qnum:"Q18",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"Incorrect → Correct",subject:"Pulmonology",qtype:"Management",concept:"COPD exacerbation O2 target",qbank:"UWorld",ankiFront:"COPD exacerbation SpO2 85% → O2 target?",ankiBack:"Titrate O2 to 88-92% (avoid hyperoxia / hypoxic drive suppression)",summary:"",resource:"",notes:""},
+      {id:607,qnum:"Q19",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"GI",qtype:"Diagnosis",concept:"Hemochromatosis",qbank:"UWorld",ankiFront:"Bronze skin + cirrhosis + DM + joint pain → diagnosis?",ankiBack:"Hemochromatosis (iron overload); treat with phlebotomy",summary:"",resource:"",notes:""},
+      {id:608,qnum:"Q20",date:"Jul 29",result:"incorrect",wrongReason:"Silly mistake / misread",time:"At the limit",answerChange:"Correct → Incorrect",subject:"Renal",qtype:"Pathophysiology",concept:"SIADH vs DI",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"SIADH: low Na, concentrated urine; DI: high Na, dilute urine",resource:"",notes:"Changed correct answer — trust gut"},
+      {id:609,qnum:"Q21",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Heme/Onc",qtype:"Diagnosis",concept:"CML vs CLL",qbank:"UWorld",ankiFront:"Splenomegaly + basophilia + t(9;22) → diagnosis?",ankiBack:"CML — Philadelphia chromosome (BCR-ABL); treat with imatinib",summary:"",resource:"",notes:""},
+      {id:610,qnum:"Q22",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"ID",qtype:"Diagnosis",concept:"Lyme disease stages",qbank:"UWorld",ankiFront:"Bull's-eye rash after tick bite → organism?",ankiBack:"Borrelia burgdorferi; treat with doxycycline",summary:"",resource:"",notes:""},
+      {id:611,qnum:"Q23",date:"Jul 29",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"Cardiology",qtype:"Management",concept:"Hypertension Management",qbank:"UWorld",ankiFront:"",ankiBack:"",summary:"Drug-resistant HTN (on 3+ agents): evaluate for secondary causes first",resource:"FA p.277",notes:"Check aldosteronism, renal artery stenosis, Cushings, pheochromocytoma"},
+    ]},
+  ],
+  MCAT:[
+    {id:10,name:"MCAT Demo — Full Length",date:"2026-07-28",questions:[
+      {id:1001,qnum:"Q1",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"C/P",qtype:"Passage-based",concept:"Electrochemical cells",qbank:"AAMC Official",ankiFront:"Galvanic cell: electrons flow anode → cathode — which electrode is negative?",ankiBack:"Anode (oxidation occurs; releases electrons)",summary:"",resource:"Khan Academy Chem",notes:""},
+      {id:1002,qnum:"Q2",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"At the limit",answerChange:"No change",subject:"C/P",qtype:"Discrete",concept:"Henderson-Hasselbalch equation",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"pH = pKa + log([A-]/[HA])",resource:"Khan Academy Chem",notes:""},
+      {id:1003,qnum:"Q3",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"CARS",qtype:"Critical analysis",concept:"Author's main argument",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:1004,qnum:"Q4",date:"Jul 28",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"Over the limit",answerChange:"Incorrect → Correct",subject:"B/B",qtype:"Passage-based",concept:"DNA replication enzymes",qbank:"AAMC Official",ankiFront:"Enzyme that removes RNA primer in prokaryotes?",ankiBack:"DNA Pol I (5'→3' exonuclease removes primer)",summary:"",resource:"Kaplan Bio Ch.4",notes:""},
+      {id:1005,qnum:"Q5",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Psych/Soc",qtype:"Passage-based",concept:"Classical vs operant conditioning",qbank:"AAMC Official",ankiFront:"Pavlov's dog salivating at bell → learning type?",ankiBack:"Classical conditioning (neutral stimulus paired with unconditioned stimulus)",summary:"",resource:"",notes:""},
+      {id:1006,qnum:"Q6",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"C/P",qtype:"Data analysis",concept:"Boyle's Law",qbank:"AAMC Official",ankiFront:"At constant temperature, doubling volume → pressure?",ankiBack:"Pressure halves (PV = constant at constant T)",summary:"",resource:"",notes:""},
+      {id:1007,qnum:"Q7",date:"Jul 28",result:"incorrect",wrongReason:"Silly mistake / misread",time:"Under the limit",answerChange:"No change",subject:"CARS",qtype:"Critical analysis",concept:"Passage inference question",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"Must be supported by passage — no outside knowledge",resource:"",notes:"Went too broad on inference"},
+      {id:1008,qnum:"Q8",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"B/B",qtype:"Passage-based",concept:"Enzyme kinetics — Km and Vmax",qbank:"AAMC Official",ankiFront:"Competitive inhibitor effect on Km and Vmax?",ankiBack:"Km increases, Vmax unchanged (overcome with excess substrate)",summary:"",resource:"Kaplan Bio",notes:""},
+      {id:1009,qnum:"Q9",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"At the limit",answerChange:"No change",subject:"Psych/Soc",qtype:"Research interpretation",concept:"Social determinants of health",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:1010,qnum:"Q10",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"C/P",qtype:"Passage-based",concept:"Amino acid optical isomers",qbank:"AAMC Official",ankiFront:"Which amino acid has NO optical isomer (no chiral center)?",ankiBack:"Glycine (side chain is H — no asymmetric carbon)",summary:"",resource:"Princeton Review",notes:""},
+      {id:1011,qnum:"Q11",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"B/B",qtype:"Passage-based",concept:"PCR process steps",qbank:"AAMC Official",ankiFront:"PCR step where template strands separate?",ankiBack:"Denaturation (~95°C)",summary:"",resource:"",notes:""},
+      {id:1012,qnum:"Q12",date:"Jul 28",result:"correct",correctReason:"Guessed",time:"At the limit",answerChange:"No change",subject:"CARS",qtype:"Critical analysis",concept:"Weakening an argument",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:1013,qnum:"Q13",date:"Jul 28",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"No change",subject:"Psych/Soc",qtype:"Passage-based",concept:"Attribution theory",qbank:"AAMC Official",ankiFront:"Fundamental attribution error: tendency to over-attribute to...?",ankiBack:"Dispositional (internal) factors, underestimating situational factors",summary:"",resource:"Khan Academy Psych",notes:""},
+      {id:1014,qnum:"Q14",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"Incorrect → Correct",subject:"C/P",qtype:"Discrete",concept:"Le Chatelier's principle",qbank:"AAMC Official",ankiFront:"Adding more reactant to equilibrium → shift direction?",ankiBack:"Shifts toward products (forward direction)",summary:"",resource:"",notes:""},
+      {id:1015,qnum:"Q15",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"B/B",qtype:"Passage-based",concept:"Lac operon regulation",qbank:"AAMC Official",ankiFront:"Lac operon — when is it maximally expressed?",ankiBack:"High lactose + low glucose (cAMP high → CAP active, repressor off)",summary:"",resource:"",notes:""},
+      {id:1016,qnum:"Q16",date:"Jul 28",result:"incorrect",wrongReason:"Ran out of time",time:"Over the limit",answerChange:"No change",subject:"CARS",qtype:"Critical analysis",concept:"Author's tone",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:1017,qnum:"Q17",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Psych/Soc",qtype:"Discrete",concept:"Erikson's stages of development",qbank:"AAMC Official",ankiFront:"Erikson stage for adolescence (12-18 years)?",ankiBack:"Identity vs. Role Confusion",summary:"",resource:"",notes:""},
+      {id:1018,qnum:"Q18",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"C/P",qtype:"Passage-based",concept:"Electrophoresis principles",qbank:"AAMC Official",ankiFront:"In gel electrophoresis, smaller fragments travel...?",ankiBack:"Farther (smaller molecules travel further from the well)",summary:"",resource:"",notes:""},
+      {id:1019,qnum:"Q19",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"At the limit",answerChange:"No change",subject:"B/B",qtype:"Research interpretation",concept:"Hardy-Weinberg equilibrium",qbank:"AAMC Official",ankiFront:"Hardy-Weinberg: what does 2pq represent?",ankiBack:"Frequency of heterozygotes in the population",summary:"",resource:"",notes:""},
+      {id:1020,qnum:"Q20",date:"Jul 28",result:"incorrect",wrongReason:"Silly mistake / misread",time:"Under the limit",answerChange:"Correct → Incorrect",subject:"Psych/Soc",qtype:"Passage-based",concept:"Health disparities and SES",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:"Changed correct answer — review social determinants"},
+      {id:1021,qnum:"Q21",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"B/B",qtype:"Discrete",concept:"Cellular respiration ATP yield",qbank:"AAMC Official",ankiFront:"Net ATP yield from 1 glucose via aerobic respiration?",ankiBack:"30-32 ATP (theoretical maximum)",summary:"",resource:"",notes:""},
+      {id:1022,qnum:"Q22",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"C/P",qtype:"Discrete",concept:"Ohm's law and circuits",qbank:"AAMC Official",ankiFront:"V = IR: doubling resistance at constant voltage → current?",ankiBack:"Current halves (I = V/R)",summary:"",resource:"",notes:""},
+      {id:1023,qnum:"Q23",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"B/B",qtype:"Passage-based",concept:"Hypertension Management",qbank:"AAMC Official",ankiFront:"",ankiBack:"",summary:"Passage discusses renin-angiotensin-aldosterone system and HTN drugs",resource:"Kaplan Bio Ch.6",notes:"ACE inhibitors block angiotensin II; explains mechanism and side effect profile"},
+    ]},
+    {id:11,name:"MCAT Demo — Full Length 2 (Review)",date:"2026-07-29",questions:[
+      {id:1101,qnum:"Q1",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Psych/Soc",qtype:"Passage-based",concept:"Hypertension Management",qbank:"AAMC Official",ankiFront:"Passage: nonadherence to HTN meds in low-SES populations — why?",ankiBack:"Social determinants (cost, health literacy, medication side effects, competing stressors)",summary:"",resource:"",notes:""},
+      {id:1102,qnum:"Q2",date:"Jul 29",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"No change",subject:"B/B",qtype:"Passage-based",concept:"Hypertension Management",qbank:"AAMC Official",ankiFront:"Study shows ARB superior to ACE-I in HTN - mechanism difference?",ankiBack:"Both block AT1 receptor (ARB directly); ACE-I blocks ACE enzyme; ARB may spare bradykinin",summary:"",resource:"Kaplan Bio",notes:"Mechanism understanding crucial for interpreting drug studies"},
+      {id:1103,qnum:"Q3",date:"Jul 29",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"C/P",qtype:"Passage-based",concept:"Diuretics and electrolyte balance",qbank:"AAMC Official",ankiFront:"Loop diuretic + ACE-I combo → hypokalemia risk?",ankiBack:"Loop diuretic causes K+ loss; ACE-I preserves K+ (opposes effect); net depends on balance",summary:"",resource:"",notes:""},
+    ]},
+  ],
+  LSAT:[
+    {id:20,name:"LSAT Demo — PrepTest 90",date:"2026-07-28",questions:[
+      {id:2001,qnum:"Q1",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Strengthen",concept:"Causal argument strengthening",qbank:"LSAC Official",ankiFront:"To strengthen a causal argument, the best answer...?",ankiBack:"Eliminates alternative causes OR confirms the proposed mechanism",summary:"",resource:"PowerScore LR Bible",notes:""},
+      {id:2002,qnum:"Q2",date:"Jul 28",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Assumption",concept:"Necessary assumption — negation test",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Negate the answer — if it destroys the conclusion, it's necessary",resource:"PowerScore LR Bible",notes:""},
+      {id:2003,qnum:"Q3",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Analytical Reasoning",qtype:"Inference",concept:"Linear sequencing game",qbank:"LSAC Official",ankiFront:"6-slot linear: A before B, B before C → slots available for A?",ankiBack:"Slots 1-4 (needs at least B and C after it)",summary:"",resource:"7Sage",notes:""},
+      {id:2004,qnum:"Q4",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"Reading Comprehension",qtype:"Inference",concept:"Author's attitude in passage",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Find explicit tone words before selecting author attitude",resource:"Manhattan Prep RC",notes:""},
+      {id:2005,qnum:"Q5",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Weaken",concept:"Weakening a correlation-causation argument",qbank:"LSAC Official",ankiFront:"Best way to weaken a correlation → causation claim?",ankiBack:"Show a confounding variable explains both phenomena",summary:"",resource:"",notes:""},
+      {id:2006,qnum:"Q6",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"Incorrect → Correct",subject:"Analytical Reasoning",qtype:"Must Be True",concept:"Grouping game constraints",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"7Sage",notes:"Drew diagram and corrected answer"},
+      {id:2007,qnum:"Q7",date:"Jul 28",result:"incorrect",wrongReason:"Silly mistake / misread",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Flaw",concept:"Ad hominem fallacy",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Ad hominem: attacking the person, not the argument",resource:"",notes:"Misidentified the flaw type"},
+      {id:2008,qnum:"Q8",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Reading Comprehension",qtype:"Inference",concept:"Comparative passage structure",qbank:"LSAC Official",ankiFront:"In comparative passage questions, what's key?",ankiBack:"Find where both authors agree AND fundamentally disagree",summary:"",resource:"",notes:""},
+      {id:2009,qnum:"Q9",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"At the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Inference",concept:"Must Be True strategy",qbank:"LSAC Official",ankiFront:"For Must Be True, the correct answer must...?",ankiBack:"Follow directly from the stimulus — no new information added",summary:"",resource:"",notes:""},
+      {id:2010,qnum:"Q10",date:"Jul 28",result:"incorrect",wrongReason:"Ran out of time",time:"Over the limit",answerChange:"No change",subject:"Analytical Reasoning",qtype:"Cannot Be True",concept:"Hybrid game",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Complex hybrid game — flag and return; do deductions first",resource:"7Sage Advanced Games",notes:""},
+      {id:2011,qnum:"Q11",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Parallel",concept:"Parallel reasoning structure",qbank:"LSAC Official",ankiFront:"In parallel reasoning, match the...?",ankiBack:"Argument structure (logical form), not the content or subject",summary:"",resource:"",notes:""},
+      {id:2012,qnum:"Q12",date:"Jul 28",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"Correct → Incorrect",subject:"Reading Comprehension",qtype:"Inference",concept:"Central purpose of passage",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Main point ≠ first sentence — check entire paragraph and conclusion",resource:"",notes:"Changed correct answer — costly"},
+      {id:2013,qnum:"Q13",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Method",concept:"Method of reasoning",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:2014,qnum:"Q14",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Analytical Reasoning",qtype:"Must Be True",concept:"Sequencing game chain deductions",qbank:"LSAC Official",ankiFront:"Most powerful deductions in sequencing games come from...?",ankiBack:"Combining rules with shared variables (chain deductions)",summary:"",resource:"7Sage",notes:""},
+      {id:2015,qnum:"Q15",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Strengthen",concept:"Survey/study argument strengthen",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:2016,qnum:"Q16",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"Reading Comprehension",qtype:"Inference",concept:"Specific detail question",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Always return to passage for detail questions",resource:"",notes:""},
+      {id:2017,qnum:"Q17",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Main Point",concept:"Conclusion indicator words",qbank:"LSAC Official",ankiFront:"Conclusion indicator words to look for?",ankiBack:"Therefore, thus, hence, so, consequently, it follows that",summary:"",resource:"",notes:""},
+      {id:2018,qnum:"Q18",date:"Jul 28",result:"correct",correctReason:"Guessed",time:"At the limit",answerChange:"No change",subject:"Analytical Reasoning",qtype:"Inference",concept:"In/out selection game",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:2019,qnum:"Q19",date:"Jul 28",result:"incorrect",wrongReason:"Silly mistake / misread",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Assumption",concept:"Sufficient vs necessary assumption",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Sufficient assumption: answer alone MAKES conclusion true",resource:"PowerScore LR Bible",notes:"Confused sufficient with necessary assumption"},
+      {id:2020,qnum:"Q20",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Reading Comprehension",qtype:"Inference",concept:"Function of a paragraph",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:2021,qnum:"Q21",date:"Jul 28",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Weaken",concept:"Plan/proposal weaken",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"",notes:""},
+      {id:2022,qnum:"Q22",date:"Jul 28",result:"incorrect",wrongReason:"Knew material, wrong algorithm",time:"At the limit",answerChange:"No change",subject:"Analytical Reasoning",qtype:"Cannot Be True",concept:"In/out grouping game",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"",resource:"7Sage",notes:""},
+      {id:2023,qnum:"Q23",date:"Jul 28",result:"incorrect",wrongReason:"Didn't know the material",time:"Over the limit",answerChange:"No change",subject:"Reading Comprehension",qtype:"Inference",concept:"Health Policy — Clinical Guidelines",qbank:"LSAC Official",ankiFront:"",ankiBack:"",summary:"Passage discusses hypertension medication guidelines: interpreting legislative intent",resource:"Manhattan Prep RC",notes:"Policy passages test argument comprehension, not policy knowledge"},
+    ]},
+    {id:21,name:"LSAT Demo — PrepTest 89 (Post-Review)",date:"2026-07-30",questions:[
+      {id:2101,qnum:"Q1-LR",date:"Jul 30",result:"correct",correctReason:"Right reasoning",time:"Under the limit",answerChange:"No change",subject:"Logical Reasoning",qtype:"Strengthen",concept:"Evidence sufficiency in medical trials",qbank:"LSAC Official",ankiFront:"Study shows treatment X reduces HTN; to strengthen: eliminate what?",ankiBack:"Confounding variables, placebo effect, researcher bias",summary:"",resource:"",notes:""},
+    ]},
+  ],
+};
+
+
+// ── Topic Browser ────────────────────────────────────────────────────────────
+function TopicBrowser({ T, allQ, sessions, cfg }) {
+  const [filterSubject, setFilterSubject] = useState("All");
+  const [filterType,    setFilterType]    = useState("All");
+  const [filterResult,  setFilterResult]  = useState("All");
+  const [filterChange,  setFilterChange]  = useState("All");
+  const [sortBy,        setSortBy]        = useState("newest");
+  const [search,        setSearch]        = useState("");
+  const [expanded,      setExpanded]      = useState({});
+
+  const filtered = allQ
+    .filter(q => filterSubject==="All" || q.subject===filterSubject)
+    .filter(q => filterType==="All"    || q.qtype===filterType)
+    .filter(q => filterResult==="All"  || q.result===filterResult.toLowerCase())
+    .filter(q => filterChange==="All"  || q.answerChange===filterChange)
+    .filter(q => !search || (q.concept||"").toLowerCase().includes(search.toLowerCase()) || (q.subject||"").toLowerCase().includes(search.toLowerCase()))
+    .sort((a,b) => {
+      if (sortBy==="newest") return b.id - a.id;
+      if (sortBy==="oldest") return a.id - b.id;
+      if (sortBy==="subject") return (a.subject||"").localeCompare(b.subject||"");
+      if (sortBy==="result") return a.result.localeCompare(b.result);
+      return 0;
+    });
+
+  const selStyle = { background:T.raised, border:"1px solid "+T.border, borderRadius:7, padding:"7px 10px", color:T.dim, fontSize:12, cursor:"pointer" };
+
+  const subjects = [...new Set(allQ.map(q=>q.subject).filter(Boolean))];
+  const qtypes   = [...new Set(allQ.map(q=>q.qtype).filter(Boolean))];
+
+  return (
+    <div>
+      {/* Search */}
+      <div style={{ marginBottom:14 }}>
+        <input
+          placeholder="Search concept, subject..."
+          value={search} onChange={e=>setSearch(e.target.value)}
+          style={{ width:"100%", background:T.raised, border:"1px solid "+T.border, borderRadius:9, padding:"10px 16px", color:T.text, fontSize:13, boxSizing:"border-box" }}
+        />
+      </div>
+
+      {/* Filters */}
+      <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap", alignItems:"center" }}>
+        <select style={selStyle} value={filterSubject} onChange={e=>setFilterSubject(e.target.value)}>
+          <option>All</option>{subjects.map(s=><option key={s}>{s}</option>)}
+        </select>
+        <select style={selStyle} value={filterType} onChange={e=>setFilterType(e.target.value)}>
+          <option>All</option>{qtypes.map(t=><option key={t}>{t}</option>)}
+        </select>
+        <select style={selStyle} value={filterResult} onChange={e=>setFilterResult(e.target.value)}>
+          <option value="All">All Results</option>
+          <option value="Correct">✓ Correct</option>
+          <option value="Incorrect">✗ Incorrect</option>
+        </select>
+        <select style={selStyle} value={filterChange} onChange={e=>setFilterChange(e.target.value)}>
+          <option value="All">All Changes</option>
+          <option>No change</option>
+          <option>Incorrect → Correct</option>
+          <option>Correct → Incorrect</option>
+          <option>Incorrect → Incorrect</option>
+        </select>
+        <select style={selStyle} value={sortBy} onChange={e=>setSortBy(e.target.value)}>
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="subject">By Subject</option>
+          <option value="result">By Result</option>
+        </select>
+        <span style={{ fontSize:11, color:T.muted, marginLeft:"auto" }}>{filtered.length} questions</span>
+        {(filterSubject!=="All"||filterType!=="All"||filterResult!=="All"||filterChange!=="All"||search) &&
+          <button onClick={()=>{setFilterSubject("All");setFilterType("All");setFilterResult("All");setFilterChange("All");setSearch("");}} style={{ background:"none", border:"none", color:T.accent, fontSize:12, cursor:"pointer" }}>Clear filters</button>}
+      </div>
+
+      {/* Subject breakdown pills */}
+      <div style={{ display:"flex", gap:8, marginBottom:18, flexWrap:"wrap" }}>
+        {[...new Set(allQ.map(q=>q.subject).filter(Boolean))].map(s => {
+          const total = allQ.filter(q=>q.subject===s).length;
+          const correct = allQ.filter(q=>q.subject===s&&q.result==="correct").length;
+          const p = Math.round(correct/total*100);
+          return (
+            <button key={s} onClick={()=>setFilterSubject(filterSubject===s?"All":s)} style={{
+              background: filterSubject===s ? (subjColors[s]||T.accent)+"28" : T.raised,
+              border: "1px solid "+(filterSubject===s ? (subjColors[s]||T.accent)+"60" : T.border),
+              borderRadius:20, padding:"5px 12px", cursor:"pointer",
+              display:"flex", alignItems:"center", gap:6,
+            }}>
+              <span style={{ fontSize:11, fontWeight:600, color:subjColors[s]||T.dim }}>{s}</span>
+              <span style={{ fontSize:10, color:T.scoreColor(p), fontWeight:700 }}>{p}%</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Question list */}
+      {filtered.length===0 && <div style={{ textAlign:"center", color:T.muted, padding:"40px 0", fontSize:13 }}>No questions match your filters.</div>}
+      {filtered.map(q => {
+        const sess = sessions.find(s=>s.questions.some(sq=>sq.id===q.id));
+        const isC = q.result==="correct";
+        return (
+          <Card key={q.id} T={T} style={{ marginBottom:8 }}>
+            <div style={{ padding:"13px 16px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:7, flexWrap:"wrap" }}>
+                    <ResultBadge result={q.result} T={T}/>
+                    {q.subject && <Pill label={q.subject} color={subjColors[q.subject]}/>}
+                    {q.qtype && <span style={{ fontSize:11, color:T.muted, background:T.raised, borderRadius:5, padding:"1px 7px" }}>{q.qtype}</span>}
+                    {q.answerChange && q.answerChange!=="No change" && (
+                      <span style={{ fontSize:10, color:q.answerChange==="Incorrect → Correct"?T.success:T.danger, background:q.answerChange==="Incorrect → Correct"?T.success+"18":T.danger+"18", borderRadius:4, padding:"1px 6px" }}>🔄 {q.answerChange}</span>
+                    )}
+                  </div>
+                  {q.concept && <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:4 }}>{q.concept}</div>}
+                  <div style={{ fontSize:11, color:T.muted }}>{sess?.name} · {q.date}</div>
+                </div>
+                <button onClick={()=>setExpanded(e=>({...e,[q.id]:!e[q.id]}))} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", fontSize:12, whiteSpace:"nowrap" }}>
+                  {expanded[q.id]?"▲ Less":"▼ More"}
+                </button>
+              </div>
+              {expanded[q.id] && (
+                <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid "+T.border, display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
+                  {[
+                    isC && q.correctReason && ["WHY CORRECT", q.correctReason, T.success],
+                    !isC && q.wrongReason  && ["WHY WRONG",   q.wrongReason,   T.danger],
+                    q.time     && ["TIME",     q.time,     T.dim],
+                    q.qbank    && ["QBANK",    q.qbank,    T.dim],
+                    q.resource && ["RESOURCE", q.resource, T.accent],
+                  ].filter(Boolean).map(([lbl,val,color]) => (
+                    <div key={lbl}><div style={{ fontSize:9, color:T.muted, letterSpacing:"0.8px", marginBottom:3 }}>{lbl}</div><div style={{ fontSize:12, color }}>{val}</div></div>
+                  ))}
+                  {q.ankiFront && <div style={{ gridColumn:"1/-1" }}><div style={{ fontSize:9, color:T.muted, letterSpacing:"0.8px", marginBottom:3 }}>ANKI</div><div style={{ fontSize:12, color:T.accent, fontStyle:"italic" }}>"{q.ankiFront}"</div></div>}
+                  {q.summary && <div style={{ gridColumn:"1/-1" }}><div style={{ fontSize:9, color:T.muted, letterSpacing:"0.8px", marginBottom:3 }}>SUMMARY</div><div style={{ fontSize:12, color:T.dim }}>{q.summary}</div></div>}
+                  {q.notes && <div style={{ gridColumn:"1/-1" }}><div style={{ fontSize:9, color:T.muted, letterSpacing:"0.8px", marginBottom:3 }}>NOTES</div><div style={{ fontSize:12, color:T.dim }}>{q.notes}</div></div>}
+                </div>
+              )}
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Flashcards Panel ────────────────────────────────────────────────────────
+function FlashcardsPanel({allQ,sessions,T,ankiTotal}){
+  const [fcSession,setFcSession]=useState("All");
+  const [fcSubject,setFcSubject]=useState("All");
+  const [fcSearch,setFcSearch]=useState("");
+  const ankiCards=allQ.filter(q=>q.ankiFront&&q.ankiFront.trim());
+  const filteredCards=ankiCards
+    .filter(q=>{
+      if(fcSession==="All")return true;
+      const sess=sessions.find(s=>s.questions.some(sq=>sq.id===q.id));
+      return String(sess?.id)===fcSession;
+    })
+    .filter(q=>fcSubject==="All"||q.subject===fcSubject)
+    .filter(q=>!fcSearch||(q.concept||"").toLowerCase().includes(fcSearch.toLowerCase())||(q.ankiFront||"").toLowerCase().includes(fcSearch.toLowerCase()));
+  const cardSessions=sessions.filter(s=>s.questions.some(q=>q.ankiFront&&q.ankiFront.trim()));
+  const cardSubjects=[...new Set(ankiCards.map(q=>q.subject).filter(Boolean))];
+  const hasFilters=fcSession!=="All"||fcSubject!=="All"||fcSearch;
+  const downloadAll=()=>{
+    const rows=ankiCards.map(q=>{const back=(q.ankiBack||q.concept||"").replace(/\t/g," ");return `${q.ankiFront.replace(/\t/g," ")}\t${back}`;}).join("\n");
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([rows],{type:"text/plain"}));a.download="vimavima_anki.txt";a.click();
+  };
+  return (<>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <div>
+        <div style={{fontSize:16,fontWeight:600,color:T.text,marginBottom:3}}>Flashcards</div>
+        <div style={{fontSize:12,color:T.muted}}>{hasFilters?`${filteredCards.length} of ${ankiTotal}`:ankiTotal} cards · Click any card to flip</div>
+      </div>
+      {ankiTotal>0&&<button onClick={downloadAll} style={{background:T.accent,border:"none",borderRadius:8,padding:"9px 20px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>⬇ Download .apkg Deck</button>}
+    </div>
+    <div style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"10px 14px",marginBottom:16,fontSize:12,color:T.dim,display:"flex",gap:10,alignItems:"center"}}>
+      <span style={{fontSize:16}}>💡</span>
+      <span style={{color:T.dim}}>Each card has a <b style={{color:T.text}}>front</b> (cue) and a <b style={{color:T.text}}>back</b> (answer). Click to flip. Download exports .txt for Anki → File → Import.</span>
+    </div>
+      <div style={{display:"flex",gap:18,alignItems:"flex-start"}}>
+        <div style={{width:188,flexShrink:0,display:"flex",flexDirection:"column",gap:12,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"16px 14px"}}>
+          <div style={{fontSize:10,color:T.dim,letterSpacing:"0.9px",textTransform:"uppercase",fontWeight:600}}>Filter Cards</div>
+          <div>
+            <div style={{fontSize:10,color:T.dim,letterSpacing:"0.7px",textTransform:"uppercase",marginBottom:5}}>Search</div>
+            <input placeholder="Concept or keyword..." value={fcSearch} onChange={e=>setFcSearch(e.target.value)}
+              style={{width:"100%",background:T.raised,border:"1px solid "+T.border,borderRadius:7,padding:"7px 10px",color:T.text,fontSize:11,boxSizing:"border-box"}}/>
+          </div>
+          {cardSessions.length>0&&(
+            <div>
+              <div style={{fontSize:10,color:T.dim,letterSpacing:"0.7px",textTransform:"uppercase",marginBottom:5}}>Session</div>
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                {[{id:"All",name:"All Sessions"},...cardSessions.map(s=>({id:String(s.id),name:s.name}))].map(item=>(
+                  <button key={item.id} onClick={()=>setFcSession(item.id)}
+                    style={{background:fcSession===item.id?T.accent+"22":T.raised,border:"1px solid "+(fcSession===item.id?T.accent+"60":T.border),borderRadius:6,padding:"6px 10px",color:fcSession===item.id?T.accent:T.dim,cursor:"pointer",fontSize:11,textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",transition:"all 0.15s"}}>
+                    {item.name.length>22?item.name.substring(0,22)+"…":item.name}
+                  </button>
                 ))}
               </div>
             </div>
           )}
-
-          <div style={{borderTop:`1px solid ${theme.border}`,paddingTop:16,marginBottom:16}}>
-            <div style={{fontSize:11,color:theme.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:10}}>Export Your Data</div>
-            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              <button onClick={()=>setExportGate("anki")} style={{background:theme.raised,border:`1px solid ${theme.accent}50`,borderRadius:8,padding:"9px 16px",color:theme.accent,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>⚡ Export to Anki (.apkg)</button>
-              <button onClick={()=>setExportGate("excel")} style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:8,padding:"9px 16px",color:theme.dim,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>📊 Export to Excel</button>
-            </div>
-            <div style={{fontSize:11,color:theme.muted,marginTop:8}}>Real exports require a free account — click above to continue.</div>
-          </div>
-
-          {exportGate && (
-            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}} onClick={e=>e.target===e.currentTarget&&setExportGate(null)}>
-              <div style={{background:theme.surface,border:`1px solid ${theme.border}`,borderRadius:18,padding:"36px 32px",maxWidth:400,width:"100%",textAlign:"center"}}>
-                <div style={{fontSize:40,marginBottom:12}}>{exportGate==="anki"?"⚡":"📊"}</div>
-                <div style={{fontSize:18,fontWeight:700,color:theme.text,marginBottom:8}}>
-                  {exportGate==="anki" ? "Ready to export your real Anki deck?" : "Ready to export your real Excel sheet?"}
-                </div>
-                <p style={{fontSize:13,color:theme.muted,lineHeight:1.65,marginBottom:24}}>
-                  Continue by creating a free account — it takes 30 seconds, and you'll land right back in the app to pick up where this demo left off.
-                </p>
-                <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
-                  <button onClick={goToSignIn} style={{background:theme.accent,border:"none",borderRadius:8,padding:"11px 24px",color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Create Free Account →</button>
-                  <button onClick={()=>setExportGate(null)} style={{background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:8,padding:"11px 18px",color:theme.muted,fontSize:14,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Not now</button>
-                </div>
+          {cardSubjects.length>0&&(
+            <div>
+              <div style={{fontSize:10,color:T.dim,letterSpacing:"0.7px",textTransform:"uppercase",marginBottom:5}}>Subject</div>
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                <button onClick={()=>setFcSubject("All")}
+                  style={{background:fcSubject==="All"?T.accent+"22":T.raised,border:"1px solid "+(fcSubject==="All"?T.accent+"60":T.border),borderRadius:6,padding:"6px 10px",color:fcSubject==="All"?T.accent:T.dim,cursor:"pointer",fontSize:11,textAlign:"left",transition:"all 0.15s"}}>
+                  All Subjects
+                </button>
+                {cardSubjects.map(s=>(
+                  <button key={s} onClick={()=>setFcSubject(fcSubject===s?"All":s)}
+                    style={{background:fcSubject===s?(subjColors[s]||T.accent)+"22":T.raised,border:"1px solid "+(fcSubject===s?(subjColors[s]||T.accent)+"60":T.border),borderRadius:6,padding:"6px 10px",color:fcSubject===s?(subjColors[s]||T.accent):T.dim,cursor:"pointer",fontSize:11,textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",transition:"all 0.15s"}}>
+                    {s}
+                  </button>
+                ))}
               </div>
             </div>
           )}
-
-          {questions.length >= 2 && (
-            <div style={{borderTop:`1px solid ${theme.border}`,paddingTop:16}}>
-              {!showSave ? (
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-                  <span style={{fontSize:12,color:theme.muted}}>Save this demo data and continue inside the full app</span>
-                  <button onClick={() => setShowSave(true)} style={{background:theme.accent,border:"none",borderRadius:8,padding:"8px 18px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Save Free →</button>
-                </div>
-              ) : linkStatus === "done" ? (
-                <div style={{textAlign:"center",color:theme.success,fontSize:13,fontWeight:600}}>
-                  ✓ Account created! Check your email, then <a href="/app" style={{color:theme.accent}}>open the full app →</a>
-                </div>
-              ) : (
-                <div>
-                  <div style={{fontSize:13,fontWeight:600,color:theme.text,marginBottom:10}}>Create your free account — your demo data carries over</div>
-                  {["email","password"].map((t, i) => (
-                    <input key={t} type={t} placeholder={t === "email" ? "you@email.com" : "Create password"}
-                      value={i===0?email:pass} onChange={e => i===0?setEmail(e.target.value):setPass(e.target.value)}
-                      style={{width:"100%",boxSizing:"border-box",background:theme.raised,border:`1px solid ${theme.border}`,borderRadius:8,padding:"9px 14px",color:theme.text,fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",marginBottom:8}}/>
-                  ))}
-                  {linkStatus==="error" && <div style={{color:theme.danger,fontSize:12,marginBottom:8}}>Something went wrong — try again.</div>}
-                  <button onClick={linkAccount} disabled={!email||!pass||linkStatus==="working"}
-                    style={{width:"100%",background:theme.accent,border:"none",borderRadius:8,padding:"10px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",opacity:!email||!pass?0.6:1}}>
-                    {linkStatus==="working" ? "Creating account…" : "Create Free Account →"}
-                  </button>
-                  <div style={{textAlign:"center",marginTop:8,fontSize:12,color:theme.muted}}>
-                    Already have an account? <a href="/app" style={{color:theme.accent}}>Sign in</a>
-                  </div>
-                </div>
-              )}
+          {hasFilters&&<button onClick={()=>{setFcSession("All");setFcSubject("All");setFcSearch("");}} style={{background:"none",border:"none",color:T.accent,fontSize:11,cursor:"pointer",textAlign:"left",padding:0}}>✕ Clear filters</button>}
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          {ankiTotal===0?(
+            <div style={{textAlign:"center",color:T.muted,padding:"50px 0",fontSize:13}}>
+              <div style={{fontSize:36,marginBottom:12}}>⚡</div>
+              <div style={{color:T.dim,marginBottom:6,fontWeight:600}}>No flashcards yet</div>
+              <div style={{fontSize:12}}>When logging a question, fill in the <b style={{color:T.text}}>“Flashcard 1-liner”</b> step to create a card.</div>
+            </div>
+          ):filteredCards.length===0?(
+            <div style={{textAlign:"center",color:T.muted,padding:"40px 0",fontSize:13}}>No cards match your filters.</div>
+          ):(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+              {filteredCards.map(q=>{const sess=sessions.find(s=>s.questions.some(sq=>sq.id===q.id));return <FlipCard key={q.id} T={T} front={q.ankiFront} answer={q.ankiBack||q.concept||""} session={sess?.name}/>;})}
             </div>
           )}
+        </div>
+      </div>
+  </>);
+}
+
+// ── Auth / Onboarding ────────────────────────────────────────────────────────
+const TRACKS = [
+  { id:"MCAT",  label:"Pre-Med",     sub:"MCAT prep — C/P, CARS, B/B, Psych/Soc",   icon:"🔬" },
+  { id:"USMLE", label:"Med Student", sub:"USMLE Step 1 & Step 2 question tracking",  icon:"🩺" },
+  { id:"LSAT",  label:"Pre-Law",     sub:"LSAT — LR, AR, Reading Comprehension",     icon:"⚖️" },
+];
+
+function AuthScreen({ onAuth, T }) {
+  const [screen, setScreen]       = useState("login");
+  const [name, setName]           = useState("");
+  const [email, setEmail]         = useState("");
+  const [pass, setPass]           = useState("");
+  const [track, setTrack]         = useState(null);
+  const [error, setError]         = useState("");
+  const [tosAgreed, setTosAgreed] = useState(false);
+
+  const inp = {
+    width:"100%",
+    background:T.raised,
+    border:"1px solid "+T.border,
+    borderRadius:8,
+    padding:"11px 14px",
+    color:T.text,
+    fontSize:13,
+    marginBottom:14,
+    boxSizing:"border-box"
+  };
+
+  const btn = (disabled) => ({
+    width:"100%",
+    background:disabled?T.muted:T.accent,
+    border:"none",
+    borderRadius:10,
+    padding:"12px",
+    color:"#fff",
+    fontSize:14,
+    fontWeight:600,
+    cursor:disabled?"not-allowed":"pointer",
+    marginTop:4,
+    opacity:disabled?0.45:1
+  });
+
+  const oBtn = {
+    width:"100%",
+    background:T.raised,
+    border:"1px solid "+T.border,
+    borderRadius:10,
+    padding:"11px",
+    color:T.text,
+    fontSize:13,
+    fontWeight:500,
+    cursor:"pointer",
+    marginBottom:10,
+    display:"flex",
+    alignItems:"center",
+    justifyContent:"center",
+    gap:10
+  };
+
+  // ✅ SUPABASE LOGIN FUNCTION
+  const signInWithProvider = async (provider) => {
+    try {
+      // Redirect to /app after successful OAuth login
+      const redirectUrl = window.location.origin + '/app';
+  
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: redirectUrl,
+        }
+      });
+      if (error) setError(error.message);
+    } catch (err) {
+      setError("Login failed. Try again.");
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!email || !pass) { setError("Please fill in all fields."); return; }
+    if (screen === "signup" && !name) { setError("Please enter your name."); return; }
+    if (screen === "signup" && !tosAgreed) { setError("Please agree to the Terms of Service and Privacy Policy."); return; }
+    setError("");
+
+    try {
+      if (screen === "signup") {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password: pass,
+          options: { data: { full_name: name } }
+        });
+        if (error) { setError(error.message); return; }
+        // onAuthStateChange in App handles the transition
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password: pass
+        });
+        if (error) { setError(error.message); return; }
+        // onAuthStateChange in App handles the transition
+      }
+    } catch (err) {
+      setError("Something went wrong. Try again.");
+    }
+  };
+
+  // ── ONBOARDING SCREEN ───────────────────────────────
+  if (screen === "onboarding") return (
+    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans',sans-serif", padding:20 }}>
+      <div style={{ background:T.surface, border:"1px solid "+T.border, borderRadius:20, padding:"40px 36px", width:"100%", maxWidth:440 }}>
+        <div style={{ marginBottom:28, display:"flex", justifyContent:"center" }}>
+          <VimaLogo dark={T.name==="dark"}/>
+        </div>
+
+        <div style={{ fontSize:22, fontWeight:700, color:T.text, marginBottom:6, textAlign:"center" }}>
+          What are you studying for?
+        </div>
+
+        <div style={{ fontSize:13, color:T.muted, textAlign:"center", marginBottom:28 }}>
+          This personalizes your question types and subjects.
+        </div>
+
+        <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:24 }}>
+          {TRACKS.map(tr => (
+            <button
+              key={tr.id}
+              onClick={() => setTrack(tr.id)}
+              style={{
+                background:track===tr.id?T.accent+"22":T.raised,
+                border:"2px solid "+(track===tr.id?T.accent:T.border),
+                borderRadius:12,
+                padding:"16px 18px",
+                cursor:"pointer",
+                textAlign:"left",
+                display:"flex",
+                alignItems:"center",
+                gap:14
+              }}
+            >
+              <span style={{ fontSize:26 }}>{tr.icon}</span>
+              <div>
+                <div style={{ fontSize:15, fontWeight:700, color:T.text }}>
+                  {tr.label}
+                </div>
+                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>
+                  {tr.sub}
+                </div>
+              </div>
+              {track===tr.id && (
+                <span style={{ marginLeft:"auto", color:T.accent, fontSize:18 }}>✓</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        <button
+          disabled={!track}
+          onClick={() => onAuth({ name, email, track })}
+          style={btn(!track)}
+        >
+          Get Started →
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── AUTH SCREEN ───────────────────────────────
+  return (
+    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans',sans-serif", padding:20 }}>
+      <div style={{ background:T.surface, border:"1px solid "+T.border, borderRadius:20, padding:"40px 36px", width:"100%", maxWidth:420 }}>
+
+        <div style={{ marginBottom:28, display:"flex", justifyContent:"center" }}>
+          <VimaLogo dark={T.name==="dark"}/>
+        </div>
+
+        <div style={{ fontSize:22, fontWeight:700, color:T.text, marginBottom:6, textAlign:"center" }}>
+          {screen==="login"?"Welcome back":"Create your account"}
+        </div>
+
+        <div style={{ fontSize:13, color:T.muted, textAlign:"center", marginBottom:24 }}>
+          {screen==="login"?"Log in to your VIMA VIMA account":"Start tracking your performance"}
+        </div>
+
+        {/* GOOGLE */}
+        {screen === "signup" && (
+          <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:14 }}>
+            <input
+              type="checkbox"
+              id="tosConsent"
+              checked={tosAgreed}
+              onChange={e => setTosAgreed(e.target.checked)}
+              style={{ marginTop:3, cursor:"pointer", accentColor:T.accent, flexShrink:0 }}
+            />
+            <label htmlFor="tosConsent" style={{ fontSize:12, color:T.muted, lineHeight:1.6, cursor:"pointer" }}>
+              I agree to the{" "}
+              <a href="/terms" target="_blank" rel="noreferrer" style={{ color:T.accent }}>Terms of Service</a>{" "}
+              and{" "}
+              <a href="/privacy" target="_blank" rel="noreferrer" style={{ color:T.accent }}>Privacy Policy</a>
+            </label>
+          </div>
+        )}
+        <button
+          style={{ ...oBtn, opacity: screen === "signup" && !tosAgreed ? 0.45 : 1, cursor: screen === "signup" && !tosAgreed ? "not-allowed" : "pointer" }}
+          onClick={() => { if (screen === "login" || tosAgreed) signInWithProvider('google'); }}
+        >
+          Continue with Google
+        </button>
+        {screen === "login" && (
+          <p style={{ fontSize:11, color:T.muted, textAlign:"center", marginTop:4, marginBottom:8, lineHeight:1.5 }}>
+            By continuing, you agree to our{" "}
+            <a href="/terms" style={{ color:T.accent }}>Terms</a>{" "}
+            and{" "}
+            <a href="/privacy" style={{ color:T.accent }}>Privacy Policy</a>
+          </p>
+        )}
+
+        <div style={{ display:"flex", alignItems:"center", gap:12, margin:"18px 0" }}>
+          <div style={{ flex:1, height:1, background:T.border }}/>
+          <span style={{ fontSize:11, color:T.muted }}>OR</span>
+          <div style={{ flex:1, height:1, background:T.border }}/>
+        </div>
+
+        {error && (
+          <div style={{ background:T.danger+"18", border:"1px solid "+T.danger+"30", borderRadius:8, padding:"9px 12px", fontSize:12, color:T.danger, marginBottom:14, textAlign:"center" }}>
+            {error}
+          </div>
+        )}
+
+        {screen==="signup" && (
+          <>
+            <label style={{ fontSize:10, color:T.muted, letterSpacing:"0.9px", textTransform:"uppercase", marginBottom:6, display:"block" }}>
+              Full Name
+            </label>
+            <input style={inp} placeholder="Your name" value={name} onChange={e=>setName(e.target.value)}/>
+          </>
+        )}
+
+        <label style={{ fontSize:10, color:T.muted, letterSpacing:"0.9px", textTransform:"uppercase", marginBottom:6, display:"block" }}>
+          Email
+        </label>
+        <input style={inp} type="email" placeholder="you@email.com" value={email} onChange={e=>setEmail(e.target.value)}/>
+
+        <label style={{ fontSize:10, color:T.muted, letterSpacing:"0.9px", textTransform:"uppercase", marginBottom:6, display:"block" }}>
+          Password
+        </label>
+        <input style={inp} type="password" placeholder="••••••••" value={pass} onChange={e=>setPass(e.target.value)}/>
+
+        <button style={btn(screen === "signup" && !tosAgreed)} onClick={handleSubmit}>
+          {screen==="login"?"Log In":"Create Account"}
+        </button>
+
+        <div style={{ textAlign:"center", marginTop:20, fontSize:13, color:T.muted }}>
+          {screen==="login" ? (
+            <span>No account? <span style={{ color:T.accent, cursor:"pointer", fontWeight:600 }} onClick={()=>{setScreen("signup");setError("");setTosAgreed(false);}}>Sign up free</span></span>
+          ) : (
+            <span>Have an account? <span style={{ color:T.accent, cursor:"pointer", fontWeight:600 }} onClick={()=>{setScreen("login");setError("");setTosAgreed(false);}}>Log in</span></span>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN APP ───────────────────────────────────────────────────────────────────
+function VimaApp(){
+  const [splashDone,setSplashDone]=useState(false);
+  const [user, setUser] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const handleUserSession = (session) => {
+      if (session?.user) {
+        const savedTrack = localStorage.getItem('vimavima_track');
+        setUser({
+          name: session.user.user_metadata?.full_name || session.user.email,
+          email: session.user.email,
+          track: savedTrack || null
+        });
+      } else {
+        setUser(null);
+      }
+      setIsAuthLoading(false);
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleUserSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleUserSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // AdSense removed from authenticated app — ads are public-only (see LandingPage.jsx / BlogPage.jsx)
+  // 
+  // Auto-detect system theme preference, fallback to dark mode
+  const [darkMode,setDarkMode]=useState(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return true; // fallback to dark
+  });
+  const T=darkMode?DARK:LIGHT;
+
+  // Keep body bg in sync with theme to eliminate white flash
+  useEffect(() => {
+    const forceW = (el) => {
+      if (!el) return;
+      el.style.setProperty('max-width','none','important');
+      el.style.setProperty('width','100%','important');
+      el.style.setProperty('margin','0','important');
+      el.style.setProperty('padding','0','important');
+    };
+    document.body.style.setProperty('background', T.bg, 'important');
+    document.body.style.setProperty('overflow-x', 'hidden', 'important');
+    document.documentElement.style.setProperty('background', T.bg, 'important');
+    forceW(document.body);
+    forceW(document.documentElement);
+    forceW(document.getElementById('root'));
+  }, [T.bg]);
+  const mode = user?.track || "USMLE";
+
+  // ── Persistent sessions: load from localStorage when user signs in ────────
+  const [sessionsByMode,setSessionsByMode]=useState({USMLE:[],MCAT:[],LSAT:[]});
+
+  // Load this user's saved data whenever they log in (or email changes)
+  useEffect(() => {
+    if (!user?.email) return;
+    const key = `vimavima_data_${user.email}`;
+    let loaded;
+    try {
+      const raw = localStorage.getItem(key);
+      loaded = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(SAMPLE_DATA));
+    } catch { loaded = JSON.parse(JSON.stringify(SAMPLE_DATA)); }
+
+    // One-time import of questions logged in the public landing-page demo before sign-up
+    // (see LandingPage.jsx InteractiveDemo, which writes "vimavima_demo_carryover").
+    try {
+      const carryoverRaw = localStorage.getItem("vimavima_demo_carryover");
+      if (carryoverRaw) {
+        const demoQuestions = JSON.parse(carryoverRaw);
+        const byExam = {};
+        demoQuestions.forEach(q => {
+          const exam = q.exam || "USMLE";
+          if (!byExam[exam]) byExam[exam] = [];
+          byExam[exam].push(q);
+        });
+        Object.entries(byExam).forEach(([exam, qs]) => {
+          if (!loaded[exam]) loaded[exam] = [];
+          loaded[exam] = [{
+            id: Date.now() + Math.random(),
+            name: "Imported from Demo",
+            date: new Date().toISOString().split("T")[0],
+            questions: qs,
+          }, ...loaded[exam]];
+        });
+        localStorage.removeItem("vimavima_demo_carryover");
+      }
+    } catch {}
+
+    setSessionsByMode(loaded);
+  }, [user?.email]);
+
+  // Save every change back to localStorage immediately
+  useEffect(() => {
+    if (!user?.email) return;
+    try {
+      localStorage.setItem(`vimavima_data_${user.email}`, JSON.stringify(sessionsByMode));
+    } catch {}
+  }, [sessionsByMode, user?.email]);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const sessions=sessionsByMode[mode]||[];
+  const setSessions=(upd)=>setSessionsByMode(prev=>({...prev,[mode]:typeof upd==="function"?upd(prev[mode]):upd}));
+  const [view,setView]=useState("home");
+  const [activeId,setActiveId]=useState(null);
+  const [showWizard,setShowWizard]=useState(false);
+  const [showPassageWizard,setShowPassageWizard]=useState(false);
+  const [showNewSession,setShowNewSession]=useState(false);
+  const [newSess,setNewSess]=useState({name:"",date:""});
+  const [tab,setTab]=useState("sessions");
+  const [analyticsTab,setAnalyticsTab]=useState("overview");
+  const [filterSubject,setFilterSubject]=useState("All");
+  const [filterResult,setFilterResult]=useState("All");
+
+  const activeSess=sessions.find(s=>s.id===activeId);
+  const allQ=sessions.flatMap(s=>s.questions).filter(q=>q.type!=="passage");
+  const totalC=allQ.filter(q=>q.result==="correct").length;
+  const overallPct=pct(totalC,allQ.length);
+  const changedWrong=allQ.filter(q=>q.answerChange==="Correct → Incorrect").length;
+  const recentSess=[...sessions].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+  const recentQs=(recentSess?.questions||[]).filter(q=>q.type!=="passage");
+  const recentPct=pct(recentQs.filter(q=>q.result==="correct").length,recentQs.length);
+  const ankiTotal=allQ.filter(q=>q.ankiFront&&q.ankiFront.trim()).length;
+  const allProgressData=[...sessions].sort((a,b)=>new Date(a.date)-new Date(b.date)).filter(s=>s.questions.filter(q=>q.type!=="passage").length>0).map(s=>{const rqs=s.questions.filter(q=>q.type!=="passage");const t=rqs.length,c=rqs.filter(q=>q.result==="correct").length;return{name:s.name.length>12?s.name.substring(0,12)+'…':s.name,score:Math.round((c/t)*100),date:s.date};});
+
+  const analytics=useMemo(()=>{
+    const bySubject={},byType={},byReason={},byChange={};
+    allQ.forEach(q=>{
+      if(!bySubject[q.subject])bySubject[q.subject]={c:0,t:0};bySubject[q.subject].t++;if(q.result==="correct")bySubject[q.subject].c++;
+      if(!byType[q.qtype])byType[q.qtype]={c:0,t:0};byType[q.qtype].t++;if(q.result==="correct")byType[q.qtype].c++;
+      if(q.wrongReason)byReason[q.wrongReason]=(byReason[q.wrongReason]||0)+1;
+      if(q.answerChange&&q.answerChange!=="No change")byChange[q.answerChange]=(byChange[q.answerChange]||0)+1;
+    });
+    return{bySubject,byType,byReason,byChange};
+  },[allQ]);
+
+  function addQuestion(qdata){setSessions(prev=>prev.map(s=>s.id===activeId?{...s,questions:[...s.questions,qdata]}:s));}
+  function updateQuestion(qdata){setSessions(prev=>prev.map(s=>s.id===activeId?{...s,questions:s.questions.map(q=>q.id===qdata.id?qdata:q)}:s));}
+  function createSession(){
+    if(!newSess.name)return;
+    const ns={id:Date.now(),name:newSess.name,date:newSess.date||new Date().toISOString().split("T")[0],questions:[]};
+    setSessions(p=>[...p,ns]);setActiveId(ns.id);setView("session");setShowNewSession(false);setNewSess({name:"",date:""});
+  }
+
+  const cfg=MODES[mode];
+  const filteredQ=allQ.filter(q=>(filterSubject==="All"||q.subject===filterSubject)&&(filterResult==="All"||q.result===filterResult.toLowerCase()));
+
+// 1. Show loading screen while checking Supabase
+if (isAuthLoading) {
+  return <div style={{ minHeight: "100vh", background: T.bg }}></div>; 
+}
+
+// 2. Show auth if not logged in
+if (!user) {
+  return <AuthScreen T={T} onAuth={(u) => { 
+    localStorage.setItem('vimavima_track', u.track);
+    setUser(u); 
+  }} />;
+}
+
+// 3. If the user is logged in but hasn't picked a track yet, show onboarding
+if (user && !user.track) {
+  return (
+    <div style={{minHeight:"100vh",background:T.bg,color:T.text,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+      <h1 style={{fontSize:24,fontWeight:700,marginBottom:8}}>Welcome to VimaVima</h1>
+      <p style={{color:T.muted,marginBottom:32}}>What exam track are you studying for?</p>
+      <div style={{display:"flex",gap:16,maxWidth:800,width:"100%",padding:20,justifyContent:"center"}}>
+        {TRACKS.map(tr => {
+          return (
+            <div 
+              key={tr.id} 
+              onClick={() => {
+                localStorage.setItem('vimavima_track', tr.id);
+                setUser(prev => ({ ...prev, track: tr.id }));
+              }}
+              style={{
+                background:T.raised,
+                border:`1px solid ${T.border}`,
+                borderRadius:12,
+                padding:24,
+                textAlign:"center",
+                cursor:"pointer",
+                flex:1,
+                maxWidth:200
+              }}
+            >
+              <div style={{fontSize:24,marginBottom:8}}>{tr.icon}</div>
+              <div style={{fontWeight:600}}>{tr.label}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// 4. Show splash screen before loading the main app
+if (!splashDone) return <SplashScreen dark={darkMode} onDone={() => setSplashDone(true)} />;
+if(view==="session"&&activeSess) return (
+  <>
+    <SessionDetail session={activeSess} sessions={sessions} onBack={()=>setView("home")} onAddQuestion={()=>setShowWizard(true)} onAddPassage={()=>setShowPassageWizard(true)} onUpdateQuestion={updateQuestion} mode={mode} T={T}/>
+    {showWizard&&<Wizard onClose={()=>setShowWizard(false)} onSave={addQuestion} mode={mode} T={T} onSwitchToPassage={()=>{setShowWizard(false);setShowPassageWizard(true);}}/> }
+    {showPassageWizard&&<PassageWizard onClose={()=>setShowPassageWizard(false)} onSave={addQuestion} mode={mode} T={T}/>}
+  </>
+);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    localStorage.removeItem('vimavima_track');
+    window.location.reload();
+  };
+
+return (
+  <div style={{
+    width: "100%",
+    minHeight: "100vh",
+    background: T.bg,
+    color: T.text,
+    display: "flex",
+    flexDirection: "column",
+    margin: 0,
+    padding: 0,
+    overflowX: "hidden"
+  }}>
+    {darkMode && (
+      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:9998,boxShadow:"inset 0 0 180px rgba(59,110,255,0.07), inset 0 0 60px rgba(59,110,255,0.04)"}}/>
+    )}
+    
+    {/* Top Header */}
+    <header style={{
+      width: "100%",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: "14px 32px",
+      borderBottom: `1px solid ${T.border}`,
+      background: T.surface,
+      backdropFilter: "blur(12px)",
+      position: "sticky",
+      top: 0,
+      zIndex: 100,
+    }}>
+      <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+        <VimaLogo dark={darkMode}/>
+        <span style={{ fontSize:11, background: T.accent+"22", color: T.accent, borderRadius:6, padding:"2px 8px", fontWeight:600 }}>{mode}</span>
+      </div>
+      
+      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+        <button
+          onClick={() => setShowNewSession(true)}
+          style={{
+            background: T.accent,
+            border: "none",
+            color: "#fff",
+            padding: "7px 16px",
+            borderRadius: "8px",
+            fontSize: "13px",
+            fontWeight: "600",
+          }}
+        >
+          + New Session
+        </button>
+        <button
+          onClick={() => setDarkMode(d => !d)}
+          style={{
+            background: T.raised,
+            border: `1px solid ${T.border}`,
+            color: T.muted,
+            padding: "6px 12px",
+            borderRadius: "8px",
+            fontSize: "13px",
+            fontWeight: "500",
+          }}
+        >
+          {darkMode ? "☀️ Light" : "🌙 Dark"}
+        </button>
+        <button 
+          onClick={handleLogout}
+          style={{
+            background: "transparent",
+            border: `1px solid ${T.border}`,
+            color: T.muted,
+            padding: "6px 14px",
+            borderRadius: "8px",
+            fontSize: "13px",
+            fontWeight: "500",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.borderColor = "#fca5a5"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.border; }}
+        >
+          Log Out
+        </button>
+      </div>
+    </header>
+
+      {/* Stats */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(155px,1fr))",gap:14,padding:"20px 32px"}}>
+        <StatCard T={T} label="Total Questions" value={allQ.length} sub={`${totalC} correct`}/>
+        <StatCard T={T} label="Overall Score" value={`${overallPct}%`} sub={`${totalC} correct`} color={T.scoreColor(overallPct)}/>
+        <StatCard T={T} label="Recent 20" value={`${recentPct}%`} sub={`${recentQs.filter(q=>q.result==="correct").length}/${recentQs.length}`} color={T.scoreColor(recentPct)}/>
+        <StatCard T={T} label="Changed → Wrong" value={changedWrong} sub="Trust your gut!" color={T.danger}/>
+      </div>
+
+      {/* Tabs */}
+      <TabBar T={T} tabs={[["sessions","📁  Sessions"],["topics","🔍  Topics"],["analytics","📊  Analytics"],["flashcards",`⚡  Flashcards${ankiTotal>0?" ("+ankiTotal+")":""}`]]} active={tab} onChange={setTab} style={{padding:"0 32px"}}/>
+
+      <div style={{padding:"20px 32px"}}>
+        {/* SESSIONS */}
+        {tab==="sessions"&&(<>
+          {sessions.length===0&&<div style={{textAlign:"center",color:T.muted,padding:"50px 0",fontSize:13}}>No {mode} sessions yet. Create your first session!</div>}
+          {[...sessions].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(s=>{
+            const c=s.questions.filter(q=>q.result==="correct").length,p=pct(c,s.questions.length);
+            return(<Card key={s.id} T={T} onClick={()=>{setActiveId(s.id);setView("session");}} style={{padding:"16px 20px",marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontSize:15,fontWeight:600,marginBottom:4,color:T.text}}>{s.name}</div>
+                  <div style={{fontSize:12,color:T.muted,display:"flex",gap:16}}>
+                    <span>📅 {s.date}</span><span>📄 {s.questions.length} questions</span>
+                    {s.questions.filter(q=>q.ankiFront).length>0&&<span style={{color:T.accent}}>⚡ {s.questions.filter(q=>q.ankiFront).length} Anki</span>}
+                  </div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:14}}>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:22,fontWeight:700,color:s.questions.length?T.scoreColor(p):T.muted}}>{s.questions.length?`${p}%`:"—"}</div>
+                    {s.questions.length>0&&<div style={{fontSize:11,color:T.muted}}>{c}/{s.questions.length}</div>}
+                  </div>
+                  <button onClick={e=>{e.stopPropagation();setSessions(prev=>prev.filter(x=>x.id!==s.id));}} style={{background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:14,padding:"4px 6px"}}>🗑</button>
+                  <span style={{color:T.muted,fontSize:16}}>›</span>
+                </div>
+              </div>
+            </Card>);
+          })}
+        </>)}
+
+        {/* ALL QUESTIONS */}
+        {tab==="allquestions"&&(<>
+          <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+            <span style={{fontSize:11,color:T.muted}}>Filter:</span>
+            <select style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:7,padding:"5px 10px",color:T.dim,fontSize:11}} value={filterSubject} onChange={e=>setFilterSubject(e.target.value)}><option>All</option>{cfg.subjects.map(s=><option key={s}>{s}</option>)}</select>
+            <select style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:7,padding:"5px 10px",color:T.dim,fontSize:11}} value={filterResult} onChange={e=>setFilterResult(e.target.value)}>{["All","Correct","Incorrect"].map(r=><option key={r}>{r}</option>)}</select>
+            <span style={{fontSize:11,color:T.muted,marginLeft:"auto"}}>{filteredQ.length} questions</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"110px 80px 70px 1fr 90px",gap:10,padding:"5px 14px",marginBottom:6}}>
+            {["RESULT","SESSION","DATE","SUBJECT / CONCEPT","TYPE"].map(h=><div key={h} style={{fontSize:9,color:T.muted,letterSpacing:"0.9px"}}>{h}</div>)}
+          </div>
+          {filteredQ.map(q=>{const sess=sessions.find(s=>s.questions.some(sq=>sq.id===q.id));return(
+            <Card key={q.id} T={T} style={{padding:"10px 14px",marginBottom:7}}>
+              <div style={{display:"grid",gridTemplateColumns:"110px 80px 70px 1fr 90px",gap:10,alignItems:"center"}}>
+                <ResultBadge result={q.result} T={T}/>
+                <span style={{fontSize:11,color:T.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sess?.name}</span>
+                <span style={{fontSize:11,color:T.muted}}>{q.date}</span>
+                <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
+                  {q.subject&&<Pill label={q.subject} color={subjColors[q.subject]}/>}
+                  {q.concept&&<span style={{fontSize:12,color:T.muted}}>· {q.concept}</span>}
+                  {q.ankiFront&&<span style={{fontSize:10,color:T.accent,background:T.accent+"18",borderRadius:4,padding:"1px 5px"}}>⚡</span>}
+                </div>
+                <span style={{fontSize:11,color:T.muted}}>{q.qtype||"—"}</span>
+              </div>
+            </Card>
+          );})}
+          {filteredQ.length===0&&<div style={{textAlign:"center",color:T.muted,padding:"40px 0",fontSize:12}}>No questions match your filters.</div>}
+        </>)}
+
+
+        {/* TOPICS */}
+        {tab==="topics"&&(<TopicBrowser T={T} allQ={allQ} sessions={sessions} cfg={cfg}/>)}
+
+        {/* ANALYTICS */}
+        {tab==="analytics"&&(<>
+          {/* Sub-tab bar */}
+          <div style={{display:"flex",gap:4,marginBottom:20,background:T.raised,borderRadius:10,padding:4,width:"fit-content"}}>
+            {[["overview","Overview"],["mistakes","Mistakes"],["subjects","Subjects"],["progress","📈 Progress"]].map(([id,label])=>(
+              <button key={id} onClick={()=>setAnalyticsTab(id)} style={{background:analyticsTab===id?T.surface:"transparent",border:analyticsTab===id?`1px solid ${T.border}`:"1px solid transparent",borderRadius:7,padding:"7px 18px",fontSize:13,fontWeight:analyticsTab===id?600:400,color:analyticsTab===id?T.text:T.muted,cursor:"pointer",transition:"all 0.15s",boxShadow:analyticsTab===id?"0 1px 3px rgba(0,0,0,0.18)":"none"}}>{label}</button>
+            ))}
+          </div>
+
+          {/* OVERVIEW sub-tab */}
+          {analyticsTab==="overview"&&(<>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+              {/* Overall donut */}
+              <Card T={T} style={{padding:"24px 22px"}}>
+                <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:20}}>Overall Performance</div>
+                {allQ.length===0 ? <div style={{textAlign:"center",color:T.muted,padding:"40px 0",fontSize:12}}>No data yet.</div> : (
+                  <div style={{display:"flex",alignItems:"center",gap:24}}>
+                    <div style={{position:"relative",width:160,height:160,flexShrink:0}}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={[{name:"Correct",value:totalC},{name:"Incorrect",value:allQ.length-totalC}]}
+                            cx="50%" cy="50%" innerRadius={52} outerRadius={72} paddingAngle={3} dataKey="value" startAngle={90} endAngle={450}>
+                            <Cell fill={T.success}/>
+                            <Cell fill={darkMode?"#1e293b":"#e5e7eb"}/>
+                          </Pie>
+                          <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:12,color:T.text}}/>
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+                        <div style={{fontSize:26,fontWeight:800,color:T.scoreColor(overallPct),lineHeight:1}}>{overallPct}%</div>
+                        <div style={{fontSize:10,color:T.muted,marginTop:3}}>correct</div>
+                      </div>
+                    </div>
+                    <div style={{flex:1}}>
+                      {[{label:"Correct",val:totalC,color:T.success},{label:"Incorrect",val:allQ.length-totalC,color:T.danger},{label:"Total",val:allQ.length,color:T.dim}].map(({label,val,color})=>(
+                        <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${T.border}`}}>
+                          <span style={{fontSize:12,color:T.muted}}>{label}</span>
+                          <span style={{fontSize:16,fontWeight:700,color}}>{val}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+              {/* Answer change summary */}
+              <Card T={T} style={{padding:"24px 22px"}}>
+                <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:20}}>Answer Changes</div>
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {ANSWER_CHANGES.filter(a=>a!=="No change").map(a=>{
+                    const cnt=allQ.filter(q=>q.answerChange===a).length;
+                    const color=a==="Incorrect → Correct"?T.success:a==="Correct → Incorrect"?T.danger:T.warn;
+                    const icon=a==="Incorrect → Correct"?"📈":a==="Correct → Incorrect"?"📉":"↔️";
+                    return (
+                      <div key={a} style={{background:color+"12",border:`1px solid ${color}28`,borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
+                        <span style={{fontSize:18}}>{icon}</span>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:11,color:T.muted,letterSpacing:"0.3px"}}>{a}</div>
+                        </div>
+                        <div style={{fontSize:22,fontWeight:700,color,lineHeight:1}}>{cnt}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            </div>
+          </>)}
+
+          {/* MISTAKES sub-tab */}
+          {analyticsTab==="mistakes"&&(<>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+              <Card T={T} style={{padding:"24px 22px"}}>
+                <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:20}}>Why You Got It Wrong</div>
+                <WrongReasonDonut byReason={analytics.byReason} T={T} size={140} inner={44} outer={62}/>
+              </Card>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,alignContent:"start"}}>
+                {[
+                  {l:"Didn't Know",v:allQ.filter(q=>q.wrongReason==="Didn't know the material").length,c:T.danger,icon:"📚"},
+                  {l:"Wrong Algorithm",v:allQ.filter(q=>q.wrongReason==="Knew material, wrong algorithm").length,c:T.warn,icon:"🧠"},
+                  {l:"Silly Mistake",v:allQ.filter(q=>q.wrongReason==="Silly mistake / misread").length,c:"#fb923c",icon:"😅"},
+                  {l:"Ran Out of Time",v:allQ.filter(q=>q.wrongReason==="Ran out of time").length,c:T.warn,icon:"⏰"},
+                ].map(item=>(
+                  <Card key={item.l} T={T} style={{padding:"16px 18px"}}>
+                    <div style={{fontSize:10,color:T.muted,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                      <span>{item.icon}</span>
+                      <span style={{letterSpacing:"0.4px",textTransform:"uppercase"}}>{item.l}</span>
+                    </div>
+                    <div style={{fontSize:28,fontWeight:700,color:item.c,lineHeight:1}}>{item.v}</div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </>)}
+
+          {/* SUBJECTS sub-tab */}
+          {analyticsTab==="subjects"&&(<>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+              {[{title:"Score by Subject",data:analytics.bySubject},{title:"Score by Question Type",data:analytics.byType}].map(({title,data:d})=>(
+                <Card key={title} T={T} style={{padding:"22px 20px"}}>
+                  <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:18}}>{title}</div>
+                  <SubjectPieChart data={d} T={T}/>
+                </Card>
+              ))}
+            </div>
+          </>)}
+
+          {/* PROGRESS sub-tab */}
+          {analyticsTab==="progress"&&(
+            allProgressData.length<2
+              ? <div style={{textAlign:"center",color:T.muted,padding:"60px 0",fontSize:13}}>
+                  <div style={{fontSize:36,marginBottom:12}}>📈</div>
+                  <div style={{fontWeight:600,color:T.dim,marginBottom:6}}>Not enough data yet</div>
+                  <div style={{fontSize:12}}>Complete at least 2 sessions with questions to see your progress trend.</div>
+                </div>
+              : <Card T={T} style={{padding:"24px 22px"}}>
+                  <div style={{fontSize:11,color:T.muted,letterSpacing:"0.8px",textTransform:"uppercase",marginBottom:4}}>Score Trend — All Sessions</div>
+                  <div style={{fontSize:12,color:T.muted,marginBottom:20}}>{allProgressData.length} sessions tracked</div>
+                  <div style={{height:280}}>
+                    <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={allProgressData} margin={{top:10,right:20,left:-10,bottom:40}}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
+                        <XAxis dataKey="name" tick={{fontSize:10,fill:T.dim,fontWeight:500}} axisLine={{stroke:T.border}} tickLine={false} angle={-35} textAnchor="end" interval={0} height={60}/>
+                        <YAxis domain={[0,100]} tick={{fontSize:10,fill:T.dim,fontWeight:500}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
+                        <Tooltip contentStyle={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,fontSize:12,color:T.text}} formatter={(v)=>[`${v}%`,"Score"]}/>
+                        <ReferenceLine y={75} stroke={T.success} strokeDasharray="4 4" strokeOpacity={0.5}/>
+                        <ReferenceLine y={60} stroke={T.warn} strokeDasharray="4 4" strokeOpacity={0.5}/>
+                        <Line type="monotone" dataKey="score" stroke={T.accent} strokeWidth={2.5}
+                          dot={{fill:T.surface,stroke:T.accent,strokeWidth:2,r:5}}
+                          activeDot={{r:7,fill:T.accent}}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div style={{display:"flex",gap:18,marginTop:14,flexWrap:"wrap"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.muted}}><div style={{width:20,height:3,background:T.accent,borderRadius:2}}/> Score trend</div>
+                    <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.success}}><div style={{width:20,height:2,background:T.success,opacity:0.6}}/> 75% goal</div>
+                    <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.warn}}><div style={{width:20,height:2,background:T.warn,opacity:0.6}}/> 60% threshold</div>
+                  </div>
+                </Card>
+          )}
+        </>)}
+
+        {/* FLASHCARDS */}
+        {tab==="flashcards"&&<FlashcardsPanel allQ={allQ} sessions={sessions} T={T} ankiTotal={ankiTotal}/>}
+      </div>
+
+      {/* New Session Modal */}
+      {showNewSession&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.65)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500}} onClick={e=>e.target===e.currentTarget&&setShowNewSession(false)}>
+          <Card T={T} style={{padding:"28px 30px",width:"100%",maxWidth:380}}>
+            <h2 style={{fontSize:17,fontWeight:700,marginBottom:20,color:T.text}}>New {mode} Session</h2>
+            <div style={{marginBottom:14}}><Lbl T={T}>Session Name</Lbl><Inp T={T} placeholder="e.g. NBME 14, MCAT Practice 3…" value={newSess.name} onChange={e=>setNewSess(n=>({...n,name:e.target.value}))} autoFocus/></div>
+            <div style={{marginBottom:22}}><Lbl T={T}>Date</Lbl><Inp T={T} type="date" value={newSess.date} onChange={e=>setNewSess(n=>({...n,date:e.target.value}))}/></div>
+            <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
+              <button onClick={()=>setShowNewSession(false)} style={{background:T.raised,border:`1px solid ${T.border}`,borderRadius:8,padding:"8px 16px",color:T.muted,cursor:"pointer",fontSize:12}}>Cancel</button>
+              <button onClick={createSession} style={{background:T.accent,border:"none",borderRadius:8,padding:"8px 18px",color:"#fff",cursor:"pointer",fontSize:12,fontWeight:600}}>Create</button>
+            </div>
+          </Card>
         </div>
       )}
     </div>
   );
 }
 
-// ── Exit-Intent Modal ─────────────────────────────────────────────────────────
-function ExitModal({ onClose }) {
-  return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.78)",display:"flex",
-      alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}}>
-      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:18,
-        padding:"36px 32px",maxWidth:420,width:"100%",textAlign:"center"}}>
-        <div style={{fontSize:44,marginBottom:12}}>🎯</div>
-        <div style={{fontSize:20,fontWeight:700,color:C.text,marginBottom:8}}>Save your progress?</div>
-        <p style={{fontSize:13,color:C.muted,lineHeight:1.65,marginBottom:24}}>
-          You've started building your performance profile. Create a free account to keep your data,
-          track every session, and get personalized weak-spot analytics.
-        </p>
-        <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-          <a href="/app" style={{background:C.accent,borderRadius:8,padding:"10px 24px",color:"#fff",
-            fontSize:14,fontWeight:600,textDecoration:"none"}}>Create Free Account</a>
-          <button onClick={onClose} style={{background:C.raised,border:`1px solid ${C.border}`,
-            borderRadius:8,padding:"10px 18px",color:C.muted,fontSize:14,cursor:"pointer",
-            fontFamily:"'DM Sans',sans-serif"}}>Stay on Page</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Showcase Slides ─────────────────────────────────────────────────────────
-function QuestionLogSlide({ T }) {
-  const fields = [
-    ["Subject",        "Cardiology"],
-    ["Question Type",  "Diagnosis"],
-    ["Timing",         "Over the limit"],
-    ["Answer Change",  "Incorrect → Incorrect"],
-    ["Confidence",     "Low confidence"],
-    ["Mistake Reason", "Didn't know the material"],
-    ["Concept Tag",    "Aortic dissection vs. STEMI"],
-  ];
-  return (
-    <div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
-        <div>
-          <div style={{fontSize:11,color:T.muted,letterSpacing:"0.6px",textTransform:"uppercase",marginBottom:6}}>
-            USMLE Step 1 · Block 4 · Question 12
-          </div>
-          <span style={{background:T.danger+"22",border:`1px solid ${T.danger}40`,borderRadius:6,
-            padding:"3px 10px",fontSize:12,color:T.danger,fontWeight:600}}>✗  Incorrect</span>
-        </div>
-        <div style={{fontSize:11,color:T.muted+"80"}}>Sep 1, 2026</div>
-      </div>
-      <div>
-        {fields.map(([label, value]) => (
-          <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-            padding:"9px 0",borderBottom:`1px solid ${T.border}`}}>
-            <span style={{fontSize:11,color:T.muted,textTransform:"uppercase",letterSpacing:"0.5px"}}>{label}</span>
-            <span style={{fontSize:13,color:T.text,fontWeight:500}}>{value}</span>
-          </div>
-        ))}
-      </div>
-      <div style={{marginTop:16,display:"flex",alignItems:"center",gap:8,background:T.accent+"12",
-        border:`1px solid ${T.accent}25`,borderRadius:8,padding:"9px 14px"}}>
-        <span style={{fontSize:12,color:T.accent,fontWeight:500}}>⚡ Flagged for Anki export</span>
-      </div>
-    </div>
-  );
-}
-
-function AnalyticsSlide({ T }) {
-  const subjects = [
-    { name:"Cardiology",   pct:67, c:T.warn },
-    { name:"Renal",        pct:40, c:T.danger },
-    { name:"Neurology",    pct:100,c:T.success },
-    { name:"Pulmonology",  pct:75, c:C.success },
-    { name:"Pharmacology", pct:58, c:C.warn },
-  ];
-  return (
-    <div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:20}}>
-        {[
-          {l:"Session Score",v:"68%",c:C.warn},
-          {l:"Questions",    v:"20", c:C.text},
-          {l:"Weak Spot",    v:"Renal",c:C.danger},
-        ].map(s => (
-          <div key={s.l} style={{background:C.raised,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
-            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:4}}>{s.l}</div>
-            <div style={{fontSize:18,fontWeight:700,color:s.c,lineHeight:1}}>{s.v}</div>
-          </div>
-        ))}
-      </div>
-      {subjects.map(s => (
-        <div key={s.name} style={{marginBottom:10}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-            <span style={{fontSize:12,color:C.dim}}>{s.name}</span>
-            <span style={{fontSize:12,fontWeight:600,color:s.c}}>{s.pct}%</span>
-          </div>
-          <div style={{height:5,background:C.raised,borderRadius:99,overflow:"hidden"}}>
-            <div style={{height:"100%",width:`${s.pct}%`,background:s.c,borderRadius:99}}/>
-          </div>
-        </div>
-      ))}
-      <div style={{marginTop:14,background:C.warn+"12",border:`1px solid ${C.warn}28`,borderRadius:8,padding:"9px 12px"}}>
-        <span style={{fontSize:12,color:C.warn}}>⚠  Pattern: You change answers to wrong 3× this session</span>
-      </div>
-    </div>
-  );
-}
-
-function AnkiSlide({ T }) {
-  const [flipped, setFlipped]             = useState(false);
-  const [transitioning, setTransitioning] = useState(false);
-  const flip = () => {
-    if (transitioning) return;
-    setTransitioning(true);
-    setTimeout(() => { setFlipped(f => !f); setTransitioning(false); }, 200);
-  };
-  return (
-    <div>
-      <div style={{fontSize:10,color:T.muted,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:14}}>
-        AI-generated from your missed question · Cardiology
-      </div>
-      <div onClick={flip} style={{
-        cursor:"pointer",
-        background:flipped ? T.accent+"18" : T.raised,
-        border:`1px solid ${flipped ? T.accent+"50" : T.border}`,
-        borderRadius:12, padding:"20px",
-        opacity:transitioning ? 0 : 1,
-        transform:transitioning ? "scale(0.97)" : "scale(1)",
-        transition:"opacity 0.2s ease, transform 0.2s ease, background 0.3s, border-color 0.3s",
-        minHeight:175,
-      }}>
-        {!flipped ? (
-          <div>
-            <div style={{fontSize:10,color:T.accent,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:12,fontWeight:600}}>Front</div>
-            <p style={{fontSize:13,color:T.text,lineHeight:1.7,marginBottom:14}}>
-              A 52-year-old man presents with sudden, severe tearing chest pain radiating to the back.
-              BP is 162/90 in the right arm and 134/78 in the left. CXR shows a widened mediastinum.
-              <br/><br/>What is the most likely diagnosis?
-            </p>
-            <div style={{textAlign:"right",fontSize:11,color:T.muted}}>tap to reveal →</div>
-          </div>
-        ) : (
-          <div>
-            <div style={{fontSize:10,color:T.accent,textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:10,fontWeight:600}}>Back</div>
-            <div style={{fontSize:15,fontWeight:700,color:T.text,marginBottom:12}}>Aortic Dissection (Type A)</div>
-            <div style={{display:"flex",flexDirection:"column",gap:7}}>
-              {[
-                "Tearing/ripping quality — not pressure-like (ACS)",
-                "Radiates to the back, not jaw or left arm",
-                "BP differential ≥20 mmHg between arms",
-                "Widened mediastinum on CXR",
-                "Troponin usually negative in early presentation",
-              ].map(b => (
-                <div key={b} style={{display:"flex",gap:8}}>
-                  <span style={{color:T.accent,flexShrink:0}}>·</span>
-                  <span style={{fontSize:12,color:T.dim,lineHeight:1.5}}>{b}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-      <div style={{textAlign:"center",marginTop:10,fontSize:11,color:T.muted}}>
-        {flipped ? "← tap to flip back" : "Part of your .apkg Anki export"}
-      </div>
-    </div>
-  );
-}
-
-const SHOWCASE_META = [
-  { tag:"Question Log",          icon:"📋", label:"USMLE Step 1 · 8-step entry" },
-  { tag:"Performance Analytics", icon:"📊", label:"Live session breakdown" },
-  { tag:"Anki Flashcard",        icon:"⚡", label:"AI-generated · tap to flip" },
-];
-
-function ShowcaseCarousel({ T }) {
-  const theme = T;
-  const [active, setActive] = useState(0);
-  const [fade, setFade]     = useState(true);
-  const pendingRef          = useRef(0);
-
-  const goTo = (idx) => {
-    if (idx === active || !fade) return;
-    pendingRef.current = idx;
-    setFade(false);
-  };
-
-  useEffect(() => {
-    if (!fade) {
-      const t = setTimeout(() => { setActive(pendingRef.current); setFade(true); }, 220);
-      return () => clearTimeout(t);
-    }
-  }, [fade]);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      pendingRef.current = (active + 1) % 3;
-      setFade(false);
-    }, 5500);
-    return () => clearInterval(t);
-  }, [active]);
-
-  return (
-    <section style={{background:theme.bg,padding:"64px 24px"}}>
-      <div style={{maxWidth:820,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:36}}>
-          <div style={{fontSize:11,color:theme.accent,fontWeight:600,letterSpacing:"1.2px",textTransform:"uppercase",marginBottom:10}}>
-            See it in action
-          </div>
-          <h2 style={{fontSize:26,fontWeight:700,color:theme.text,marginBottom:10}}>
-            Your data, structured and actionable
-          </h2>
-          <p style={{fontSize:14,color:theme.muted,lineHeight:1.65,maxWidth:500,margin:"0 auto"}}>
-            Every question you log builds a precise diagnostic picture of exactly where your score is leaking.
-          </p>
-        </div>
-        <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap"}}>
-          {SHOWCASE_META.map((m, i) => (
-            <button key={i} onClick={() => goTo(i)} style={{
-              background:i===active ? theme.surface : "transparent",
-              border:`1px solid ${i===active ? theme.accent+"50" : theme.border}`,
-              borderRadius:999, padding:"8px 18px", cursor:"pointer",
-              fontFamily:"'DM Sans',sans-serif", transition:"all 0.2s ease",
-              display:"flex", alignItems:"center", gap:7,
-            }}>
-              <span style={{fontSize:14}}>{m.icon}</span>
-              <span style={{fontSize:13,fontWeight:i===active?600:400,color:i===active?theme.text:theme.muted}}>{m.tag}</span>
-            </button>
-          ))}
-        </div>
-        <div style={{
-          background:theme.surface, border:`1px solid ${theme.border}`,
-          borderRadius:20, padding:"28px",
-          minHeight:360,
-          opacity:fade?1:0,
-          transform:fade?"translateY(0px)":"translateY(7px)",
-          transition:"opacity 0.22s ease, transform 0.22s ease",
-          boxShadow:`0 0 80px ${theme.accent}07`,
-        }}>
-          <div style={{fontSize:11,color:theme.muted,fontWeight:500,letterSpacing:"0.5px",marginBottom:18,
-            display:"flex",alignItems:"center",gap:6}}>
-            <span style={{width:6,height:6,borderRadius:3,background:theme.accent,display:"inline-block",flexShrink:0}}/>
-            {SHOWCASE_META[active].label}
-          </div>
-          {active === 0 && <QuestionLogSlide T={theme} />}
-          {active === 1 && <AnalyticsSlide T={theme} />}
-          {active === 2 && <AnkiSlide T={theme} />}
-        </div>
-        <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:22}}>
-          {[0,1,2].map(i => (
-            <button key={i} onClick={() => goTo(i)} style={{
-              width:i===active?22:6, height:6, borderRadius:3,
-              background:i===active?theme.accent:theme.raised,
-              border:`1px solid ${i===active?theme.accent:theme.border}`,
-              padding:0, cursor:"pointer", transition:"all 0.3s ease",
-            }}/>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ── Landing Page ──────────────────────────────────────────────────────────────
-const HERO_SLIDES = [
-  {
-    title: "Try the Review Flow",
-    subtitle: "Experience the core workflow",
-    body: "Log a few practice questions and watch instant analytics build. No account required.",
-    cta: "Start Demo →",
-    ctaSecondary: null,
-    isDemo: true
-  },
-  {
-    title: "MCAT CARS",
-    subtitle: "The framework that separates 128 from 132.",
-    body: "A precise system used by top scorers to read, reason, and perform under pressure.",
-    cta: "Read the Guide",
-    ctaSecondary: "Try the review flow →",
-    blogSlug: "mcat-cars-framework"
-  },
-  {
-    title: "USMLE Wrong Answers",
-    subtitle: "4 Types & How to Fix Each",
-    body: "Not all wrong answers are equal. Learn the 4 types of mistakes and apply the right study strategy to each one.",
-    cta: "Learn the Framework →",
-    blogSlug: "learn-from-wrong-answers-usmle"
-  },
-  {
-    title: "Building Your Anki Deck",
-    subtitle: "From Real Exam Mistakes",
-    body: "The most powerful Anki decks are built from your actual wrong answers. Generate cards automatically from logged questions.",
-    cta: "See the Strategy →",
-    blogSlug: "spaced-repetition-anki-premed"
-  },
-  {
-    title: "LSAT Logical Reasoning",
-    subtitle: "Master 10 Question Types",
-    body: "LR accounts for 50% of your score. Learn question types and the exact plan to master them efficiently.",
-    cta: "Start the Plan →",
-    blogSlug: "lsat-logical-reasoning"
+// ── Public Router ─────────────────────────────────────────────────────────────
+// PUBLIC: / and /blog/* → ads allowed, no auth required
+// Anything else (/app, unknown) → authenticated VimaApp, no ads
+export default function App() {
+  const path = window.location.pathname;
+  
+  // Handle /guides redirect to /blog
+  if (path === "/guides") {
+    window.location.pathname = "/blog";
+    return null;
   }
-];
-
-const HERO_ICONS = ["✨", "📖", "🧠", "⚡", "⚖️"];
-
-// Dynamic SVG gradient visual — replaces static screenshots with a theme-aware, per-slide blob.
-function HeroVisual({ isDark, slideIndex, gradients }) {
-  const g = gradients.colors[slideIndex % gradients.colors.length];
-  const bg = gradients[`slide${(slideIndex % 5) + 1}`];
-  return (
-    <div style={{
-      position:"relative", width:"100%", maxWidth:560, height:260,
-      margin:"0 auto 40px", borderRadius:28, overflow:"hidden",
-      background:bg,
-      border:`1px solid ${isDark?"rgba(100,140,255,0.15)":"#e5e7eb"}`,
-    }}>
-      <style>{`
-        @keyframes heroBlobA { 0%,100% { transform: translate(0,0); } 50% { transform: translate(14px,-10px); } }
-        @keyframes heroBlobB { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-12px,12px); } }
-      `}</style>
-      <svg width="100%" height="100%" viewBox="0 0 560 260" style={{position:"absolute",inset:0}}>
-        <defs>
-          <filter id={`heroBlur${slideIndex}`} x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="36"/>
-          </filter>
-        </defs>
-        <circle cx="150" cy="90" r="110" fill={g.primary} filter={`url(#heroBlur${slideIndex})`} style={{animation:"heroBlobA 6s ease-in-out infinite"}}/>
-        <circle cx="410" cy="175" r="130" fill={g.secondary} filter={`url(#heroBlur${slideIndex})`} style={{animation:"heroBlobB 7s ease-in-out infinite"}}/>
-        <g opacity={isDark?0.12:0.08} stroke={isDark?"#8896b0":"#4b5563"} strokeWidth="1">
-          {Array.from({length:8}).map((_,i)=>(<line key={`v${i}`} x1={i*80} y1="0" x2={i*80} y2="260"/>))}
-          {Array.from({length:5}).map((_,i)=>(<line key={`h${i}`} x1="0" y1={i*65} x2="560" y2={i*65}/>))}
-        </g>
-      </svg>
-      <div style={{position:"relative",zIndex:1,height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
-        <div style={{width:76,height:76,borderRadius:22,background:isDark?"rgba(255,255,255,0.08)":"rgba(255,255,255,0.7)",backdropFilter:"blur(6px)",border:`1px solid ${isDark?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.85)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,boxShadow:"0 8px 32px rgba(0,0,0,0.12)"}}>
-          {HERO_ICONS[slideIndex % HERO_ICONS.length]}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function LandingPage() {
-  const { isDark, setIsDark, theme: C } = useTheme();
-  const themeGradients = getHeroGradients(isDark);
-  const demoRef = useRef(null);
-  const [showExitModal, setShowExitModal] = useState(false);
-  const [heroSlide, setHeroSlide] = useState(0);
-
-  useEffect(() => {
-    injectAdSense();
-    if (!document.querySelector('link[href*="DM+Sans"]')) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap";
-      document.head.appendChild(link);
-    }
-    document.body.style.background = C.bg;
-    document.body.style.margin = "0";
-    document.body.style.fontFamily = "'DM Sans', sans-serif";
-  }, [C]);
-
-  // Auto-rotate hero slides every 5 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setHeroSlide(prev => (prev + 1) % HERO_SLIDES.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Exit-intent fires once per session when cursor leaves viewport top
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.clientY <= 0 && !sessionStorage.getItem("exitShown")) {
-        setShowExitModal(true);
-        sessionStorage.setItem("exitShown", "1");
-      }
-    };
-    document.addEventListener("mouseleave", handler);
-    return () => document.removeEventListener("mouseleave", handler);
-  }, []);
-
-  const scrollToDemo = () => demoRef.current?.scrollIntoView({ behavior:"smooth" });
-
-  return (
-    <div style={{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'DM Sans',sans-serif"}}>
-      <SEO 
-        title="Vima Vima — AI Question Analytics for USMLE, MCAT, and LSAT Prep" 
-        description="Track your practice questions, get AI-powered insights into mistakes, and auto-generate Anki flashcards. Free question logging and analytics for serious exam prep." 
-        pathname={window.location.pathname}
-      />
-      <style>{`*{box-sizing:border-box;margin:0;padding:0}a{color:${C.accent};text-decoration:none}a:hover{text-decoration:underline}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(100,140,255,0.2);border-radius:10px}`}</style>
-
-      {showExitModal && <ExitModal onClose={() => setShowExitModal(false)}/>}
-
-      {/* Nav */}
-      <nav style={{position:"sticky",top:0,zIndex:100,background:C.surface+"ee",
-        backdropFilter:"blur(12px)",borderBottom:`1px solid ${C.border}`,
-        padding:"14px 32px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <a href="/" style={{display:"flex",alignItems:"center",textDecoration:"none"}}>
-            <BrandLogo dark={isDark} height={30}/>
-          </a>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:18}}>
-          <a href="/blog" style={{fontSize:13,color:C.muted,fontWeight:500}}>Guides</a>
-          <a href="/about" style={{fontSize:13,color:C.muted,fontWeight:500}}>About</a>
-          <a href="/faq" style={{fontSize:13,color:C.muted,fontWeight:500}}>FAQ</a>
-          <button onClick={() => setIsDark(!isDark)} style={{background:C.raised,border:`1px solid ${C.border}`,borderRadius:8,
-            padding:"7px 14px",color:C.text,fontSize:13,fontWeight:600,cursor:"pointer",
-            fontFamily:"'DM Sans',sans-serif"}}>
-            {isDark ? "☀️ Light" : "🌙 Dark"}
-          </button>
-          <button onClick={() => window.location.href = '/app'} style={{background:C.accent,border:"none",borderRadius:8,
-            padding:"7px 18px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",
-            fontFamily:"'DM Sans',sans-serif"}}>Sign In</button>
-          <button onClick={scrollToDemo} style={{background:"transparent",border:`1.5px solid ${C.accent}`,borderRadius:8,
-            padding:"7px 18px",color:C.accent,fontSize:13,fontWeight:600,cursor:"pointer",
-            fontFamily:"'DM Sans',sans-serif"}}>Try Demo →</button>
-        </div>
-      </nav>
-
-      {/* Hero Carousel */}
-      <section style={{maxWidth:1200,margin:"0 auto",padding:"80px 24px 60px",position:"relative"}}>
-        <style>{`
-          @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-          .slide-content { animation: fadeIn 0.5s ease-out; }
-        `}</style>
-        
-        {/* Slide Container - Centered Single-Column Layout */}
-        <div style={{maxWidth:760,margin:"0 auto",textAlign:"center"}}>
-          <HeroVisual isDark={isDark} slideIndex={heroSlide} gradients={themeGradients}/>
-          <div className="slide-content" style={{marginBottom:32}}>
-            <h1 style={{fontSize:56,fontWeight:700,color:isDark?C.text:"#0a0d1a",lineHeight:1.15,
-              letterSpacing:"-1.5px",marginBottom:16}}>
-              {HERO_SLIDES[heroSlide]?.title}
-            </h1>
-            <p style={{fontSize:20,color:isDark?C.muted:"#4a5568",fontWeight:500,lineHeight:1.4,marginBottom:20}}>
-              {HERO_SLIDES[heroSlide]?.subtitle}
-            </p>
-            <p style={{fontSize:16,color:isDark?C.dim:"#5a6b7a",lineHeight:1.7,maxWidth:480,margin:"0 auto"}}>
-              {HERO_SLIDES[heroSlide]?.body}
-            </p>
-          </div>
-
-          {/* CTA Buttons */}
-          <div style={{display:"flex",gap:16,flexWrap:"wrap",justifyContent:"center"}}>
-            {HERO_SLIDES[heroSlide]?.isDemo ? (
-              <button onClick={scrollToDemo} style={{background:isDark?C.accent:"#0055d4",border:"none",borderRadius:8,
-                padding:"14px 32px",color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer",
-                fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s",
-                boxShadow:isDark?"0 4px 16px rgba(59,110,255,0.3)":"0 4px 12px rgba(0,85,212,0.25)"}}>
-                {HERO_SLIDES[heroSlide]?.cta}
-              </button>
-            ) : (
-              <>
-                <a href={`/blog/${HERO_SLIDES[heroSlide]?.blogSlug}`} style={{background:isDark?C.accent:"#0055d4",
-                  border:"none",borderRadius:8,padding:"14px 32px",color:"#fff",fontSize:15,fontWeight:600,
-                  cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s",display:"inline-block",
-                  textDecoration:"none",boxShadow:isDark?"0 4px 16px rgba(59,110,255,0.3)":"0 4px 12px rgba(0,85,212,0.25)"}}>
-                  {HERO_SLIDES[heroSlide]?.cta}
-                </a>
-                {HERO_SLIDES[heroSlide]?.ctaSecondary && (
-                  <button onClick={scrollToDemo} style={{background:"transparent",border:`1.5px solid ${isDark?C.accent:"#0055d4"}`,
-                    borderRadius:8,padding:"12px 30px",color:isDark?C.accent:"#0055d4",fontSize:15,fontWeight:600,
-                    cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>
-                    {HERO_SLIDES[heroSlide]?.ctaSecondary}
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Navigation Dots */}
-        <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:60}}>
-          {HERO_SLIDES.map((_, i) => (
-            <button key={i} onClick={() => setHeroSlide(i)} style={{
-              width:heroSlide===i?32:10,height:6,background:heroSlide===i?(isDark?C.accent:"#0055d4"):(isDark?C.border:"#d1d5db"),
-              border:"none",borderRadius:3,cursor:"pointer",transition:"all 0.3s"
-            }}/>
-          ))}
-        </div>
-      </section>
-
-      {/* Demo */}
-      <section ref={demoRef} style={{background:isDark?C.bg:"#f9f9f9",padding:"100px 24px",borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`}}>
-        <div style={{maxWidth:1000,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:60}}>
-            <h2 style={{fontSize:44,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:16,lineHeight:1.2}}>
-              Try the Full Review Flow
-            </h2>
-            <p style={{fontSize:18,color:isDark?C.muted:"#6b7280",lineHeight:1.6,maxWidth:600,margin:"0 auto"}}>
-              Experience the complete workflow: log a practice question, reflect on your performance, and watch analytics emerge in real time. No account required.
-            </p>
-          </div>
-          <InteractiveDemo T={C}/>
-        </div>
-      </section>
-
-      <ShowcaseCarousel T={C} />
-
-      <AdUnit/>
-
-      {/* Study Guides Section */}
-      <section style={{maxWidth:1000,margin:"0 auto",padding:"100px 24px",borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`}}>
-        <div style={{textAlign:"center",marginBottom:60}}>
-          <h2 style={{fontSize:44,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:16}}>
-            Study Guides & Frameworks
-          </h2>
-          <p style={{fontSize:18,color:isDark?C.muted:"#6b7280",lineHeight:1.6,maxWidth:600,margin:"0 auto"}}>
-            Research-backed strategies from top scorers and exam experts
-          </p>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:24}}>
-        {[
-          {slug:"mcat-cars-framework",label:"MCAT",title:"MCAT CARS",preview:"The framework separating 128 from 132 scorers. A precise system for reading comprehension under pressure."},
-          {slug:"learn-from-wrong-answers-usmle",label:"USMLE",title:"4 Types of Wrong Answers",preview:"Learn why you miss questions and the exact study strategy to address each type of mistake."},
-          {slug:"lsat-logical-reasoning",label:"LSAT",title:"Logical Reasoning Mastery",preview:"Master the 10 question types that account for 50% of your LSAT score."},
-          {slug:"spaced-repetition-anki-premed",label:"Study Method",title:"Building Your Anki Deck",preview:"Generate flashcards from your actual wrong answers for lasting retention and intelligent spacing."},
-        ].map(item => (
-          <a key={item.slug} href={`/blog/${item.slug}`} style={{
-            background:isDark?C.surface:"#ffffff",border:`1px solid ${isDark?C.border:"#e5e7eb"}`,borderRadius:8,padding:32,
-            display:"flex",flexDirection:"column",textDecoration:"none",transition:"all 0.3s",
-            cursor:"pointer"
-          }} onMouseEnter={e=>{e.currentTarget.style.borderColor=isDark?C.accent:"#0055d4"; e.currentTarget.style.boxShadow=isDark?"0 12px 32px rgba(59,110,255,0.15)":"0 12px 32px rgba(0,85,212,0.08)"}}
-             onMouseLeave={e=>{e.currentTarget.style.borderColor=isDark?C.border:"#e5e7eb"; e.currentTarget.style.boxShadow="none"}}>
-            <div style={{fontSize:13,background:isDark?C.accent+"15":C.accent+"10",color:isDark?C.accent:"#0055d4",borderRadius:5,
-              padding:"6px 12px",fontWeight:600,width:"fit-content",marginBottom:16}}>
-              {item.label}
-            </div>
-            <h3 style={{fontSize:20,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:12,lineHeight:1.3}}>
-              {item.title}
-            </h3>
-            <p style={{fontSize:15,color:isDark?C.muted:"#6b7280",lineHeight:1.6,flex:1,marginBottom:16}}>
-              {item.preview}
-            </p>
-            <div style={{fontSize:14,color:isDark?C.accent:"#0055d4",fontWeight:500}}>Read full guide →</div>
-          </a>
-        ))}
-        </div>
-        <div style={{textAlign:"center",marginTop:48}}>
-          <a href="/blog" style={{background:isDark?C.raised:"#f3f4f6",border:`1px solid ${isDark?C.border:"#e5e7eb"}`,borderRadius:8,
-            padding:"14px 32px",color:isDark?C.muted:"#6b7280",fontSize:15,fontWeight:600,textDecoration:"none",
-            display:"inline-block",transition:"all 0.3s"}} 
-            onMouseEnter={e=>{e.currentTarget.style.background=isDark?C.surface:"#ffffff"; e.currentTarget.style.borderColor=isDark?C.accent+"60":"#d1d5db"}}
-            onMouseLeave={e=>{e.currentTarget.style.background=isDark?C.raised:"#f3f4f6"; e.currentTarget.style.borderColor=isDark?C.border:"#e5e7eb"}}>
-            View All Guides →
-          </a>
-        </div>
-      </section>
-
-      <AdUnit/>
-      <section style={{maxWidth:1000,margin:"0 auto",padding:"100px 24px",borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`}}>
-        <div style={{textAlign:"center",marginBottom:60}}>
-          <h2 style={{fontSize:44,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:16}}>
-            Built for High-Scorers
-          </h2>
-          <p style={{fontSize:18,color:isDark?C.muted:"#6b7280",lineHeight:1.6,maxWidth:700,margin:"0 auto"}}>
-            A system designed around how top scorers actually study: structured reflection after every question, analytics that matter, and instant Anki generation from your real mistakes.
-          </p>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:24}}>
-        {[
-          {icon:"📋",title:"Structured Question Logging",
-            body:"After each practice session, log the essentials: correct or wrong, time taken, whether you changed your answer, why you missed it, and the concept tested. This 90-second habit is what separates improvement from plateau."},
-          {icon:"📊",title:"Actionable Analytics",
-            body:"A 65% practice score is meaningless without context. Vima Viva breaks performance by subject, question type, and mistake category. You'll know exactly whether your gaps are knowledge, reasoning, or speed."},
-          {icon:"⚡",title:"Anki Cards from Mistakes",
-            body:"Generate AI-drafted flashcards from your actual wrong answers. Export them directly to Anki as a real .apkg deck. Your personal card deck builds automatically from questions you actually struggled with."},
-        ].map(f => (
-          <div key={f.title} style={{background:isDark?C.surface:"#ffffff",border:`1px solid ${isDark?C.border:"#e5e7eb"}`,borderRadius:8,padding:32}}>
-            <div style={{fontSize:32,marginBottom:16}}>{f.icon}</div>
-            <div style={{fontSize:18,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:12}}>{f.title}</div>
-            <p style={{fontSize:15,color:isDark?C.muted:"#6b7280",lineHeight:1.7}}>{f.body}</p>
-          </div>
-        ))}
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section style={{maxWidth:1000,margin:"0 auto",padding:"100px 24px",borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`}}>
-        <div style={{textAlign:"center",marginBottom:60}}>
-          <h2 style={{fontSize:44,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:16}}>How It Works</h2>
-          <p style={{fontSize:18,color:isDark?C.muted:"#6b7280",lineHeight:1.6,maxWidth:700,margin:"0 auto"}}>
-            A simple, consistent workflow that builds your learning data and powers your improvement
-          </p>
-        </div>
-        <div style={{maxWidth:800,margin:"0 auto"}}>
-          <div style={{display:"flex",flexDirection:"column",gap:32}}>
-            {[
-              {n:"01",t:"Select Your Exam Track",d:"Start with your exam: USMLE (Step 1/Step 2 CK), MCAT, or LSAT. Each track has its own subject and question-type taxonomy matched to the real exam."},
-              {n:"02",t:"Create a Study Session",d:"Log a practice session: one exam, one block, or one timed set. Name it however you track it (UWorld Block 7, NBME 14, PrepTest 90) and begin logging questions."},
-              {n:"03",t:"Log Each Question",d:"After each question: mark it correct or wrong, note the time, whether you changed your answer, why you missed it (if wrong), and which concept it tested."},
-              {n:"04",t:"Review Your Analytics",d:"After each session, see your score breakdown, timing patterns, most common mistakes, and concept gaps. Track trends over time to see what's working and what needs change."},
-              {n:"05",t:"Generate Your Anki Deck",d:"Export all your missed questions as flashcards directly to Anki. Your personal deck builds from the questions you actually struggled with — not generic pre-made cards."},
-            ].map(s => (
-              <div key={s.n} style={{display:"flex",gap:24,alignItems:"flex-start"}}>
-                <div style={{flexShrink:0,width:48,height:48,borderRadius:8,background:isDark?C.accent+"20":C.accent+"15",
-                  border:`1.5px solid ${isDark?C.accent+"50":C.accent+"40"}`,display:"flex",alignItems:"center",justifyContent:"center",
-                  fontSize:14,fontWeight:700,color:isDark?C.accent:"#0055d4"}}>{s.n}</div>
-                <div style={{paddingTop:6}}>
-                  <div style={{fontSize:16,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:8}}>{s.t}</div>
-                  <p style={{fontSize:15,color:isDark?C.muted:"#6b7280",lineHeight:1.7}}>{s.d}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Who it's for */}
-      <section style={{maxWidth:1000,margin:"0 auto",padding:"100px 24px",borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`}}>
-        <h2 style={{fontSize:44,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:60,textAlign:"center"}}>Built for Serious Exam Prep</h2>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:40}}>
-          {[
-            {track:"USMLE",desc:"Step 1 & Step 2 CK Prep",detail:"Master the UWorld grind with structured question logs, mistake categorization by subject and type, and analytics that reveal whether gaps are knowledge or reasoning. Build a personal Anki deck from your actual wrong answers."},
-            {track:"MCAT",desc:"Full Prep + CARS Framework",detail:"Unique CARS Passage Analysis mode using a 6-skill matrix (Main Idea, Tone, Author Perspective, Arguments, Contrasting Theories, Inference traps). Diagnose why you're missing reading comprehension questions — because it's rarely about knowledge."},
-            {track:"LSAT",desc:"PrepTest & Practice Tracking",detail:"Track Logical Reasoning, Analytical Reasoning, and Reading Comprehension separately. Identify exactly which question types cost you the most, then focus your preparation on real weaknesses instead of guessing."},
-          ].map(g => (
-            <div key={g.track} style={{display:"flex",flexDirection:"column"}}>
-              <div style={{fontSize:13,fontWeight:700,color:isDark?C.accent:"#0055d4",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:12}}>
-                {g.track}
-              </div>
-              <h3 style={{fontSize:22,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:12,lineHeight:1.3}}>
-                {g.desc}
-              </h3>
-              <p style={{fontSize:15,color:isDark?C.muted:"#6b7280",lineHeight:1.7}}>
-                {g.detail}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <AdUnit/>
-
-      {/* FAQ */}
-      <section style={{maxWidth:900,margin:"0 auto",padding:"100px 24px",borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`}}>
-        <div style={{textAlign:"center",marginBottom:60}}>
-          <h2 style={{fontSize:44,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:16}}>Frequently Asked Questions</h2>
-          <p style={{fontSize:18,color:isDark?C.muted:"#6b7280",lineHeight:1.6,maxWidth:600,margin:"0 auto"}}>
-            Everything you need to know before you start
-          </p>
-        </div>
-        <div style={{display:"flex",flexDirection:"column"}}>
-        {[
-          {q:"Is Vima Vima free?",a:"Yes. Core features — question logging, performance analytics, session tracking, and Anki card generation — are completely free. Create an account with an email address or Google sign-in and get immediate access."},
-          {q:"Which exams does Vima Vima support?",a:"USMLE (Step 1 and Step 2 CK), MCAT, and LSAT. Each track has its own subject taxonomy and question-type categories that match your actual exam."},
-          {q:"How is Vima Vima different from a spreadsheet?",a:"Spreadsheets require you to design structure and build formulas. Vima Vima provides structured logging, pre-built analytics that surface patterns across hundreds of questions, and one-click Anki export. You get actionable insights automatically."},
-          {q:"How do I export to Anki?",a:"Select your missed questions, generate AI-drafted cards or write your own, and export as a real .apkg file. Import directly into Anki desktop or AnkiDroid in one click. Your personal deck builds from your actual wrong answers."},
-          {q:"How long does it take to log a question?",a:"About 30–60 seconds once you're familiar with the form. Six simple fields: correct/incorrect, time, answer change, why you missed it, and concept tested. Most students log during the review phase of each block."},
-          {q:"What is the MCAT CARS mode?",a:"A six-skill framework (Main Idea, Tone, Author Perspective, Arguments, Contrasting Theories, Inference traps) for analyzing each passage. Diagnose why you miss CARS questions — it's almost never a knowledge problem."},
-          {q:"Is my data private?",a:"Yes. All study data is stored securely and never sold. Delete your account and all data at any time by emailing vimavimasupport@gmail.com."},
-          {q:"Can I use Vima Vima with my existing question banks?",a:"Yes. Vima Vima is question-bank agnostic. Tag each question's source (UWorld, NBME, 7Sage, AAMC, etc.) and compare performance across resources."},
-        ].map((item,i,arr) => (
-          <div key={i} style={{borderBottom:`1px solid ${isDark?C.border:"#e5e7eb"}`,paddingTop:24,paddingBottom:24}}>
-            <div style={{fontSize:16,fontWeight:700,color:isDark?C.text:"#0a0d1a",marginBottom:12}}>{item.q}</div>
-            <p style={{fontSize:15,color:isDark?C.muted:"#6b7280",lineHeight:1.8}}>{item.a}</p>
-          </div>
-        ))}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer style={{borderTop:`1px solid ${isDark?C.border:"#e5e7eb"}`,padding:"48px 24px 32px",textAlign:"center",background:isDark?C.bg:"#f9f9f9"}}>
-        <div style={{maxWidth:1000,margin:"0 auto 32px",fontSize:14,color:isDark?C.muted:"#6b7280",display:"flex",gap:24,justifyContent:"center",flexWrap:"wrap"}}>
-          <a href="/" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>Home</a>
-          <a href="/blog" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>Guides</a>
-          <a href="/about" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>About</a>
-          <a href="/faq" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>FAQ</a>
-          <a href="/contact" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>Contact</a>
-          <a href="/app" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>Sign In</a>
-          <a href="/terms" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>Terms</a>
-          <a href="/privacy" style={{color:isDark?C.muted:"#6b7280",textDecoration:"none",transition:"color 0.2s"}} onMouseEnter={e=>e.currentTarget.style.color=isDark?C.text:"#0a0d1a"} onMouseLeave={e=>e.currentTarget.style.color=isDark?C.muted:"#6b7280"}>Privacy</a>
-        </div>
-        <div style={{fontSize:13,color:isDark?C.muted+"80":"#9ca3af"}}>© 2026 Vima Vima · Designed for serious exam prep</div>
-      </footer>
-    </div>
-  );
+  
+  // Route to public pages (no theme needed, handled by component)
+  if (path === "/" || path === "/demo") return <HelmetProvider><ThemeProvider><LandingPage /></ThemeProvider></HelmetProvider>;
+  if (path === "/blog" || path.startsWith("/blog/")) {
+    return <HelmetProvider><ThemeProvider><BlogPage slug={path.replace(/^\/blog\/?/, "") || ""} /></ThemeProvider></HelmetProvider>;
+  }
+  if (path === "/about") return <HelmetProvider><ThemeProvider><AboutPage /></ThemeProvider></HelmetProvider>;
+  if (path === "/faq") return <HelmetProvider><ThemeProvider><FAQPage /></ThemeProvider></HelmetProvider>;
+  if (path === "/contact") return <HelmetProvider><ThemeProvider><ContactPage /></ThemeProvider></HelmetProvider>;
+  if (path === "/terms") return <HelmetProvider><ThemeProvider><TermsOfService /></ThemeProvider></HelmetProvider>;
+  if (path === "/privacy") return <HelmetProvider><ThemeProvider><PrivacyPolicy /></ThemeProvider></HelmetProvider>;
+  
+  // Default to authenticated app
+  return <ThemeProvider><VimaApp /></ThemeProvider>;
 }
