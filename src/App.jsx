@@ -208,11 +208,11 @@ function SplashScreen({ dark, onDone }) {
       opacity: phase === "out" ? 0 : 1,
       transition: phase === "out" ? "opacity 0.7s ease" : "none",
     }}>
-      {/* Glow effect — highlighter-yellow rectangle sized to sit within the ladder mark between VIMA and VIMA */}
+      {/* Glow effect — highlighter-yellow circle sized to sit within the ladder mark between VIMA and VIMA */}
       {phase === "glow" && (
         <div style={{
           position:"absolute",
-          width:50, height:50,
+          width:40, height:40,
           background:`radial-gradient(circle, #ffffff 0%, #ffff33 30%, ${glowColor} 60%, transparent 85%)`,
           borderRadius:4,
           animation:"splashGlow 1.2s ease-in-out",
